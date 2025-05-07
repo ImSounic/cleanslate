@@ -9,6 +9,8 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
+// Import the admin mode screen (you'll need to create this)
+import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({Key? key}) : super(key: key);
@@ -534,142 +536,205 @@ class _MembersScreenState extends State<MembersScreen> {
     }
   }
 
+  // Navigate to Admin Mode screen
+  // Inside your MembersScreen class
+  void _navigateToAdminMode() {
+    if (_householdService.currentHousehold != null) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AdminModeScreen()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No household selected. Create or join a household first.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Back button, search bar and code button section
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                children: [
-                  // Back button
-                  IconButton(
-                    icon: Icon(Icons.arrow_back, color: AppColors.primary),
-                    onPressed: () => Navigator.pop(context),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 8),
-                  // Search bar
-                  Expanded(
-                    child: Container(
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Back button, search bar and code button section
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    children: [
+                      // Back button
+                      IconButton(
+                        icon: Icon(Icons.arrow_back, color: AppColors.primary),
+                        onPressed: () => Navigator.pop(context),
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
                       ),
-                      child: TextField(
-                        controller: _searchController,
-                        style: TextStyle(
-                          color: AppColors.textPrimary,
-                          fontFamily: 'VarelaRound',
-                          fontSize: 14,
+                      const SizedBox(width: 8),
+                      // Search bar
+                      Expanded(
+                        child: Container(
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: TextField(
+                            controller: _searchController,
+                            style: TextStyle(
+                              color: AppColors.textPrimary,
+                              fontFamily: 'VarelaRound',
+                              fontSize: 14,
+                            ),
+                            decoration: InputDecoration(
+                              hintText:
+                                  'Search for your flats, household or rooms',
+                              hintStyle: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontFamily: 'VarelaRound',
+                                fontSize: 14,
+                              ),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.all(10.0),
+                                child: Icon(
+                                  Icons.search,
+                                  color: AppColors.textSecondary,
+                                  size: 20,
+                                ),
+                              ),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 0,
+                                vertical: 12,
+                              ),
+                              isDense: true,
+                            ),
+                            textAlignVertical: TextAlignVertical.center,
+                          ),
                         ),
-                        decoration: InputDecoration(
-                          hintText: 'Search for your flats, household or rooms',
-                          hintStyle: TextStyle(
-                            color: AppColors.textSecondary,
+                      ),
+                      const SizedBox(width: 8),
+                      // Code button
+                      ElevatedButton(
+                        onPressed: () {
+                          // Show household code
+                          if (_householdService.currentHousehold != null) {
+                            _showHouseholdCode(
+                              _householdService.currentHousehold!.code,
+                            );
+                          } else {
+                            // Show options if no household is selected
+                            _showNoHouseholdOptionsDialog();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: AppColors.textLight,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 10,
+                          ),
+                        ),
+                        child: const Text(
+                          'Room Code',
+                          style: TextStyle(
                             fontFamily: 'VarelaRound',
                             fontSize: 14,
                           ),
-                          prefixIcon: Padding(
-                            padding: const EdgeInsets.all(10.0),
-                            child: Icon(
-                              Icons.search,
-                              color: AppColors.textSecondary,
-                              size: 20,
-                            ),
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 0,
-                            vertical: 12,
-                          ),
-                          isDense: true,
                         ),
-                        textAlignVertical: TextAlignVertical.center,
                       ),
-                    ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  // Code button
-                  ElevatedButton(
-                    onPressed: () {
-                      // Show household code
-                      if (_householdService.currentHousehold != null) {
-                        _showHouseholdCode(
-                          _householdService.currentHousehold!.code,
-                        );
-                      } else {
-                        // Show options if no household is selected
-                        _showNoHouseholdOptionsDialog();
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: AppColors.textLight,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                ),
+
+                // Members title and count
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Members',
+                        style: TextStyle(
+                          fontSize: 38,
+                          fontFamily: 'Switzer',
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                        ),
                       ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 10,
+                      Text(
+                        _householdName,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontFamily: 'VarelaRound',
+                          color: AppColors.primary,
+                        ),
                       ),
-                    ),
-                    child: const Text(
-                      'Room Code',
-                      style: TextStyle(fontFamily: 'VarelaRound', fontSize: 14),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+
+                // Members list or content based on state
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _refreshHouseholdData,
+                    child:
+                        _isLoading
+                            ? const Center(child: CircularProgressIndicator())
+                            : _errorMessage != null
+                            ? _buildErrorView()
+                            : _householdService.currentHousehold == null
+                            ? _buildNoHouseholdView()
+                            : _buildMembersListWithAddContent(),
+                  ),
+                ),
+              ],
             ),
 
-            // Members title and count
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Members',
-                    style: TextStyle(
-                      fontSize: 38,
-                      fontFamily: 'Switzer',
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.primary,
-                    ),
+            // Admin Mode button positioned at the bottom center of the screen
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: ElevatedButton.icon(
+                  onPressed: _navigateToAdminMode,
+                  icon: Icon(
+                    Icons.admin_panel_settings,
+                    color: AppColors.textLight,
                   ),
-                  Text(
-                    _householdName,
+                  label: const Text(
+                    'Admin Mode',
                     style: TextStyle(
-                      fontSize: 20,
+                      color: Colors.white,
                       fontFamily: 'VarelaRound',
-                      color: AppColors.primary,
+                      fontSize: 16,
                     ),
                   ),
-                ],
-              ),
-            ),
-
-            // Members list or content based on state
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _refreshHouseholdData,
-                child:
-                    _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _errorMessage != null
-                        ? _buildErrorView()
-                        : _householdService.currentHousehold == null
-                        ? _buildNoHouseholdView()
-                        : _buildMembersListWithAddContent(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: AppColors.textLight,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    elevation: 3,
+                  ),
+                ),
               ),
             ),
           ],
@@ -790,6 +855,9 @@ class _MembersScreenState extends State<MembersScreen> {
 
         // Add the "Add your flatmates" section if admin is the only member
         if (_members.length <= 1) _buildAddFlatmatesSection(),
+
+        // Add some space at the bottom for the Admin Mode button
+        const SizedBox(height: 60),
       ],
     );
   }
@@ -798,18 +866,18 @@ class _MembersScreenState extends State<MembersScreen> {
   Widget _buildAddFlatmatesSection() {
     return Column(
       children: [
-        const SizedBox(height: 20),
-        // SVG image of people moving boxes
+        const SizedBox(height: 10), // Reduced top spacing
+        // SVG image of people moving boxes - smaller height
         SvgPicture.asset(
           'assets/images/no_members.svg', // Adjust path as needed
-          height: 392,
+          height: 280, // Reduced from 392 to make it smaller
           fit: BoxFit.contain,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12), // Reduced spacing between SVG and text
         Text(
           'Add your Flatmates by sharing',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 18, // Slightly smaller font
             color: AppColors.textSecondary,
             fontFamily: 'VarelaRound',
           ),
@@ -817,12 +885,12 @@ class _MembersScreenState extends State<MembersScreen> {
         Text(
           'room code through socials',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 18, // Slightly smaller font
             color: AppColors.textSecondary,
             fontFamily: 'VarelaRound',
           ),
         ),
-        const SizedBox(height: 40),
+        const SizedBox(height: 20), // Reduced bottom spacing
       ],
     );
   }
