@@ -9,11 +9,10 @@ import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
-import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -30,7 +29,7 @@ class _HomeScreenState extends State<HomeScreen>
   bool _isLoading = true;
   int _selectedTabIndex = 0;
   int _selectedNavIndex = 0;
-  bool _hasNotifications = false;
+  final bool _hasNotifications = false;
   bool _isDarkMode = false;
 
   late AnimationController _toggleController;
@@ -842,7 +841,7 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             Icons.assignment_outlined,
             size: 80,
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color: AppColors.textSecondary,
           ),
           const SizedBox(height: 16),
           Text(
@@ -898,7 +897,7 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             Icons.assignment_outlined,
             size: 80,
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color: AppColors.textSecondary,
           ),
           const SizedBox(height: 16),
           Text(
@@ -1149,9 +1148,9 @@ class _HomeScreenState extends State<HomeScreen>
 
                   // Priority text
                   Text(
-                    StringExtension(
+                    _capitalize(
                       (assignment['priority'] ?? 'Medium').toString(),
-                    ).capitalize(),
+                    ),
                     style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'VarelaRound',
@@ -1277,11 +1276,12 @@ class _HomeScreenState extends State<HomeScreen>
       },
     );
   }
-}
 
-// Extension method to capitalize the first letter of a string
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
+  // Helper function to capitalize strings
+  String _capitalize(String s) {
+    if (s.isEmpty) {
+      return s;
+    }
+    return s[0].toUpperCase() + s.substring(1).toLowerCase();
   }
 }

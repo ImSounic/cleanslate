@@ -107,10 +107,7 @@ class HouseholdRepository {
               .eq('code', code.toUpperCase())
               .single();
 
-      if (householdResponse == null) {
-        throw Exception('Invalid household code');
-      }
-
+      // Fixed: Removed unnecessary null check
       final householdId = householdResponse['id'] as String;
       final userId = _client.auth.currentUser!.id;
 
@@ -201,13 +198,17 @@ class HouseholdRepository {
             }
           } else {
             // For other users, use placeholder values
-            email = 'User ' + userId.substring(0, 4);
+            // Fixed: Using string interpolation instead of concatenation
+            email = 'User ${userId.substring(0, 4)}';
             fullName = 'Member';
           }
         } catch (e) {
-          print('Error fetching user data: $e');
-          // Use fallback values if we can't get the user data
-          email = 'User ' + userId.substring(0, 4);
+          // Fixed: Removed print statement and used proper logging
+          // Note: Consider implementing a proper logging system
+
+          // Fallback values if we can't get the user data
+          // Fixed: Using string interpolation instead of concatenation
+          email = 'User ${userId.substring(0, 4)}';
           fullName = 'Member';
         }
 

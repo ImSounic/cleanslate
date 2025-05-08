@@ -4,7 +4,7 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 
 class CreateHouseholdDialog extends StatefulWidget {
-  const CreateHouseholdDialog({Key? key}) : super(key: key);
+  const CreateHouseholdDialog({super.key});
 
   @override
   State<CreateHouseholdDialog> createState() => _CreateHouseholdDialogState();

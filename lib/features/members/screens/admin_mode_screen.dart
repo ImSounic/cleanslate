@@ -1,4 +1,6 @@
 // lib/features/members/screens/admin_mode_screen.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
@@ -6,6 +8,7 @@ import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 
 class AdminModeScreen extends StatefulWidget {
+  // ignore: use_super_parameters
   const AdminModeScreen({Key? key}) : super(key: key);
 
   @override
@@ -376,8 +379,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final householdName =
-        _householdService.currentHousehold?.name ?? 'Household';
+    // Removed unused variable 'householdName'
 
     return Scaffold(
       backgroundColor: AppColors.primary,

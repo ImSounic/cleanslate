@@ -1,4 +1,6 @@
 // lib/features/settings/screens/settings_screen.dart
+// ignore_for_file: avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
@@ -9,7 +11,7 @@ import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({Key? key}) : super(key: key);
+  const SettingsScreen({super.key});
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();

@@ -1,9 +1,11 @@
 // lib/features/auth/screens/signup_screen.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 
 class SignupScreen extends StatefulWidget {
-  const SignupScreen({Key? key}) : super(key: key);
+  const SignupScreen({super.key});
 
   @override
   State<SignupScreen> createState() => _SignupScreenState();
@@ -16,7 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  bool _acceptedTerms = false;
+  final bool _acceptedTerms = false;
 
   @override
   void dispose() {

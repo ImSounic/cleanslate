@@ -5,13 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/services/supabase_service.dart'; // Add this import
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
-  const ScheduleScreen({Key? key}) : super(key: key);
+  const ScheduleScreen({super.key});
 
   @override
   State<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -21,12 +22,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     with SingleTickerProviderStateMixin {
   final _choreRepository = ChoreRepository();
   final _householdService = HouseholdService();
+  final _supabaseService = SupabaseService(); // Add SupabaseService
 
   // View mode: 0 for week, 1 for month
   int _viewMode = 0;
   bool _isLoading = true;
   bool _showRecurringChores = false;
-  String _userName = 'Sounic';
+  String _userName = ''; // Make it non-final and initialize empty
   int _selectedNavIndex = 2; // Schedule tab selected
 
   // List to store regular and recurring chores
@@ -38,7 +40,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   DateTime _weekStart = DateTime.now().subtract(
     Duration(days: DateTime.now().weekday - 1),
   );
-  int _selectedWeekDay = DateTime.now().weekday;
 
   // Animation controller for the bottom sheet slide
   late AnimationController _animationController;
@@ -53,6 +54,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   @override
   void initState() {
     super.initState();
+    _loadUserData(); // Load user data
     _loadChores();
 
     // Initialize animation controller for bottom sheet
@@ -70,6 +72,22 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   void dispose() {
     _animationController.dispose();
     super.dispose();
+  }
+
+  // Load user data from SupabaseService
+  Future<void> _loadUserData() async {
+    final user = _supabaseService.currentUser;
+    if (user != null) {
+      final userData = user.userMetadata;
+      setState(() {
+        if (userData != null && userData.containsKey('full_name')) {
+          _userName = userData['full_name'] as String;
+        } else {
+          // If full_name is not available, use email or a default value
+          _userName = user.email?.split('@').first ?? 'User';
+        }
+      });
+    }
   }
 
   Future<void> _loadChores() async {
@@ -95,7 +113,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       );
 
       // Separate regular and recurring chores
-      final now = DateTime.now();
       final regular = <Map<String, dynamic>>[];
       final recurring = <Map<String, dynamic>>[];
 
@@ -171,7 +188,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   void _selectDate(DateTime date) {
     setState(() {
       _selectedDate = date;
-      _selectedWeekDay = date.weekday;
     });
   }
 
@@ -399,7 +415,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        '$_userName\'s chores',
+                        // Use the first name when displaying the title
+                        '${_userName.split(' ').first}\'s chores',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -824,7 +841,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   List<Widget> _buildChoresList() {
-    final now = DateTime.now();
     final displayedChores =
         _chores.where((chore) {
           // Filter chores by selected date if needed

@@ -1,13 +1,13 @@
 // lib/features/members/screens/members_screen.dart
+// ignore_for_file: use_super_parameters, use_build_context_synchronously, deprecated_member_use, avoid_print
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
-import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
-import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 // Import the admin mode screen (you'll need to create this)
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
@@ -24,7 +24,7 @@ class _MembersScreenState extends State<MembersScreen> {
   final TextEditingController _searchController = TextEditingController();
   final HouseholdRepository _householdRepository = HouseholdRepository();
   final HouseholdService _householdService = HouseholdService();
-  final SupabaseService _supabaseService = SupabaseService();
+  // Removed unused SupabaseService instance
   final TextEditingController _householdNameController =
       TextEditingController();
   final TextEditingController _householdCodeController =
@@ -902,53 +902,6 @@ class _MembersScreenState extends State<MembersScreen> {
         ),
         const SizedBox(height: 20), // Reduced bottom spacing
       ],
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.people_outline,
-            size: 80,
-            color: AppColors.textSecondary.withOpacity(0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No members found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Invite some people to join your household',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () {
-              if (_householdService.currentHousehold != null) {
-                _showHouseholdCode(_householdService.currentHousehold!.code);
-              }
-            },
-            icon: Icon(Icons.share, color: AppColors.textLight),
-            label: const Text('Share Invite Code'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: AppColors.textLight,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

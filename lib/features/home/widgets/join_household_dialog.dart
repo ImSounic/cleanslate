@@ -5,7 +5,7 @@ import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 
 class JoinHouseholdDialog extends StatefulWidget {
-  const JoinHouseholdDialog({Key? key}) : super(key: key);
+  const JoinHouseholdDialog({super.key});
 
   @override
   State<JoinHouseholdDialog> createState() => _JoinHouseholdDialogState();

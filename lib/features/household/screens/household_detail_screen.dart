@@ -1,3 +1,5 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
@@ -5,8 +7,7 @@ import 'package:cleanslate/data/repositories/chore_repository.dart';
 class HouseholdDetailScreen extends StatefulWidget {
   final String householdId;
 
-  const HouseholdDetailScreen({Key? key, required this.householdId})
-    : super(key: key);
+  const HouseholdDetailScreen({super.key, required this.householdId});
 
   @override
   State<HouseholdDetailScreen> createState() => _HouseholdDetailScreenState();

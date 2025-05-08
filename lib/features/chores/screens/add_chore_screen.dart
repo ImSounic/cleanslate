@@ -7,7 +7,7 @@ import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:intl/intl.dart';
 
 class AddChoreScreen extends StatefulWidget {
-  const AddChoreScreen({Key? key}) : super(key: key);
+  const AddChoreScreen({super.key});
 
   @override
   State<AddChoreScreen> createState() => _AddChoreScreenState();
@@ -30,7 +30,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
 
   bool _isLoading = false;
   bool _showTodoInput = false; // To toggle todo input visibility
-  List<String> _todoItems = []; // To store todo items
+  final List<String> _todoItems = []; // To store todo items
 
   final List<String> _priorities = ['Low', 'Medium', 'High'];
   final List<Map<String, dynamic>> _members = [];

@@ -1,4 +1,6 @@
 // lib/data/services/supabase_service.dart
+// ignore_for_file: avoid_print
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;

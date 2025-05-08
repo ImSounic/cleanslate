@@ -1,16 +1,11 @@
 // lib/features/household/screens/members_screen.dart
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 
 class MembersScreen extends StatefulWidget {
-  final String householdId;
-  final String householdName;
-
-  const MembersScreen({
-    Key? key,
-    required this.householdId,
-    required this.householdName,
-  }) : super(key: key);
+  const MembersScreen({super.key});
 
   @override
   State<MembersScreen> createState() => _MembersScreenState();
@@ -33,50 +28,14 @@ class _MembersScreenState extends State<MembersScreen> {
     });
 
     try {
-      // In a real app, you would fetch this from your repository
-      // For now, we'll use example data
+      await _householdRepository.getHouseholds();
       setState(() {
-        _members = [
-          {
-            'id': '1',
-            'name': 'You',
-            'email': 'Email@gmail.com',
-            'relationship': 'Relation',
-          },
-          {
-            'id': '2',
-            'name': 'Alice Johnson',
-            'email': 'alice.johnson@example.com',
-            'relationship': 'Friend',
-          },
-          {
-            'id': '3',
-            'name': 'Bob Smith',
-            'email': 'bob.smith@example.com',
-            'relationship': 'Colleague',
-          },
-          {
-            'id': '4',
-            'name': 'Catherine Lee',
-            'email': 'catherine.lee@example.com',
-            'relationship': 'Sister',
-          },
-          {
-            'id': '5',
-            'name': 'David Brown',
-            'email': 'david.brown@example.com',
-            'relationship': 'Cousin',
-          },
-          {
-            'id': '6',
-            'name': 'Eva White',
-            'email': 'eva.white@example.com',
-            'relationship': 'Acquaintance',
-          },
-        ];
+        _members = [];
       });
     } catch (e) {
-      // Handle error
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error loading households: $e')));
     } finally {
       setState(() {
         _isLoading = false;
@@ -87,155 +46,163 @@ class _MembersScreenState extends State<MembersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F8F8),
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Members',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF4A63B9),
-                    ),
-                  ),
-                  Text(
-                    'The ${widget.householdName}',
-                    style: const TextStyle(fontSize: 16, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : ListView.builder(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _members.length,
-                        itemBuilder: (context, index) {
-                          final member = _members[index];
-                          return _buildMemberCard(member, index);
-                        },
-                      ),
-            ),
-          ],
-        ),
+      appBar: AppBar(title: const Text('My Households')),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _members.isEmpty
+              ? _buildEmptyState()
+              : _buildMembersList(),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          _showCreateHouseholdDialog();
+        },
+        child: const Icon(Icons.add),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1, // Members tab
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFF4A63B9),
-        unselectedItemColor: Colors.grey,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.home_outlined, size: 80, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          const Text(
+            'No households yet',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            label: 'Members',
+          const SizedBox(height: 8),
+          const Text(
+            'Create your first household to get started',
+            style: TextStyle(fontSize: 16, color: Colors.grey),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Settings',
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () {
+              _showCreateHouseholdDialog();
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Create Household'),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildMemberCard(Map<String, dynamic> member, int index) {
-    final colors = [
-      Colors.pink.shade100,
-      Colors.purple.shade100,
-      Colors.blue.shade100,
-      Colors.green.shade100,
-      Colors.orange.shade100,
-    ];
-
-    final color = colors[index % colors.length];
-    final initial = index == 0 ? 'M' : (index).toString();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.grey.shade200),
-        ),
-        elevation: 0,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Row(
-            children: [
-              // Avatar
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: color,
-                child: Text(
-                  initial,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
+  Widget _buildMembersList() {
+    return ListView.builder(
+      itemCount: _members.length,
+      padding: const EdgeInsets.all(16),
+      itemBuilder: (context, index) {
+        final member = _members[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 16),
+          elevation: 2,
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: CircleAvatar(
+              backgroundColor: Theme.of(context).primaryColor,
+              child: Text(
+                member['name'][0].toUpperCase(),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(width: 16),
-              // Member details
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      member['name'],
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+            ),
+            title: Text(
+              member['name'],
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            subtitle: Text('Member since ${member['joinDate']}'),
+            trailing: const Icon(Icons.arrow_forward_ios),
+            onTap: () {
+              // Handle member tap
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _showCreateHouseholdDialog() async {
+    final nameController = TextEditingController();
+    bool isCreating = false;
+
+    return showDialog(
+      context: context,
+      builder:
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  title: const Text('Create Household'),
+                  content: TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(
+                      labelText: 'Household Name',
+                      hintText: 'Enter a name for your household',
                     ),
-                    Text(
-                      member['email'],
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    autofocus: true,
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () {
+                        Navigator.of(context).pop();
+                      },
+                      child: const Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed:
+                          isCreating
+                              ? null
+                              : () async {
+                                if (nameController.text.trim().isEmpty) {
+                                  return;
+                                }
+
+                                setState(() {
+                                  isCreating = true;
+                                });
+
+                                try {
+                                  await _householdRepository.createHousehold(
+                                    nameController.text.trim(),
+                                  );
+
+                                  if (mounted) {
+                                    Navigator.of(context).pop();
+                                    _loadMembers();
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Error: $e')),
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() {
+                                      isCreating = false;
+                                    });
+                                  }
+                                }
+                              },
+                      child:
+                          isCreating
+                              ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Create'),
                     ),
                   ],
                 ),
-              ),
-              // Relationship chip
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4A63B9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  member['relationship'],
-                  style: TextStyle(fontSize: 12, color: Colors.white),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Edit icon
-              Icon(Icons.edit, color: Colors.grey, size: 20),
-            ],
           ),
-        ),
-      ),
     );
   }
 }

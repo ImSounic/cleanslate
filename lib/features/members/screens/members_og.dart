@@ -1,4 +1,6 @@
 // lib/features/members/screens/members_screen.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
@@ -8,7 +10,7 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 
 class MembersScreen extends StatefulWidget {
-  const MembersScreen({Key? key}) : super(key: key);
+  const MembersScreen({super.key});
 
   @override
   State<MembersScreen> createState() => _MembersScreenState();

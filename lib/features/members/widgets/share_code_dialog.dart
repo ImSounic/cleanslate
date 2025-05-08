@@ -1,11 +1,13 @@
 // lib/features/members/widgets/share_code_dialog.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 
 class ShareCodeDialog extends StatelessWidget {
-  const ShareCodeDialog({Key? key}) : super(key: key);
+  const ShareCodeDialog({super.key});
 
   @override
   Widget build(BuildContext context) {

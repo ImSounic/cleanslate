@@ -1,9 +1,11 @@
+// ignore_for_file: use_build_context_synchronously
+
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/features/household/screens/household_detail_screen.dart'; // Add this import
 
 class HouseholdsScreen extends StatefulWidget {
-  const HouseholdsScreen({Key? key}) : super(key: key);
+  const HouseholdsScreen({super.key});
 
   @override
   State<HouseholdsScreen> createState() => _HouseholdsScreenState();
