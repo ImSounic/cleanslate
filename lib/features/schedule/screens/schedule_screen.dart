@@ -44,6 +44,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   late AnimationController _animationController;
   late Animation<double> _animation;
 
+  // Drag parameters
+  double _dragStartY = 0;
+  double _dragDistance = 0;
+  final double _dragThreshold =
+      50; // Threshold to close the card when dragging down
+
   @override
   void initState() {
     super.initState();
@@ -196,6 +202,43 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         _animationController.reverse();
       }
     });
+  }
+
+  // Handle drag to close the card
+  void _handleDragStart(DragStartDetails details) {
+    _dragStartY = details.globalPosition.dy;
+    _dragDistance = 0;
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    // Only allow dragging down, not up
+    if (details.delta.dy > 0) {
+      setState(() {
+        _dragDistance = details.globalPosition.dy - _dragStartY;
+        // Adjust the animation value based on drag distance
+        final animationValue = (_animation.value - (_dragDistance / 300)).clamp(
+          0.0,
+          1.0,
+        );
+        _animationController.value = animationValue;
+      });
+    }
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_dragDistance > _dragThreshold) {
+      // Close the card if dragged beyond threshold
+      setState(() {
+        _showRecurringChores = false;
+      });
+      _animationController.reverse();
+    } else {
+      // Snap back if not dragged enough
+      _animationController.forward();
+    }
+
+    // Reset drag values
+    _dragDistance = 0;
   }
 
   // Mark a chore as complete or incomplete
@@ -418,25 +461,21 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               },
             ),
 
-            // FAB for toggling recurring chores
-            Positioned(
-              bottom: 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: FloatingActionButton(
-                  onPressed: _toggleRecurringChores,
-                  backgroundColor: AppColors.primary,
-                  elevation: 4.0,
-                  child: Icon(
-                    _showRecurringChores
-                        ? Icons.keyboard_arrow_down
-                        : Icons.keyboard_arrow_up,
-                    color: Colors.white,
+            // FAB for toggling recurring chores - only visible when not showing recurring chores
+            if (!_showRecurringChores)
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: FloatingActionButton(
+                    onPressed: _toggleRecurringChores,
+                    backgroundColor: AppColors.primary,
+                    elevation: 4.0,
+                    child: Icon(Icons.keyboard_arrow_up, color: Colors.white),
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -962,199 +1001,198 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     }).toList();
   }
 
-  // New method to build the recurring chores card as a half-screen popup
+  // Build the recurring chores card as a half-screen popup with drag to close
   Widget _buildRecurringChoresCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(30),
-          topRight: Radius.circular(30),
+    return GestureDetector(
+      onVerticalDragStart: _handleDragStart,
+      onVerticalDragUpdate: _handleDragUpdate,
+      onVerticalDragEnd: _handleDragEnd,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.background,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(30),
+            topRight: Radius.circular(30),
+          ),
+          border: Border.all(color: AppColors.primary),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle indicator
-          Container(
-            margin: const EdgeInsets.only(top: 10, bottom: 10),
-            width: 60,
-            height: 5,
-            decoration: BoxDecoration(
-              color: Colors.grey[300],
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-
-          // Recurring Chores header with sync icon and Add button
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      'Recurring Chores',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.primary,
-                        fontFamily: 'Switzer',
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.sync, color: AppColors.primary, size: 20),
-                  ],
-                ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddChoreScreen(),
-                      ),
-                    ).then((_) => _loadChores());
-                  },
-                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
-                  label: const Text(
-                    'Add',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Recurring chores list
-          _recurringChores.isEmpty
-              ? Padding(
-                padding: const EdgeInsets.all(20),
-                child: Center(
-                  child: Text(
-                    'No recurring chores set up yet',
-                    style: TextStyle(
-                      color: AppColors.textSecondary,
-                      fontFamily: 'VarelaRound',
-                    ),
-                  ),
-                ),
-              )
-              : Container(
-                constraints: BoxConstraints(
-                  // Limit the height to make it a half-screen popup
-                  maxHeight: MediaQuery.of(context).size.height * 0.4,
-                ),
-                child: ListView.builder(
-                  itemCount: _recurringChores.length,
-                  shrinkWrap: true,
-                  padding: const EdgeInsets.only(bottom: 80),
-                  itemBuilder: (context, index) {
-                    final chore = _recurringChores[index];
-                    final frequency = chore['frequency'] ?? 'weekly';
-                    String frequencyText;
-                    String dayText = '';
-
-                    switch (frequency.toLowerCase()) {
-                      case 'daily':
-                        frequencyText = 'Daily';
-                        break;
-                      case 'weekly':
-                        frequencyText = 'Weekly';
-                        dayText = '× Tuesday';
-                        break;
-                      case 'monthly':
-                        frequencyText = 'Monthly';
-                        break;
-                      case 'biweekly':
-                        frequencyText = 'Twice a week';
-                        dayText = '× Mon,Tue';
-                        break;
-                      default:
-                        frequencyText = 'Weekly';
-                    }
-
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 4,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: Colors.grey[300]!),
-                        ),
-                        child: ListTile(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 4,
-                          ),
-                          leading: Container(
-                            width: 24,
-                            height: 24,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.grey[400]!,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          title: Text(
-                            chore['name'] ?? 'Untitled Chore',
-                            style: TextStyle(
-                              fontFamily: 'VarelaRound',
-                              fontWeight: FontWeight.w500,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                '$frequencyText $dayText',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.textSecondary,
-                                  fontFamily: 'VarelaRound',
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  Icons.more_vert,
-                                  color: AppColors.textSecondary,
-                                  size: 16,
-                                ),
-                                onPressed: () {
-                                  // Show chore options menu
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  },
-                ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle indicator
+            Container(
+              margin: const EdgeInsets.only(top: 10, bottom: 10),
+              width: 60,
+              height: 5,
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
               ),
-        ],
+            ),
+
+            // Recurring Chores header with sync icon and Add button
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Text(
+                        'Recurring Chores',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontFamily: 'Switzer',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Icon(Icons.sync, color: AppColors.primary, size: 20),
+                    ],
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const AddChoreScreen(),
+                        ),
+                      ).then((_) => _loadChores());
+                    },
+                    icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                    label: const Text(
+                      'Add',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Recurring chores list
+            _recurringChores.isEmpty
+                ? Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Center(
+                    child: Text(
+                      'No recurring chores set up yet',
+                      style: TextStyle(
+                        color: AppColors.textSecondary,
+                        fontFamily: 'VarelaRound',
+                      ),
+                    ),
+                  ),
+                )
+                : Container(
+                  constraints: BoxConstraints(
+                    // Limit the height to make it a half-screen popup
+                    maxHeight: MediaQuery.of(context).size.height * 0.4,
+                  ),
+                  child: ListView.builder(
+                    itemCount: _recurringChores.length,
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.only(bottom: 80),
+                    itemBuilder: (context, index) {
+                      final chore = _recurringChores[index];
+                      final frequency = chore['frequency'] ?? 'weekly';
+                      String frequencyText;
+                      String dayText = '';
+
+                      switch (frequency.toLowerCase()) {
+                        case 'daily':
+                          frequencyText = 'Daily';
+                          break;
+                        case 'weekly':
+                          frequencyText = 'Weekly';
+                          dayText = '× Tuesday';
+                          break;
+                        case 'monthly':
+                          frequencyText = 'Monthly';
+                          break;
+                        case 'biweekly':
+                          frequencyText = 'Twice a week';
+                          dayText = '× Mon,Tue';
+                          break;
+                        default:
+                          frequencyText = 'Weekly';
+                      }
+
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 4,
+                        ),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.primary),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 4,
+                            ),
+                            leading: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.grey[400]!,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            title: Text(
+                              chore['name'] ?? 'Untitled Chore',
+                              style: TextStyle(
+                                fontFamily: 'VarelaRound',
+                                fontWeight: FontWeight.w500,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '$frequencyText $dayText',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppColors.textSecondary,
+                                    fontFamily: 'VarelaRound',
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: Icon(
+                                    Icons.more_vert,
+                                    color: AppColors.textSecondary,
+                                    size: 16,
+                                  ),
+                                  onPressed: () {
+                                    // Show chore options menu
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+          ],
+        ),
       ),
     );
   }
