@@ -7,6 +7,8 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
+import 'package:cleanslate/features/auth/screens/landing_screen.dart';
+import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -83,10 +85,194 @@ class _HomeScreenState extends State<HomeScreen>
       });
     } catch (e) {
       // Handle error
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading chores: $e')));
+      }
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  void _showProfileMenu() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: 250,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // User profile section
+                CircleAvatar(
+                  radius: 30,
+                  backgroundColor: AppColors.primary,
+                  child: Icon(Icons.person, color: Colors.white, size: 36),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _userName,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    fontFamily: 'Switzer',
+                  ),
+                ),
+                Text(
+                  _supabaseService.currentUser?.email ?? 'sounic@example.com',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: AppColors.textSecondary,
+                    fontFamily: 'VarelaRound',
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(),
+
+                // Menu options
+                _buildProfileMenuItem(
+                  icon: Icons.person_outline,
+                  title: 'View Profile',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Navigate to profile screen
+                  },
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.home_outlined,
+                  title: 'Household Settings',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Navigate to household settings
+                  },
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.settings_outlined,
+                  title: 'App Settings',
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.dark_mode_outlined,
+                  title: 'Dark Mode',
+                  isDarkModeOption: true,
+                ),
+                _buildProfileMenuItem(
+                  icon: Icons.help_outline,
+                  title: 'Help & Support',
+                  onTap: () {
+                    Navigator.pop(context);
+                    // Navigate to help screen
+                  },
+                ),
+                const Divider(),
+                _buildProfileMenuItem(
+                  icon: Icons.logout,
+                  title: 'Log Out',
+                  isDestructive: true,
+                  onTap: () async {
+                    Navigator.pop(context);
+                    await _handleLogout();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProfileMenuItem({
+    required IconData icon,
+    required String title,
+    bool isDestructive = false,
+    bool isDarkModeOption = false,
+    VoidCallback? onTap,
+  }) {
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isDestructive ? Colors.red : AppColors.primary,
+        size: 20,
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isDestructive ? Colors.red : AppColors.textPrimary,
+          fontSize: 14,
+          fontFamily: 'VarelaRound',
+        ),
+      ),
+      trailing:
+          isDarkModeOption
+              ? Switch(
+                value: _isDarkMode,
+                onChanged: (value) {
+                  setState(() {
+                    _isDarkMode = value;
+                    if (_isDarkMode) {
+                      _toggleController.forward();
+                    } else {
+                      _toggleController.reverse();
+                    }
+                  });
+                  Navigator.pop(context);
+                },
+                activeColor: AppColors.primary,
+              )
+              : null,
+      dense: true,
+      onTap: isDarkModeOption ? null : onTap,
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    try {
+      await _supabaseService.signOut();
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LandingScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error logging out: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _completeChore(String assignmentId) async {
+    try {
+      await _choreRepository.completeChore(assignmentId);
+      // Refresh chores list
+      _loadChores();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error completing chore: $e')));
+      }
     }
   }
 
@@ -178,29 +364,37 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   const SizedBox(width: 12),
                   // Notifications
-                  SvgPicture.asset(
-                    _hasNotifications
-                        ? 'assets/images/icons/red_bell.svg'
-                        : 'assets/images/icons/bell.svg',
-                    height: 24,
-                    width: 24,
-                    colorFilter:
-                        _hasNotifications
-                            ? null
-                            : ColorFilter.mode(
-                              AppColors.iconPrimary,
-                              BlendMode.srcIn,
-                            ),
+                  GestureDetector(
+                    onTap: () {
+                      // Show notifications
+                    },
+                    child: SvgPicture.asset(
+                      _hasNotifications
+                          ? 'assets/images/icons/red_bell.svg'
+                          : 'assets/images/icons/bell.svg',
+                      height: 24,
+                      width: 24,
+                      colorFilter:
+                          _hasNotifications
+                              ? null
+                              : ColorFilter.mode(
+                                AppColors.iconPrimary,
+                                BlendMode.srcIn,
+                              ),
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Profile
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: AppColors.primary,
-                    child: Icon(
-                      Icons.person,
-                      color: AppColors.textLight,
-                      size: 18,
+                  GestureDetector(
+                    onTap: _showProfileMenu,
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColors.primary,
+                      child: Icon(
+                        Icons.person,
+                        color: AppColors.textLight,
+                        size: 18,
+                      ),
                     ),
                   ),
                 ],
@@ -255,6 +449,8 @@ class _HomeScreenState extends State<HomeScreen>
               child:
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
+                      : _myChores.isEmpty
+                      ? _buildEmptyState()
                       : _buildChoresList(),
             ),
           ],
@@ -310,12 +506,6 @@ class _HomeScreenState extends State<HomeScreen>
                 _selectedNavIndex = index;
               });
             }
-            // else if (index == 2) { // Calendar
-            //   await Navigator.push(context, MaterialPageRoute(builder: (context) => CalendarScreen()));
-            //   setState(() {
-            //     _selectedNavIndex = 0;
-            //   });
-            // }
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor: AppColors.navSelected,
@@ -411,65 +601,128 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildChoresList() {
-    // Example data based on the design
-    final demoChores = [
-      {
-        'name': 'Buy milk',
-        'assignee': 'Emma',
-        'assigneeInitial': 'E',
-        'avatarColor': AppColors.avatarAmber,
-        'priority': 'High',
-        'priorityColor': AppColors.priorityHigh,
-        'due': 'Today',
-        'completed': false,
-      },
-      {
-        'name': 'Take out Trash',
-        'assignee': 'Jack',
-        'assigneeInitial': 'J',
-        'avatarColor': AppColors.avatarGreen,
-        'priority': 'High',
-        'priorityColor': AppColors.priorityHigh,
-        'due': 'Today',
-        'completed': false,
-      },
-      {
-        'name': 'Vaccum The Hall',
-        'assignee': 'Dad',
-        'assigneeInitial': 'D',
-        'avatarColor': AppColors.avatarBrown,
-        'priority': 'Low',
-        'priorityColor': AppColors.priorityLow,
-        'due': 'Tomorrow',
-        'completed': false,
-      },
-      {
-        'name': 'Do Laundry',
-        'assignee': 'Mom',
-        'assigneeInitial': 'M',
-        'avatarColor': AppColors.avatarPurple,
-        'priority': 'Medium',
-        'priorityColor': AppColors.priorityMedium,
-        'due': 'Tomorrow',
-        'completed': true,
-      },
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: demoChores.length,
-      itemBuilder: (context, index) {
-        final chore = demoChores[index];
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 12),
-          child: _buildChoreCard(chore),
-        );
-      },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.assignment_outlined,
+            size: 80,
+            color: AppColors.textSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No chores assigned to you',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              fontFamily: 'Switzer',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Add chores to get started',
+            style: TextStyle(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+              fontFamily: 'VarelaRound',
+            ),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: () async {
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddChoreScreen()),
+              );
+              if (result == true) {
+                _loadChores();
+              }
+            },
+            icon: const Icon(Icons.add),
+            label: const Text('Add New Chore'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildChoreCard(Map<String, dynamic> chore) {
+  Widget _buildChoresList() {
+    return RefreshIndicator(
+      onRefresh: _loadChores,
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: _myChores.length,
+        itemBuilder: (context, index) {
+          final choreAssignment = _myChores[index];
+          final chore = choreAssignment['chores'] as Map<String, dynamic>;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: _buildChoreCard(choreAssignment, chore),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildChoreCard(
+    Map<String, dynamic> assignment,
+    Map<String, dynamic> chore,
+  ) {
+    // Determine priority color
+    Color priorityColor;
+    switch ((assignment['priority'] ?? 'medium').toLowerCase()) {
+      case 'high':
+        priorityColor = AppColors.priorityHigh;
+        break;
+      case 'medium':
+        priorityColor = AppColors.priorityMedium;
+        break;
+      case 'low':
+        priorityColor = AppColors.priorityLow;
+        break;
+      default:
+        priorityColor = AppColors.priorityMedium;
+    }
+
+    // Format due date
+    String dueDate = 'No date';
+    if (assignment['due_date'] != null) {
+      final date = DateTime.parse(assignment['due_date']);
+      final now = DateTime.now();
+      final tomorrow = DateTime(now.year, now.month, now.day + 1);
+
+      if (date.year == now.year &&
+          date.month == now.month &&
+          date.day == now.day) {
+        dueDate = 'Today';
+      } else if (date.year == tomorrow.year &&
+          date.month == tomorrow.month &&
+          date.day == tomorrow.day) {
+        dueDate = 'Tomorrow';
+      } else {
+        dueDate = DateFormat('MMM d, yyyy').format(date);
+      }
+    }
+
+    // Determine completion status
+    final isCompleted = assignment['status'] == 'completed';
+
+    // Get assignee full name and initial
+    final assigneeFullName = _userName;
+    final assigneeInitial =
+        assigneeFullName.isNotEmpty ? assigneeFullName[0].toUpperCase() : 'U';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -477,121 +730,171 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderPrimary),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Completion circle
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color:
-                    chore['completed']
-                        ? AppColors.primary
-                        : AppColors.borderPrimary,
-                width: 2,
+          // Top row with chore name, completion circle, and priority
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Completion circle - make it interactive
+              GestureDetector(
+                onTap: () {
+                  if (!isCompleted) {
+                    _completeChore(assignment['id']);
+                  }
+                },
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color:
+                          isCompleted
+                              ? AppColors.primary
+                              : AppColors.borderPrimary,
+                      width: 2,
+                    ),
+                    color: isCompleted ? AppColors.primary : Colors.transparent,
+                  ),
+                  child:
+                      isCompleted
+                          ? Icon(
+                            Icons.check,
+                            color: AppColors.textLight,
+                            size: 16,
+                          )
+                          : null,
+                ),
               ),
-              color:
-                  chore['completed'] ? AppColors.primary : Colors.transparent,
-            ),
-            child:
-                chore['completed']
-                    ? Icon(Icons.check, color: AppColors.textLight, size: 16)
-                    : null,
-          ),
-          const SizedBox(width: 16),
-          // Chore details
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  chore['name'],
+              const SizedBox(width: 16),
+
+              // Chore name
+              Expanded(
+                child: Text(
+                  chore['name'] ?? 'Unnamed Chore',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Switzer',
                     color: AppColors.textPrimary,
-                    decoration:
-                        chore['completed'] ? TextDecoration.lineThrough : null,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Text(
-                      'Assignee: ',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'VarelaRound',
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    CircleAvatar(
-                      radius: 10,
-                      backgroundColor: chore['avatarColor'],
-                      child: Text(
-                        chore['assigneeInitial'],
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textLight,
-                          fontFamily: 'VarelaRound',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      chore['assignee'],
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'VarelaRound',
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    SvgPicture.asset(
-                      'assets/images/icons/scroll_description.svg',
-                      height: 12,
-                      width: 12,
-                      colorFilter: ColorFilter.mode(
-                        AppColors.textPrimary,
-                        BlendMode.srcIn,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          // Priority and due date
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
+              ),
+
+              // Priority label
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   SvgPicture.asset(
                     'assets/images/icons/flag.svg',
                     height: 14,
                     width: 14,
                     colorFilter: ColorFilter.mode(
-                      chore['priorityColor'],
+                      priorityColor,
                       BlendMode.srcIn,
                     ),
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    chore['priority'],
+                    (assignment['priority'] ?? 'Medium')
+                        .toString()
+                        .capitalize(),
                     style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'VarelaRound',
-                      color: chore['priorityColor'],
+                      color: priorityColor,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 4),
+
+              // More options
+              Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: GestureDetector(
+                  onTap: () {
+                    // Show chore options
+                    _showChoreOptions(assignment, chore);
+                  },
+                  child: Icon(
+                    Icons.more_vert,
+                    color: AppColors.textSecondary,
+                    size: 20,
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8), // Space between rows
+          // Bottom row with assignee and due date
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Assignee info
               Row(
+                children: [
+                  Text(
+                    'Assignee: ',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'VarelaRound',
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  CircleAvatar(
+                    radius: 10,
+                    backgroundColor: AppColors.avatarAmber, // Default color
+                    child: Text(
+                      assigneeInitial,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: AppColors.textLight,
+                        fontFamily: 'VarelaRound',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  // Show full name now since we have more space
+                  Flexible(
+                    child: Text(
+                      assigneeFullName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'VarelaRound',
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  // Show description icon only if there is a description
+                  if (chore['description'] != null &&
+                      chore['description'].toString().isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: SvgPicture.asset(
+                        'assets/images/icons/scroll_description.svg',
+                        height: 12,
+                        width: 12,
+                        colorFilter: ColorFilter.mode(
+                          AppColors.textPrimary,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+
+              // Due date
+              Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   SvgPicture.asset(
                     'assets/images/icons/clock.svg',
@@ -604,7 +907,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    chore['due'],
+                    dueDate,
                     style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'VarelaRound',
@@ -615,11 +918,72 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ],
           ),
-          const SizedBox(width: 12),
-          // More options
-          Icon(Icons.more_vert, color: AppColors.textSecondary, size: 20),
         ],
       ),
     );
+  }
+
+  void _showChoreOptions(
+    Map<String, dynamic> assignment,
+    Map<String, dynamic> chore,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.edit, color: AppColors.primary),
+                title: const Text('Edit Chore'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to edit chore screen
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.check_circle, color: AppColors.primary),
+                title: const Text('Mark as Complete'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _completeChore(assignment['id']);
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.person_add, color: AppColors.primary),
+                title: const Text('Reassign Chore'),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Show reassign dialog
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text(
+                  'Delete Chore',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Show delete confirmation
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+// Extension method to capitalize the first letter of a string
+extension StringExtension on String {
+  String capitalize() {
+    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }
