@@ -1,3 +1,4 @@
+// lib/data/repositories/chore_repository.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChoreRepository {
@@ -9,7 +10,7 @@ class ChoreRepository {
     required String name,
     String? description,
     int? estimatedDuration,
-    String frequency = 'weekly',
+    String? frequency = 'weekly',
   }) async {
     final response =
         await _client
@@ -60,12 +61,14 @@ class ChoreRepository {
     required String choreId,
     required String assignedTo,
     required DateTime dueDate,
+    String? priority,
   }) async {
     await _client.from('chore_assignments').insert({
       'chore_id': choreId,
       'assigned_to': assignedTo,
       'due_date': dueDate.toIso8601String(),
       'status': 'pending',
+      'priority': priority ?? 'medium',
       'assigned_by': _client.auth.currentUser!.id,
     });
   }

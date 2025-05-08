@@ -6,6 +6,7 @@ import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
+import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -263,8 +264,17 @@ class _HomeScreenState extends State<HomeScreen>
         backgroundColor: AppColors.primary,
         shape: const CircleBorder(),
         child: Icon(Icons.add, color: AppColors.textLight),
-        onPressed: () {
-          // Show dialog to create a new chore
+        onPressed: () async {
+          // Navigate to the add chore screen
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddChoreScreen()),
+          );
+
+          // If a chore was added successfully, refresh the list
+          if (result == true) {
+            _loadChores();
+          }
         },
       ),
       bottomNavigationBar: Container(
