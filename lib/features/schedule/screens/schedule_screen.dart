@@ -7,6 +7,8 @@ import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
+import 'package:cleanslate/features/members/screens/members_screen.dart';
+import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({Key? key}) : super(key: key);
@@ -24,6 +26,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   bool _isLoading = true;
   bool _showRecurringChores = false;
   String _userName = 'Sounic';
+  int _selectedNavIndex = 2; // Schedule tab selected
 
   // List to store regular and recurring chores
   List<Map<String, dynamic>> _chores = [];
@@ -358,78 +361,148 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               child:
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : SingleChildScrollView(
-                        child: Column(
-                          children: [
-                            // Regular chores
-                            ..._buildChoresList(),
+                      : Stack(
+                        children: [
+                          SingleChildScrollView(
+                            child: Column(
+                              children: [
+                                // Regular chores
+                                ..._buildChoresList(),
 
-                            // Recurring chores section
-                            _buildRecurringChoresSection(),
-                          ],
-                        ),
+                                // Recurring chores section
+                                _buildRecurringChoresSection(),
+
+                                // Add extra padding at the bottom to account for the FAB and bottom nav bar
+                                const SizedBox(height: 100),
+                              ],
+                            ),
+                          ),
+                          // Position the FAB within the content area, above the bottom nav bar
+                          Positioned(
+                            bottom: 16,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: FloatingActionButton(
+                                onPressed: _toggleRecurringChores,
+                                backgroundColor: AppColors.primary,
+                                elevation: 4.0,
+                                child: Icon(
+                                  _showRecurringChores
+                                      ? Icons.keyboard_arrow_down
+                                      : Icons.keyboard_arrow_up,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
             ),
           ],
         ),
       ),
-      floatingActionButton: Align(
-        alignment: Alignment.bottomCenter,
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: 16),
-          child: FloatingActionButton(
-            onPressed: _toggleRecurringChores,
-            backgroundColor: AppColors.primary,
-            child: Icon(
-              _showRecurringChores
-                  ? Icons.keyboard_arrow_down
-                  : Icons.keyboard_arrow_up,
-              color: Colors.white,
-            ),
-          ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 2, // Schedule tab
-        onTap: (index) {
-          if (index != 2) {
-            // Handle navigation to other tabs
-            Navigator.pop(context);
-          }
-        },
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppColors.navSelected,
-        unselectedItemColor: AppColors.navUnselected,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        backgroundColor: AppColors.background,
-        elevation: 0,
-        items: [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home, color: AppColors.navUnselected),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people, color: AppColors.navUnselected),
-            label: 'Members',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today, color: AppColors.navSelected),
-            label: 'Schedule',
-            activeIcon: Container(
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.2),
-                shape: BoxShape.circle,
+        child: BottomNavigationBar(
+          currentIndex: _selectedNavIndex,
+          onTap: (index) {
+            if (index != _selectedNavIndex) {
+              setState(() {
+                _selectedNavIndex = index;
+              });
+
+              // Handle navigation
+              if (index == 0) {
+                // Navigate to Home
+                Navigator.pop(context);
+              } else if (index == 1) {
+                // Members tab
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MembersScreen(),
+                  ),
+                );
+              } else if (index == 3) {
+                // Settings tab
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              }
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppColors.navSelected,
+          unselectedItemColor: AppColors.navUnselected,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          backgroundColor: AppColors.background,
+          elevation: 0,
+          items: [
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/home.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 0
+                      ? AppColors.navSelected
+                      : AppColors.navUnselected,
+                  BlendMode.srcIn,
+                ),
               ),
-              padding: const EdgeInsets.all(4),
-              child: Icon(Icons.calendar_today, color: AppColors.navSelected),
+              label: 'Home',
             ),
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings, color: AppColors.navUnselected),
-            label: 'Settings',
-          ),
-        ],
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/members.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 1
+                      ? AppColors.navSelected
+                      : AppColors.navUnselected,
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Members',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/schedule.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 2
+                      ? AppColors.navSelected
+                      : AppColors.navUnselected,
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Schedule',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/settings.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 3
+                      ? AppColors.navSelected
+                      : AppColors.navUnselected,
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -594,7 +667,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children:
-                ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map((day) {
+                ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) {
                   return SizedBox(
                     width: 32,
                     child: Text(
@@ -816,7 +889,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                       const SizedBox(width: 4),
                       Text(
                         StringExtension(
-                          (assignment['priority'] ?? 'Medium').toString(),
+                          (assignment != null && assignment['priority'] != null)
+                              ? assignment['priority'].toString()
+                              : 'Medium',
                         ).capitalize(),
                         style: TextStyle(
                           fontSize: 12,
@@ -1001,18 +1076,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 ),
               );
             }).toList(),
-
-          // Bottom padding
-          const SizedBox(height: 80),
         ],
       ),
     );
-  }
-}
-
-// Extension method to capitalize the first letter of a string
-extension StringExtension on String {
-  String capitalize() {
-    return "${this[0].toUpperCase()}${substring(1).toLowerCase()}";
   }
 }

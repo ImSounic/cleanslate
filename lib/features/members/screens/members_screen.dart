@@ -11,6 +11,7 @@ import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 // Import the admin mode screen (you'll need to create this)
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
+import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({Key? key}) : super(key: key);
@@ -748,9 +749,22 @@ class _MembersScreenState extends State<MembersScreen> {
           currentIndex: _selectedNavIndex,
           onTap: (index) {
             if (index != _selectedNavIndex) {
-              // Navigate back to home if home icon is clicked
+              setState(() {
+                _selectedNavIndex = index;
+              });
+
+              // Handle navigation
               if (index == 0) {
+                // Navigate back to home
                 Navigator.pop(context);
+              } else if (index == 2) {
+                // Navigate to Schedule screen
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ScheduleScreen(),
+                  ),
+                );
               } else if (index == 3) {
                 // Settings tab
                 Navigator.pushReplacement(
@@ -760,10 +774,6 @@ class _MembersScreenState extends State<MembersScreen> {
                   ),
                 );
               }
-              // Handle other navigation items here
-              setState(() {
-                _selectedNavIndex = index;
-              });
             }
           },
           type: BottomNavigationBarType.fixed,
