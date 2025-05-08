@@ -23,6 +23,8 @@ class _HomeScreenState extends State<HomeScreen>
   final _choreRepository = ChoreRepository();
   String _userName = '';
   List<Map<String, dynamic>> _myChores = [];
+  List<Map<String, dynamic>> _completedChores =
+      []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
   int _selectedNavIndex = 0;
@@ -32,7 +34,13 @@ class _HomeScreenState extends State<HomeScreen>
   late AnimationController _toggleController;
   late Animation<double> _toggleAnimation;
 
-  final List<String> _tabTitles = ['My Tasks', 'In-progress', 'Assigned to'];
+  // Updated tab titles to include Completed
+  final List<String> _tabTitles = [
+    'My Tasks',
+    'In-progress',
+    'Assigned to',
+    'Completed',
+  ];
 
   @override
   void initState() {
@@ -80,8 +88,22 @@ class _HomeScreenState extends State<HomeScreen>
 
     try {
       final chores = await _choreRepository.getMyChores();
+
+      // Separate completed and pending chores
+      final completed = <Map<String, dynamic>>[];
+      final pending = <Map<String, dynamic>>[];
+
+      for (final chore in chores) {
+        if (chore['status'] == 'completed') {
+          completed.add(chore);
+        } else {
+          pending.add(chore);
+        }
+      }
+
       setState(() {
-        _myChores = chores;
+        _myChores = pending;
+        _completedChores = completed;
       });
     } catch (e) {
       // Handle error
@@ -449,9 +471,7 @@ class _HomeScreenState extends State<HomeScreen>
               child:
                   _isLoading
                       ? const Center(child: CircularProgressIndicator())
-                      : _myChores.isEmpty
-                      ? _buildEmptyState()
-                      : _buildChoresList(),
+                      : _buildChoreContent(),
             ),
           ],
         ),
@@ -577,6 +597,29 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
+  // Method to show appropriate content based on selected tab
+  Widget _buildChoreContent() {
+    // Show appropriate content based on selected tab
+    switch (_selectedTabIndex) {
+      case 0: // My Tasks
+        return _myChores.isEmpty
+            ? _buildEmptyState()
+            : _buildChoresList(_myChores);
+      case 3: // Completed
+        return _completedChores.isEmpty
+            ? _buildEmptyStateWithMessage(
+              'No completed chores',
+              'Complete your tasks to see them here',
+            )
+            : _buildChoresList(_completedChores);
+      default: // Other tabs - placeholder for now
+        return _buildEmptyStateWithMessage(
+          'Coming Soon',
+          'This tab is under development',
+        );
+    }
+  }
+
   Widget _buildTabButton(int index) {
     final isSelected = _selectedTabIndex == index;
     return OutlinedButton(
@@ -657,14 +700,49 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildChoresList() {
+  Widget _buildEmptyStateWithMessage(String title, String message) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Icons.assignment_outlined,
+            size: 80,
+            color: AppColors.textSecondary.withOpacity(0.5),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+              fontFamily: 'Switzer',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: TextStyle(
+              fontSize: 16,
+              color: AppColors.textSecondary,
+              fontFamily: 'VarelaRound',
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoresList(List<Map<String, dynamic>> chores) {
     return RefreshIndicator(
       onRefresh: _loadChores,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _myChores.length,
+        itemCount: chores.length,
         itemBuilder: (context, index) {
-          final choreAssignment = _myChores[index];
+          final choreAssignment = chores[index];
           final chore = choreAssignment['chores'] as Map<String, dynamic>;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -718,10 +796,16 @@ class _HomeScreenState extends State<HomeScreen>
     // Determine completion status
     final isCompleted = assignment['status'] == 'completed';
 
-    // Get assignee full name and initial
+    // Get assignee first name only
     final assigneeFullName = _userName;
+    final assigneeFirstName = assigneeFullName.split(' ').first;
     final assigneeInitial =
         assigneeFullName.isNotEmpty ? assigneeFullName[0].toUpperCase() : 'U';
+
+    // Check if chore has description
+    final hasDescription =
+        chore['description'] != null &&
+        chore['description'].toString().isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -730,67 +814,135 @@ class _HomeScreenState extends State<HomeScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.borderPrimary),
       ),
-      child: Column(
+      // Reduced height for the card
+      height: 110,
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          // Top row with chore name, completion circle, and priority
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Completion circle - make it interactive
-              GestureDetector(
-                onTap: () {
-                  if (!isCompleted) {
-                    _completeChore(assignment['id']);
-                  }
-                },
-                child: Container(
-                  width: 24,
-                  height: 24,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color:
-                          isCompleted
-                              ? AppColors.primary
-                              : AppColors.borderPrimary,
-                      width: 2,
+          // LEFT COLUMN - Completion circle for the entire height
+          GestureDetector(
+            onTap: () {
+              if (!isCompleted) {
+                _completeChore(assignment['id']);
+              }
+            },
+            child: Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color:
+                      isCompleted ? AppColors.primary : AppColors.borderPrimary,
+                  width: 2,
+                ),
+                color: isCompleted ? AppColors.primary : Colors.transparent,
+              ),
+              child:
+                  isCompleted
+                      ? Icon(Icons.check, color: AppColors.textLight, size: 16)
+                      : null,
+            ),
+          ),
+
+          const SizedBox(width: 16),
+
+          // MIDDLE/MAIN CONTENT - Chore details in column layout
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // TOP ROW - Title and description icon
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        chore['name'] ?? 'Unnamed Chore',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Switzer',
+                          color: AppColors.textPrimary,
+                          decoration:
+                              isCompleted ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    color: isCompleted ? AppColors.primary : Colors.transparent,
-                  ),
-                  child:
-                      isCompleted
-                          ? Icon(
-                            Icons.check,
-                            color: AppColors.textLight,
-                            size: 16,
-                          )
-                          : null,
-                ),
-              ),
-              const SizedBox(width: 16),
 
-              // Chore name
-              Expanded(
-                child: Text(
-                  chore['name'] ?? 'Unnamed Chore',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Switzer',
-                    color: AppColors.textPrimary,
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                    // Description icon moved directly next to title
+                    if (hasDescription)
+                      Padding(
+                        padding: const EdgeInsets.only(left: 4),
+                        child: SvgPicture.asset(
+                          'assets/images/icons/scroll_description.svg',
+                          height: 14,
+                          width: 14,
+                          colorFilter: ColorFilter.mode(
+                            AppColors.textPrimary,
+                            BlendMode.srcIn,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-              ),
 
-              // Priority label
+                const SizedBox(height: 8),
+
+                // ASSIGNEE ROW - Just first name
+                Row(
+                  children: [
+                    Text(
+                      'Assignee: ',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'VarelaRound',
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    CircleAvatar(
+                      radius: 10,
+                      backgroundColor: AppColors.avatarAmber,
+                      child: Text(
+                        assigneeInitial,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: AppColors.textLight,
+                          fontFamily: 'VarelaRound',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    // Only show first name
+                    Text(
+                      assigneeFirstName,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'VarelaRound',
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+
+                // Spacer to push elements to their positions
+                const Spacer(),
+              ],
+            ),
+          ),
+
+          // RIGHT COLUMN - Priority, options, and due date
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // TOP RIGHT ROW - Priority flag and three dots in a row
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Flag icon
                   SvgPicture.asset(
                     'assets/images/icons/flag.svg',
                     height: 14,
@@ -800,7 +952,10 @@ class _HomeScreenState extends State<HomeScreen>
                       BlendMode.srcIn,
                     ),
                   ),
+
                   const SizedBox(width: 4),
+
+                  // Priority text
                   Text(
                     (assignment['priority'] ?? 'Medium')
                         .toString()
@@ -811,88 +966,24 @@ class _HomeScreenState extends State<HomeScreen>
                       color: priorityColor,
                     ),
                   ),
-                ],
-              ),
 
-              // More options
-              Padding(
-                padding: const EdgeInsets.only(left: 8),
-                child: GestureDetector(
-                  onTap: () {
-                    // Show chore options
-                    _showChoreOptions(assignment, chore);
-                  },
-                  child: Icon(
-                    Icons.more_vert,
-                    color: AppColors.textSecondary,
-                    size: 20,
-                  ),
-                ),
-              ),
-            ],
-          ),
+                  const SizedBox(width: 8),
 
-          const SizedBox(height: 8), // Space between rows
-          // Bottom row with assignee and due date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Assignee info
-              Row(
-                children: [
-                  Text(
-                    'Assignee: ',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'VarelaRound',
+                  // Three dots menu on the same row
+                  GestureDetector(
+                    onTap: () {
+                      _showChoreOptions(assignment, chore);
+                    },
+                    child: Icon(
+                      Icons.more_vert,
                       color: AppColors.textSecondary,
+                      size: 20,
                     ),
                   ),
-                  CircleAvatar(
-                    radius: 10,
-                    backgroundColor: AppColors.avatarAmber, // Default color
-                    child: Text(
-                      assigneeInitial,
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: AppColors.textLight,
-                        fontFamily: 'VarelaRound',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // Show full name now since we have more space
-                  Flexible(
-                    child: Text(
-                      assigneeFullName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'VarelaRound',
-                        color: AppColors.textSecondary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  // Show description icon only if there is a description
-                  if (chore['description'] != null &&
-                      chore['description'].toString().isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: SvgPicture.asset(
-                        'assets/images/icons/scroll_description.svg',
-                        height: 12,
-                        width: 12,
-                        colorFilter: ColorFilter.mode(
-                          AppColors.textPrimary,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                    ),
                 ],
               ),
 
-              // Due date
+              // BOTTOM RIGHT - Due date
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -946,14 +1037,15 @@ class _HomeScreenState extends State<HomeScreen>
                   // Navigate to edit chore screen
                 },
               ),
-              ListTile(
-                leading: Icon(Icons.check_circle, color: AppColors.primary),
-                title: const Text('Mark as Complete'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _completeChore(assignment['id']);
-                },
-              ),
+              if (assignment['status'] != 'completed')
+                ListTile(
+                  leading: Icon(Icons.check_circle, color: AppColors.primary),
+                  title: const Text('Mark as Complete'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _completeChore(assignment['id']);
+                  },
+                ),
               ListTile(
                 leading: Icon(Icons.person_add, color: AppColors.primary),
                 title: const Text('Reassign Chore'),
