@@ -8,6 +8,8 @@ import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
+import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -689,6 +691,16 @@ class _HomeScreenState extends State<HomeScreen>
               setState(() {
                 _selectedNavIndex = 0;
               });
+            } else if (index == 2) {
+              // Schedule tab - Add this section
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ScheduleScreen()),
+              );
+              // Reset the selected index to home after returning from schedule screen
+              setState(() {
+                _selectedNavIndex = 0;
+              });
             } else if (index == 3) {
               // Settings tab
               await Navigator.push(
@@ -1137,9 +1149,9 @@ class _HomeScreenState extends State<HomeScreen>
 
                   // Priority text
                   Text(
-                    (assignment['priority'] ?? 'Medium')
-                        .toString()
-                        .capitalize(),
+                    StringExtension(
+                      (assignment['priority'] ?? 'Medium').toString(),
+                    ).capitalize(),
                     style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'VarelaRound',
