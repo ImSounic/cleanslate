@@ -17,7 +17,8 @@ class ScheduleScreen extends StatefulWidget {
   State<ScheduleScreen> createState() => _ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen> {
+class _ScheduleScreenState extends State<ScheduleScreen>
+    with SingleTickerProviderStateMixin {
   final _choreRepository = ChoreRepository();
   final _householdService = HouseholdService();
 
@@ -39,10 +40,30 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   );
   int _selectedWeekDay = DateTime.now().weekday;
 
+  // Animation controller for the bottom sheet slide
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+
   @override
   void initState() {
     super.initState();
     _loadChores();
+
+    // Initialize animation controller for bottom sheet
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+
+    _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadChores() async {
@@ -168,6 +189,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void _toggleRecurringChores() {
     setState(() {
       _showRecurringChores = !_showRecurringChores;
+
+      if (_showRecurringChores) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
     });
   }
 
@@ -199,205 +226,216 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // Header with back button and title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-              child: Row(
-                children: [
-                  GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: Icon(
-                      Icons.arrow_back_ios,
-                      color: AppColors.primary,
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Schedule',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                      fontFamily: 'Switzer',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Week/Month toggle
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey[200],
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _viewMode = 0),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color:
-                                _viewMode == 0
-                                    ? Colors.white
-                                    : Colors.transparent,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Week',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Switzer',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.calendar_today,
-                                color: AppColors.primary,
-                                size: 16,
-                              ),
-                            ],
-                          ),
+            // Main content
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with back button and title
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                  child: Row(
+                    children: [
+                      GestureDetector(
+                        onTap: () => Navigator.pop(context),
+                        child: Icon(
+                          Icons.arrow_back_ios,
+                          color: AppColors.primary,
+                          size: 20,
                         ),
                       ),
-                    ),
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () => setState(() => _viewMode = 1),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          decoration: BoxDecoration(
-                            color:
-                                _viewMode == 1
-                                    ? Colors.white
-                                    : Colors.transparent,
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Text(
-                                'Month',
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Switzer',
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.calendar_month,
-                                color: AppColors.primary,
-                                size: 16,
-                              ),
-                            ],
-                          ),
+                      const SizedBox(width: 16),
+                      Text(
+                        'Schedule',
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontFamily: 'Switzer',
                         ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Calendar view (weekly or monthly)
-            _viewMode == 0 ? _buildWeekView() : _buildMonthView(),
-
-            const SizedBox(height: 16),
-
-            // Chores section title
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '$_userName\'s chores',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.primary,
-                      fontFamily: 'Switzer',
-                    ),
+                    ],
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
+                ),
+
+                // Week/Month toggle
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Container(
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(20),
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(30),
                     ),
-                    child: Text(
-                      '0${_chores.length} tasks',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                        fontFamily: 'VarelaRound',
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Chores list
-            Expanded(
-              child:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : Stack(
-                        children: [
-                          SingleChildScrollView(
-                            child: Column(
-                              children: [
-                                // Regular chores
-                                ..._buildChoresList(),
-
-                                // Recurring chores section
-                                _buildRecurringChoresSection(),
-
-                                // Add extra padding at the bottom to account for the FAB and bottom nav bar
-                                const SizedBox(height: 100),
-                              ],
-                            ),
-                          ),
-                          // Position the FAB within the content area, above the bottom nav bar
-                          Positioned(
-                            bottom: 16,
-                            left: 0,
-                            right: 0,
-                            child: Center(
-                              child: FloatingActionButton(
-                                onPressed: _toggleRecurringChores,
-                                backgroundColor: AppColors.primary,
-                                elevation: 4.0,
-                                child: Icon(
-                                  _showRecurringChores
-                                      ? Icons.keyboard_arrow_down
-                                      : Icons.keyboard_arrow_up,
-                                  color: Colors.white,
-                                ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _viewMode = 0),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color:
+                                    _viewMode == 0
+                                        ? Colors.white
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Week',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Switzer',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.calendar_today,
+                                    color: AppColors.primary,
+                                    size: 16,
+                                  ),
+                                ],
                               ),
                             ),
                           ),
-                        ],
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _viewMode = 1),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              decoration: BoxDecoration(
+                                color:
+                                    _viewMode == 1
+                                        ? Colors.white
+                                        : Colors.transparent,
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Month',
+                                    style: TextStyle(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w500,
+                                      fontFamily: 'Switzer',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Icon(
+                                    Icons.calendar_month,
+                                    color: AppColors.primary,
+                                    size: 16,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Calendar view (weekly or monthly)
+                _viewMode == 0 ? _buildWeekView() : _buildMonthView(),
+
+                const SizedBox(height: 16),
+
+                // Chores section title
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        '$_userName\'s chores',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.primary,
+                          fontFamily: 'Switzer',
+                        ),
                       ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '0${_chores.length} tasks',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.white,
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Chores list
+                Expanded(
+                  child:
+                      _isLoading
+                          ? const Center(child: CircularProgressIndicator())
+                          : ListView(
+                            padding: const EdgeInsets.only(bottom: 100),
+                            children: _buildChoresList(),
+                          ),
+                ),
+              ],
+            ),
+
+            // Recurring Chores bottom sheet
+            AnimatedBuilder(
+              animation: _animation,
+              builder: (context, child) {
+                return Positioned(
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  child:
+                      _showRecurringChores
+                          ? Transform.translate(
+                            offset: Offset(0, (1 - _animation.value) * 300),
+                            child: _buildRecurringChoresCard(),
+                          )
+                          : Container(),
+                );
+              },
+            ),
+
+            // FAB for toggling recurring chores
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: FloatingActionButton(
+                  onPressed: _toggleRecurringChores,
+                  backgroundColor: AppColors.primary,
+                  elevation: 4.0,
+                  child: Icon(
+                    _showRecurringChores
+                        ? Icons.keyboard_arrow_down
+                        : Icons.keyboard_arrow_up,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -518,17 +556,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            IconButton(
+              icon: Icon(Icons.navigate_before, color: AppColors.primary),
+              onPressed: _navigatePrevious,
+            ),
             Text(
               DateFormat('MMMM yyyy').format(_weekStart),
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: AppColors.primary,
+                color: AppColors.textSecondary, // Changed to secondary color
               ),
-            ),
-            IconButton(
-              icon: Icon(Icons.navigate_before, color: AppColors.primary),
-              onPressed: _navigatePrevious,
             ),
             IconButton(
               icon: Icon(Icons.navigate_next, color: AppColors.primary),
@@ -629,12 +667,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       ),
       child: Column(
         children: [
-          // Month and Year with navigation
+          // Month and Year with navigation - removed ">" after the date
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '${DateFormat('MMMM yyyy').format(_selectedDate)} >',
+                DateFormat('MMMM yyyy').format(_selectedDate),
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -857,19 +895,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.access_time,
-                  size: 16,
-                  color: AppColors.textSecondary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  dueDate != null ? _formatDate(dueDate) : 'No due date',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                    fontFamily: 'VarelaRound',
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.access_time,
+                      size: 16,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      dueDate != null ? _formatDate(dueDate) : 'No due date',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                        fontFamily: 'VarelaRound',
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(width: 12),
                 Container(
@@ -920,162 +962,198 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     }).toList();
   }
 
-  Widget _buildRecurringChoresSection() {
-    if (_recurringChores.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
+  // New method to build the recurring chores card as a half-screen popup
+  Widget _buildRecurringChoresCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(30),
+          topRight: Radius.circular(30),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // Divider line with text
+          // Handle indicator
+          Container(
+            margin: const EdgeInsets.only(top: 10, bottom: 10),
+            width: 60,
+            height: 5,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
+
+          // Recurring Chores header with sync icon and Add button
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Container(
-                    height: 2,
-                    color: AppColors.primary.withOpacity(0.2),
+                Row(
+                  children: [
+                    Text(
+                      'Recurring Chores',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                        fontFamily: 'Switzer',
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.sync, color: AppColors.primary, size: 20),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddChoreScreen(),
+                      ),
+                    ).then((_) => _loadChores());
+                  },
+                  icon: const Icon(Icons.add, size: 16, color: Colors.white),
+                  label: const Text(
+                    'Add',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
 
-          // Recurring chores title and Add button
-          if (_showRecurringChores)
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        'Recurring Chores',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
-                          fontFamily: 'Switzer',
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Icon(Icons.sync, color: AppColors.primary, size: 20),
-                    ],
-                  ),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const AddChoreScreen(),
-                        ),
-                      ).then((_) => _loadChores());
-                    },
-                    icon: const Icon(Icons.add, size: 16),
-                    label: const Text('Add'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
           // Recurring chores list
-          if (_showRecurringChores)
-            ..._recurringChores.map((chore) {
-              final frequency = chore['frequency'] ?? 'weekly';
-              String frequencyText = 'Weekly';
-              String dayText = '';
-
-              switch (frequency.toLowerCase()) {
-                case 'daily':
-                  frequencyText = 'Daily';
-                  break;
-                case 'weekly':
-                  frequencyText = 'Weekly';
-                  dayText = '× Tuesday'; // Example, would come from DB
-                  break;
-                case 'monthly':
-                  frequencyText = 'Monthly';
-                  break;
-                case 'biweekly':
-                  frequencyText = 'Twice a week';
-                  dayText = '× Mon,Tue'; // Example, would come from DB
-                  break;
-              }
-
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 4,
-                ),
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.borderPrimary),
-                  ),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    leading: Container(
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey[400]!, width: 2),
-                      ),
-                    ),
-                    title: Text(
-                      chore['name'] ?? 'Untitled Chore',
-                      style: TextStyle(
-                        fontFamily: 'VarelaRound',
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textPrimary,
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '$frequencyText $dayText',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                            fontFamily: 'VarelaRound',
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(
-                            Icons.more_vert,
-                            color: AppColors.textSecondary,
-                            size: 16,
-                          ),
-                          onPressed: () {
-                            // Show chore options menu
-                          },
-                        ),
-                      ],
+          _recurringChores.isEmpty
+              ? Padding(
+                padding: const EdgeInsets.all(20),
+                child: Center(
+                  child: Text(
+                    'No recurring chores set up yet',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontFamily: 'VarelaRound',
                     ),
                   ),
                 ),
-              );
-            }).toList(),
+              )
+              : Container(
+                constraints: BoxConstraints(
+                  // Limit the height to make it a half-screen popup
+                  maxHeight: MediaQuery.of(context).size.height * 0.4,
+                ),
+                child: ListView.builder(
+                  itemCount: _recurringChores.length,
+                  shrinkWrap: true,
+                  padding: const EdgeInsets.only(bottom: 80),
+                  itemBuilder: (context, index) {
+                    final chore = _recurringChores[index];
+                    final frequency = chore['frequency'] ?? 'weekly';
+                    String frequencyText;
+                    String dayText = '';
+
+                    switch (frequency.toLowerCase()) {
+                      case 'daily':
+                        frequencyText = 'Daily';
+                        break;
+                      case 'weekly':
+                        frequencyText = 'Weekly';
+                        dayText = '× Tuesday';
+                        break;
+                      case 'monthly':
+                        frequencyText = 'Monthly';
+                        break;
+                      case 'biweekly':
+                        frequencyText = 'Twice a week';
+                        dayText = '× Mon,Tue';
+                        break;
+                      default:
+                        frequencyText = 'Weekly';
+                    }
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 4,
+                      ),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: Colors.grey[300]!),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 4,
+                          ),
+                          leading: Container(
+                            width: 24,
+                            height: 24,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.grey[400]!,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            chore['name'] ?? 'Untitled Chore',
+                            style: TextStyle(
+                              fontFamily: 'VarelaRound',
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '$frequencyText $dayText',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.textSecondary,
+                                  fontFamily: 'VarelaRound',
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  Icons.more_vert,
+                                  color: AppColors.textSecondary,
+                                  size: 16,
+                                ),
+                                onPressed: () {
+                                  // Show chore options menu
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
         ],
       ),
     );

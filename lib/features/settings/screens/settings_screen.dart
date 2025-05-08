@@ -152,6 +152,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         },
                       ),
                       const SizedBox(height: 12),
+
+                      // New - Schedule Item
+                      _buildNavigationItem(
+                        icon: Icons.calendar_today_outlined,
+                        title: 'Schedule',
+                        onTap: () {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ScheduleScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 12),
+
                       _buildNavigationItem(
                         icon: Icons.language,
                         title: 'Language',
@@ -223,6 +239,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => const MembersScreen(),
+                  ),
+                );
+              } else if (index == 2) {
+                // Navigate to Schedule
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ScheduleScreen(),
                   ),
                 );
               }
