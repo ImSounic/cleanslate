@@ -1,4 +1,4 @@
-// lib/data/repositories/chore_repository.dart
+// lib/features/chores/chores_repository.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChoreRepository {
@@ -50,7 +50,7 @@ class ChoreRepository {
         .from('chore_assignments')
         .select('*, chores(*)')
         .eq('assigned_to', userId)
-        .eq('status', 'pending')
+        // Removed the .eq('status', 'pending') filter to get all chores
         .order('due_date', ascending: true);
 
     return response;
@@ -81,6 +81,14 @@ class ChoreRepository {
           'status': 'completed',
           'completed_at': DateTime.now().toIso8601String(),
         })
+        .eq('id', assignmentId);
+  }
+
+  // Unmark a chore as complete (set back to pending)
+  Future<void> uncompleteChore(String assignmentId) async {
+    await _client
+        .from('chore_assignments')
+        .update({'status': 'pending', 'completed_at': null})
         .eq('id', assignmentId);
   }
 }

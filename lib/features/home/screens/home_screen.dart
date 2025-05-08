@@ -298,6 +298,184 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // Method to uncomplete a chore
+  Future<void> _uncompleteChore(String assignmentId) async {
+    try {
+      // Use the repository method instead of direct client access
+      await _choreRepository.uncompleteChore(assignmentId);
+
+      // Refresh chores list
+      _loadChores();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error uncompleting chore: $e')));
+      }
+    }
+  }
+
+  // Method to show task details overlay
+  void _showTaskDetailsOverlay(
+    Map<String, dynamic> chore,
+    Map<String, dynamic> assignment,
+  ) {
+    // Parse the description to look for to-do items
+    final description = chore['description'] as String? ?? '';
+    List<Map<String, dynamic>> todoItems = [];
+
+    // Extract to-do items from description if they follow the format "- [ ] Task" or "- [x] Task"
+    final todoRegex = RegExp(r'- \[([ x])\] (.+)');
+    final matches = todoRegex.allMatches(description);
+
+    for (final match in matches) {
+      final isCompleted = match.group(1) == 'x';
+      final taskText = match.group(2) ?? '';
+      todoItems.add({'text': taskText, 'completed': isCompleted});
+    }
+
+    // Clean description by removing to-do items
+    String cleanDescription = description;
+    if (todoItems.isNotEmpty) {
+      // If there are to-do items, remove them from the description
+      final todoStartIndex = description.indexOf('To-do items:');
+      if (todoStartIndex != -1) {
+        cleanDescription = description.substring(0, todoStartIndex).trim();
+      }
+    }
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Task Details header
+                Row(
+                  children: [
+                    SvgPicture.asset(
+                      'assets/images/icons/task_details.svg',
+                      height: 24,
+                      width: 24,
+                      colorFilter: ColorFilter.mode(
+                        AppColors.primary,
+                        BlendMode.srcIn,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Task Details',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                        fontFamily: 'Switzer',
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                // Task title and description
+                Text(
+                  chore['name'] ?? 'Untitled Task',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                    fontFamily: 'VarelaRound',
+                  ),
+                ),
+
+                if (cleanDescription.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    cleanDescription,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black54,
+                      fontFamily: 'VarelaRound',
+                    ),
+                  ),
+                ],
+
+                // To-do items if any
+                if (todoItems.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ...todoItems.map(
+                    (todo) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: Checkbox(
+                              value: todo['completed'],
+                              onChanged: null, // Read-only in overlay
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              activeColor: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              todo['text'],
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontFamily: 'VarelaRound',
+                                color: Colors.black87,
+                                decoration:
+                                    todo['completed']
+                                        ? TextDecoration.lineThrough
+                                        : null,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+
+                // User profile picture in bottom right
+                Align(
+                  alignment: Alignment.bottomRight,
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 16),
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: AppColors.avatarAmber,
+                      child: Text(
+                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: AppColors.textLight,
+                          fontFamily: 'VarelaRound',
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Extract first name from full name
@@ -822,7 +1000,11 @@ class _HomeScreenState extends State<HomeScreen>
           // LEFT COLUMN - Completion circle for the entire height
           GestureDetector(
             onTap: () {
-              if (!isCompleted) {
+              if (isCompleted) {
+                // If task is completed, allow unchecking
+                _uncompleteChore(assignment['id']);
+              } else {
+                // If task is pending, mark as complete
                 _completeChore(assignment['id']);
               }
             },
@@ -852,46 +1034,23 @@ class _HomeScreenState extends State<HomeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // TOP ROW - Title and description icon
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: Text(
-                        chore['name'] ?? 'Unnamed Chore',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          fontFamily: 'Switzer',
-                          color: AppColors.textPrimary,
-                          decoration:
-                              isCompleted ? TextDecoration.lineThrough : null,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-
-                    // Description icon moved directly next to title
-                    if (hasDescription)
-                      Padding(
-                        padding: const EdgeInsets.only(left: 4),
-                        child: SvgPicture.asset(
-                          'assets/images/icons/scroll_description.svg',
-                          height: 14,
-                          width: 14,
-                          colorFilter: ColorFilter.mode(
-                            AppColors.textPrimary,
-                            BlendMode.srcIn,
-                          ),
-                        ),
-                      ),
-                  ],
+                // TOP ROW - Title only (description icon moved down)
+                Text(
+                  chore['name'] ?? 'Unnamed Chore',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    fontFamily: 'Switzer',
+                    color: AppColors.textPrimary,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
 
                 const SizedBox(height: 8),
 
-                // ASSIGNEE ROW - Just first name
+                // ASSIGNEE ROW - Including first name and description icon
                 Row(
                   children: [
                     Text(
@@ -924,6 +1083,27 @@ class _HomeScreenState extends State<HomeScreen>
                         color: AppColors.textSecondary,
                       ),
                     ),
+
+                    // Description icon moved here after assignee first name
+                    if (hasDescription)
+                      GestureDetector(
+                        onTap: () {
+                          // Show the task details overlay when icon is tapped
+                          _showTaskDetailsOverlay(chore, assignment);
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 8),
+                          child: SvgPicture.asset(
+                            'assets/images/icons/scroll_description.svg',
+                            height: 14,
+                            width: 14,
+                            colorFilter: ColorFilter.mode(
+                              AppColors.textPrimary,
+                              BlendMode.srcIn,
+                            ),
+                          ),
+                        ),
+                      ),
                   ],
                 ),
 
@@ -1018,6 +1198,8 @@ class _HomeScreenState extends State<HomeScreen>
     Map<String, dynamic> assignment,
     Map<String, dynamic> chore,
   ) {
+    final isCompleted = assignment['status'] == 'completed';
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -1037,13 +1219,25 @@ class _HomeScreenState extends State<HomeScreen>
                   // Navigate to edit chore screen
                 },
               ),
-              if (assignment['status'] != 'completed')
+              if (!isCompleted)
                 ListTile(
                   leading: Icon(Icons.check_circle, color: AppColors.primary),
                   title: const Text('Mark as Complete'),
                   onTap: () {
                     Navigator.pop(context);
                     _completeChore(assignment['id']);
+                  },
+                ),
+              if (isCompleted)
+                ListTile(
+                  leading: Icon(
+                    Icons.radio_button_unchecked,
+                    color: AppColors.primary,
+                  ),
+                  title: const Text('Mark as Pending'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _uncompleteChore(assignment['id']);
                   },
                 ),
               ListTile(
