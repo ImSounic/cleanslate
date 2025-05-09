@@ -1,4 +1,6 @@
 // lib/features/home/screens/home_screen.dart
+// Updated with proper chore deletion functionality
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
@@ -347,17 +349,19 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  // Method to delete a chore assignment
-  Future<void> _deleteChore(String assignmentId) async {
+  // Updated: Method to delete a chore by its ID, not just the assignment
+  Future<void> _deleteChore(String choreId, String assignmentId) async {
     try {
       // Show loading indicator
       setState(() {
         _isLoading = true;
       });
 
-      // Call the delete method - Note: This function doesn't exist in the repository
-      // You would need to implement it in the ChoreRepository class
+      // First delete the assignment
       await _choreRepository.deleteChoreAssignment(assignmentId);
+
+      // Then delete the chore from the chores table
+      await _choreRepository.deleteChore(choreId);
 
       // Refresh chores list after deletion
       await _loadChores();
@@ -377,6 +381,12 @@ class _HomeScreenState extends State<HomeScreen>
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error deleting chore: $e')));
+      }
+    } finally {
+      if (mounted && _isLoading) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -1498,7 +1508,7 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _confirmDeleteChore(assignment['id']);
+                  _confirmDeleteChore(chore['id'], assignment['id']);
                 },
               ),
             ],
@@ -1508,8 +1518,8 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Add confirmation dialog for chore deletion
-  void _confirmDeleteChore(String assignmentId) {
+  // Updated: Confirmation dialog now passes chore ID as well
+  void _confirmDeleteChore(String choreId, String assignmentId) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -1551,7 +1561,7 @@ class _HomeScreenState extends State<HomeScreen>
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _deleteChore(assignmentId);
+                _deleteChore(choreId, assignmentId);
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
               child: const Text('Delete'),

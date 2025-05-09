@@ -114,16 +114,14 @@ class ChoreRepository {
   Future<void> deleteChore(String choreId) async {
     try {
       // Start a transaction to ensure both operations complete
-      await _client.rpc(
-        'delete_chore_and_assignments',
-        params: {'chore_id': choreId},
-      );
-    } catch (e) {
-      // If RPC fails or isn't available, fallback to sequential operations
-      // 1. Delete all assignments for this chore
+      // First delete all assignments related to this chore
       await _client.from('chore_assignments').delete().eq('chore_id', choreId);
-      // 2. Delete the chore itself
+
+      // Then delete the chore itself
       await _client.from('chores').delete().eq('id', choreId);
+    } catch (e) {
+      // If operation fails, throw a more descriptive exception
+      throw Exception('Failed to delete chore: $e');
     }
   }
 
@@ -147,5 +145,41 @@ class ChoreRepository {
         .from('chore_assignments')
         .update(updates)
         .eq('id', assignmentId);
+  }
+
+  // Get a chore by ID
+  Future<Map<String, dynamic>?> getChoreById(String choreId) async {
+    try {
+      final response =
+          await _client
+              .from('chores')
+              .select('*')
+              .eq('id', choreId)
+              .maybeSingle();
+
+      return response;
+    } catch (e) {
+      throw Exception('Failed to fetch chore: $e');
+    }
+  }
+
+  // Update chore details
+  Future<void> updateChore({
+    required String choreId,
+    String? name,
+    String? description,
+    int? estimatedDuration,
+    String? frequency,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (name != null) updates['name'] = name;
+    if (description != null) updates['description'] = description;
+    if (estimatedDuration != null)
+      updates['estimated_duration'] = estimatedDuration;
+    if (frequency != null) updates['frequency'] = frequency;
+
+    if (updates.isEmpty) return; // No updates to make
+
+    await _client.from('chores').update(updates).eq('id', choreId);
   }
 }
