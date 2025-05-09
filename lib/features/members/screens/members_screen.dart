@@ -1336,17 +1336,11 @@ class _MembersScreenState extends State<MembersScreen> {
         // SVG image of people moving boxes - smaller height
         SvgPicture.asset(
           'assets/images/no_members.svg', // Adjust path as needed
-          height: 280, // Reduced from 392 to make it smaller
-          colorFilter:
-              isDarkMode
-                  ? ColorFilter.mode(
-                    Colors.white.withOpacity(0.8),
-                    BlendMode.srcIn,
-                  )
-                  : null,
+          height: 270, // Reduced from 392 to make it smaller
+          // Removed color filter so SVG appears the same in both light and dark mode
           fit: BoxFit.contain,
         ),
-        const SizedBox(height: 12), // Reduced spacing between SVG and text
+        const SizedBox(height: 10), // Reduced spacing between SVG and text
         Text(
           'Add your Flatmates by sharing',
           style: TextStyle(

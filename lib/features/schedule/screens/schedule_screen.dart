@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
-import 'package:cleanslate/data/services/supabase_service.dart'; // Add this import
+import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
@@ -22,13 +23,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     with SingleTickerProviderStateMixin {
   final _choreRepository = ChoreRepository();
   final _householdService = HouseholdService();
-  final _supabaseService = SupabaseService(); // Add SupabaseService
+  final _supabaseService = SupabaseService();
 
   // View mode: 0 for week, 1 for month
   int _viewMode = 0;
   bool _isLoading = true;
   bool _showRecurringChores = false;
-  String _userName = ''; // Make it non-final and initialize empty
+  String _userName = '';
   int _selectedNavIndex = 2; // Schedule tab selected
 
   // List to store regular and recurring chores
@@ -54,7 +55,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   @override
   void initState() {
     super.initState();
-    _loadUserData(); // Load user data
+    _loadUserData();
     _loadChores();
 
     // Initialize animation controller for bottom sheet
@@ -282,8 +283,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
   @override
   Widget build(BuildContext context) {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor:
+          isDarkMode ? AppColors.backgroundDark : AppColors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -300,7 +305,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         onTap: () => Navigator.pop(context),
                         child: Icon(
                           Icons.arrow_back_ios,
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
                           size: 20,
                         ),
                       ),
@@ -310,7 +318,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         style: TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
                           fontFamily: 'Switzer',
                         ),
                       ),
@@ -323,7 +334,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.grey[200],
+                      color:
+                          isDarkMode
+                              ? AppColors.surfaceDark.withOpacity(0.6)
+                              : Colors.grey[200],
                       borderRadius: BorderRadius.circular(30),
                     ),
                     child: Row(
@@ -336,7 +350,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               decoration: BoxDecoration(
                                 color:
                                     _viewMode == 0
-                                        ? Colors.white
+                                        ? isDarkMode
+                                            ? AppColors.surfaceDark
+                                            : Colors.white
                                         : Colors.transparent,
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -346,7 +362,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   Text(
                                     'Week',
                                     style: TextStyle(
-                                      color: AppColors.primary,
+                                      color:
+                                          isDarkMode
+                                              ? AppColors.textPrimaryDark
+                                              : AppColors.primary,
                                       fontWeight: FontWeight.w500,
                                       fontFamily: 'Switzer',
                                     ),
@@ -354,7 +373,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   const SizedBox(width: 8),
                                   Icon(
                                     Icons.calendar_today,
-                                    color: AppColors.primary,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.primary,
                                     size: 16,
                                   ),
                                 ],
@@ -370,7 +392,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               decoration: BoxDecoration(
                                 color:
                                     _viewMode == 1
-                                        ? Colors.white
+                                        ? isDarkMode
+                                            ? AppColors.surfaceDark
+                                            : Colors.white
                                         : Colors.transparent,
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -380,7 +404,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   Text(
                                     'Month',
                                     style: TextStyle(
-                                      color: AppColors.primary,
+                                      color:
+                                          isDarkMode
+                                              ? AppColors.textPrimaryDark
+                                              : AppColors.primary,
                                       fontWeight: FontWeight.w500,
                                       fontFamily: 'Switzer',
                                     ),
@@ -388,7 +415,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   const SizedBox(width: 8),
                                   Icon(
                                     Icons.calendar_month,
-                                    color: AppColors.primary,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.primary,
                                     size: 16,
                                   ),
                                 ],
@@ -404,7 +434,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 const SizedBox(height: 16),
 
                 // Calendar view (weekly or monthly)
-                _viewMode == 0 ? _buildWeekView() : _buildMonthView(),
+                _viewMode == 0
+                    ? _buildWeekView(isDarkMode)
+                    : _buildMonthView(isDarkMode),
 
                 const SizedBox(height: 16),
 
@@ -420,7 +452,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
                           fontFamily: 'Switzer',
                         ),
                       ),
@@ -430,7 +465,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
@@ -450,10 +488,17 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 Expanded(
                   child:
                       _isLoading
-                          ? const Center(child: CircularProgressIndicator())
+                          ? Center(
+                            child: CircularProgressIndicator(
+                              color:
+                                  isDarkMode
+                                      ? AppColors.primaryDark
+                                      : AppColors.primary,
+                            ),
+                          )
                           : ListView(
                             padding: const EdgeInsets.only(bottom: 100),
-                            children: _buildChoresList(),
+                            children: _buildChoresList(isDarkMode),
                           ),
                 ),
               ],
@@ -471,7 +516,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       _showRecurringChores
                           ? Transform.translate(
                             offset: Offset(0, (1 - _animation.value) * 300),
-                            child: _buildRecurringChoresCard(),
+                            child: _buildRecurringChoresCard(isDarkMode),
                           )
                           : Container(),
                 );
@@ -487,7 +532,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 child: Center(
                   child: FloatingActionButton(
                     onPressed: _toggleRecurringChores,
-                    backgroundColor: AppColors.primary,
+                    backgroundColor:
+                        isDarkMode ? AppColors.primaryDark : AppColors.primary,
                     elevation: 4.0,
                     child: Icon(Icons.keyboard_arrow_up, color: Colors.white),
                   ),
@@ -498,7 +544,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedNavIndex,
@@ -532,11 +583,16 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             }
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.navSelected,
-          unselectedItemColor: AppColors.navUnselected,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          backgroundColor: AppColors.background,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
           elevation: 0,
           items: [
             BottomNavigationBarItem(
@@ -546,8 +602,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 0
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -560,8 +620,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 1
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -574,12 +638,16 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 2
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
-              label: 'Schedule',
+              label: 'Calendar',
             ),
             BottomNavigationBarItem(
               icon: SvgPicture.asset(
@@ -588,8 +656,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 3
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -601,7 +673,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
-  Widget _buildWeekView() {
+  Widget _buildWeekView(bool isDarkMode) {
     final days = List.generate(7, (index) {
       return _weekStart.add(Duration(days: index));
     });
@@ -613,7 +685,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             IconButton(
-              icon: Icon(Icons.navigate_before, color: AppColors.primary),
+              icon: Icon(
+                Icons.navigate_before,
+                color:
+                    isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+              ),
               onPressed: _navigatePrevious,
             ),
             Text(
@@ -621,11 +697,18 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
-                color: AppColors.textSecondary, // Changed to secondary color
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
               ),
             ),
             IconButton(
-              icon: Icon(Icons.navigate_next, color: AppColors.primary),
+              icon: Icon(
+                Icons.navigate_next,
+                color:
+                    isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+              ),
               onPressed: _navigateNext,
             ),
           ],
@@ -654,7 +737,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   width: 40,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.primary : Colors.transparent,
+                    color:
+                        isSelected
+                            ? (isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary)
+                            : Colors.transparent,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -664,7 +752,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         dayName,
                         style: TextStyle(
                           color:
-                              isSelected ? Colors.white : AppColors.textPrimary,
+                              isSelected
+                                  ? Colors.white
+                                  : (isDarkMode
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary),
                           fontFamily: 'VarelaRound',
                           fontSize: 14,
                         ),
@@ -677,8 +769,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               isSelected
                                   ? Colors.white
                                   : (isToday
-                                      ? AppColors.primary
-                                      : AppColors.textPrimary),
+                                      ? (isDarkMode
+                                          ? AppColors.primaryDark
+                                          : AppColors.primary)
+                                      : (isDarkMode
+                                          ? AppColors.textPrimaryDark
+                                          : AppColors.textPrimary)),
                           fontWeight:
                               isToday || isSelected
                                   ? FontWeight.bold
@@ -698,7 +794,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
-  Widget _buildMonthView() {
+  Widget _buildMonthView(bool isDarkMode) {
     final year = _selectedDate.year;
     final month = _selectedDate.month;
     final firstDayOfMonth = DateTime(year, month, 1);
@@ -717,9 +813,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       padding: const EdgeInsets.all(16),
       margin: const EdgeInsets.symmetric(horizontal: 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDarkMode ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey[300]!),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : Colors.grey[300]!,
+        ),
       ),
       child: Column(
         children: [
@@ -732,20 +830,35 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
-                  color: AppColors.primary,
+                  color:
+                      isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.primary,
                 ),
               ),
               Row(
                 children: [
                   IconButton(
-                    icon: Icon(Icons.chevron_left, color: AppColors.primary),
+                    icon: Icon(
+                      Icons.chevron_left,
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.primary,
+                    ),
                     onPressed: _navigatePrevious,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
                   const SizedBox(width: 20),
                   IconButton(
-                    icon: Icon(Icons.chevron_right, color: AppColors.primary),
+                    icon: Icon(
+                      Icons.chevron_right,
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.primary,
+                    ),
                     onPressed: _navigateNext,
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
@@ -767,7 +880,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     child: Text(
                       day,
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
                         fontSize: 12,
                         fontFamily: 'VarelaRound',
                       ),
@@ -806,7 +922,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       height: 32,
                       decoration: BoxDecoration(
                         color:
-                            isSelected ? AppColors.primary : Colors.transparent,
+                            isSelected
+                                ? (isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary)
+                                : Colors.transparent,
                         shape: BoxShape.circle,
                       ),
                       child: Center(
@@ -815,12 +935,18 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           style: TextStyle(
                             color:
                                 !isCurrentMonth
-                                    ? Colors.grey[400]
+                                    ? (isDarkMode
+                                        ? Colors.grey[700]
+                                        : Colors.grey[400])
                                     : (isSelected
                                         ? Colors.white
                                         : (isToday
-                                            ? AppColors.primary
-                                            : AppColors.textPrimary)),
+                                            ? (isDarkMode
+                                                ? AppColors.primaryDark
+                                                : AppColors.primary)
+                                            : (isDarkMode
+                                                ? AppColors.textPrimaryDark
+                                                : AppColors.textPrimary))),
                             fontWeight:
                                 isToday || isSelected
                                     ? FontWeight.bold
@@ -840,7 +966,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     );
   }
 
-  List<Widget> _buildChoresList() {
+  List<Widget> _buildChoresList(bool isDarkMode) {
     final displayedChores =
         _chores.where((chore) {
           // Filter chores by selected date if needed
@@ -872,7 +998,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             child: Text(
               'No chores scheduled for this day',
               style: TextStyle(
-                color: AppColors.textSecondary,
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
                 fontFamily: 'VarelaRound',
               ),
             ),
@@ -908,7 +1037,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.borderPrimary),
+            border: Border.all(
+              color:
+                  isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+            ),
+            color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
           ),
           child: ListTile(
             contentPadding: const EdgeInsets.symmetric(
@@ -927,10 +1060,22 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: isCompleted ? AppColors.primary : Colors.grey[400]!,
+                    color:
+                        isCompleted
+                            ? (isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary)
+                            : (isDarkMode
+                                ? AppColors.borderDark
+                                : Colors.grey[400]!),
                     width: 2,
                   ),
-                  color: isCompleted ? AppColors.primary : Colors.transparent,
+                  color:
+                      isCompleted
+                          ? (isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary)
+                          : Colors.transparent,
                 ),
                 child:
                     isCompleted
@@ -943,7 +1088,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               style: TextStyle(
                 fontFamily: 'VarelaRound',
                 fontWeight: FontWeight.w500,
-                color: AppColors.textPrimary,
+                color:
+                    isDarkMode
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
                 decoration: isCompleted ? TextDecoration.lineThrough : null,
               ),
             ),
@@ -955,14 +1103,20 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     Icon(
                       Icons.access_time,
                       size: 16,
-                      color: AppColors.textSecondary,
+                      color:
+                          isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                     ),
                     const SizedBox(width: 4),
                     Text(
                       dueDate != null ? _formatDate(dueDate) : 'No due date',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -975,7 +1129,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: priorityColor),
                   ),
@@ -1002,7 +1156,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 IconButton(
                   icon: Icon(
                     Icons.more_vert,
-                    color: AppColors.textSecondary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                     size: 16,
                   ),
                   onPressed: () {
@@ -1018,19 +1175,18 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   // Build the recurring chores card as a half-screen popup with drag to close
-  Widget _buildRecurringChoresCard() {
+  Widget _buildRecurringChoresCard(bool isDarkMode) {
     return GestureDetector(
       onVerticalDragStart: _handleDragStart,
       onVerticalDragUpdate: _handleDragUpdate,
       onVerticalDragEnd: _handleDragEnd,
       child: Container(
         decoration: BoxDecoration(
-          color: AppColors.background,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(30),
-            topRight: Radius.circular(30),
+          color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          border: Border.all(
+            color: isDarkMode ? AppColors.borderDark : AppColors.primary,
           ),
-          border: Border.all(color: AppColors.primary),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1041,7 +1197,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
               width: 60,
               height: 5,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
@@ -1059,12 +1215,22 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
                           fontFamily: 'Switzer',
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Icon(Icons.sync, color: AppColors.primary, size: 20),
+                      Icon(
+                        Icons.sync,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                        size: 20,
+                      ),
                     ],
                   ),
                   ElevatedButton.icon(
@@ -1082,7 +1248,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                       style: TextStyle(color: Colors.white),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor:
+                          isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -1104,7 +1273,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     child: Text(
                       'No recurring chores set up yet',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -1152,7 +1324,16 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.primary),
+                            border: Border.all(
+                              color:
+                                  isDarkMode
+                                      ? AppColors.primaryDark
+                                      : AppColors.primary,
+                            ),
+                            color:
+                                isDarkMode
+                                    ? AppColors.backgroundDark
+                                    : Colors.white,
                           ),
                           child: ListTile(
                             contentPadding: const EdgeInsets.symmetric(
@@ -1165,7 +1346,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.grey[400]!,
+                                  color:
+                                      isDarkMode
+                                          ? AppColors.borderDark
+                                          : Colors.grey[400]!,
                                   width: 2,
                                 ),
                               ),
@@ -1175,7 +1359,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               style: TextStyle(
                                 fontFamily: 'VarelaRound',
                                 fontWeight: FontWeight.w500,
-                                color: AppColors.textPrimary,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
                               ),
                             ),
                             trailing: Row(
@@ -1185,14 +1372,20 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   '$frequencyText $dayText',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.textSecondary,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
                                     fontFamily: 'VarelaRound',
                                   ),
                                 ),
                                 IconButton(
                                   icon: Icon(
                                     Icons.more_vert,
-                                    color: AppColors.textSecondary,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.textSecondaryDark
+                                            : AppColors.textSecondary,
                                     size: 16,
                                   ),
                                   onPressed: () {
