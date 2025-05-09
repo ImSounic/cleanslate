@@ -2,6 +2,8 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -18,7 +20,8 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  final bool _acceptedTerms = false;
+  bool _acceptedTerms = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -29,7 +32,16 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (!_formKey.currentState!.validate() || !_acceptedTerms) return;
+    if (!_formKey.currentState!.validate() || !_acceptedTerms) {
+      if (!_acceptedTerms) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('You must accept the terms and conditions'),
+          ),
+        );
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -67,13 +79,18 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFF0D2E52), Color(0xFF2185D0)],
+            colors:
+                isDarkMode
+                    ? AppColors.authGradientDark
+                    : AppColors.authGradient,
           ),
         ),
         child: SafeArea(
@@ -131,7 +148,15 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _passwordController,
                     label: 'Password',
                     isPassword: true,
-                    suffixIcon: Icons.lock_outline,
+                    suffixIcon:
+                        _obscurePassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                    onSuffixTap: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a password';
@@ -143,6 +168,45 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
+
+                  // Terms and conditions checkbox
+                  Row(
+                    children: [
+                      Theme(
+                        data: Theme.of(
+                          context,
+                        ).copyWith(unselectedWidgetColor: Colors.white70),
+                        child: Checkbox(
+                          value: _acceptedTerms,
+                          onChanged: (value) {
+                            setState(() {
+                              _acceptedTerms = value ?? false;
+                            });
+                          },
+                          checkColor: AppColors.primary,
+                          fillColor: MaterialStateProperty.resolveWith<Color>(
+                            (states) => Colors.white,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _acceptedTerms = !_acceptedTerms;
+                            });
+                          },
+                          child: const Text(
+                            'I accept the Terms & Conditions',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 24),
+
                   GestureDetector(
                     onTap: () {
                       // Show terms and conditions
@@ -198,6 +262,7 @@ class _SignupScreenState extends State<SignupScreen> {
     required String label,
     IconData? suffixIcon,
     bool isPassword = false,
+    VoidCallback? onSuffixTap,
     required String? Function(String?) validator,
   }) {
     return Column(
@@ -207,7 +272,7 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword && _obscurePassword,
           validator: validator,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
@@ -226,8 +291,12 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             suffixIcon:
                 suffixIcon != null
-                    ? Icon(suffixIcon, color: Colors.white)
+                    ? GestureDetector(
+                      onTap: onSuffixTap,
+                      child: Icon(suffixIcon, color: Colors.white),
+                    )
                     : null,
+            errorStyle: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ),
       ],

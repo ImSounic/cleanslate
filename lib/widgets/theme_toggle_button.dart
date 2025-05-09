@@ -5,7 +5,11 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 
 class ThemeToggleButton extends StatefulWidget {
-  const ThemeToggleButton({Key? key}) : super(key: key);
+  final double width;
+  final double height;
+
+  const ThemeToggleButton({Key? key, this.width = 64, this.height = 32})
+    : super(key: key);
 
   @override
   State<ThemeToggleButton> createState() => _ThemeToggleButtonState();
@@ -67,11 +71,11 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton>
         }
       },
       child: Container(
-        height: 32,
-        width: 64,
+        height: widget.height,
+        width: widget.width,
         decoration: BoxDecoration(
           color: isDarkMode ? AppColors.surfaceDark : AppColors.primary,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(widget.height / 2),
         ),
         padding: const EdgeInsets.all(2),
         child: AnimatedBuilder(
@@ -81,10 +85,13 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton>
               children: [
                 // Sliding circle background
                 Transform.translate(
-                  offset: Offset(_animation.value * 32, 0),
+                  offset: Offset(
+                    _animation.value * (widget.width - widget.height + 4),
+                    0,
+                  ),
                   child: Container(
-                    width: 28,
-                    height: 28,
+                    width: widget.height - 4,
+                    height: widget.height - 4,
                     decoration: BoxDecoration(
                       color:
                           isDarkMode
@@ -97,7 +104,7 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton>
                 // Light mode icon
                 Positioned(
                   left: 6,
-                  top: 6,
+                  top: widget.height / 2 - 8,
                   child: Opacity(
                     opacity: 1 - _animation.value,
                     child: Icon(
@@ -110,7 +117,7 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton>
                 // Dark mode icon
                 Positioned(
                   right: 6,
-                  top: 6,
+                  top: widget.height / 2 - 8,
                   child: Opacity(
                     opacity: _animation.value,
                     child: Icon(

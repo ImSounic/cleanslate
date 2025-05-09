@@ -1,9 +1,12 @@
 // lib/features/auth/screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:cleanslate/features/auth/screens/forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +21,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _supabaseService = SupabaseService();
   final _householdService = HouseholdService();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -62,12 +66,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors:
+                isDarkMode
+                    ? AppColors.authGradientDark
+                    : AppColors.authGradient,
+          ),
           image: DecorationImage(
-            image: AssetImage('assets/images/background.png'),
+            image: const AssetImage('assets/images/background.png'),
             fit: BoxFit.cover,
+            opacity: isDarkMode ? 0.5 : 1.0, // Reduce opacity in dark mode
           ),
         ),
         child: SafeArea(
@@ -101,7 +116,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _passwordController,
                   label: 'Password',
                   isPassword: true,
-                  suffixIcon: Icons.lock_outline,
+                  suffixIcon:
+                      _obscurePassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                  onSuffixTap: () {
+                    setState(() {
+                      _obscurePassword = !_obscurePassword;
+                    });
+                  },
                 ),
                 const SizedBox(height: 24),
                 const Center(
@@ -139,7 +162,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 Center(
                   child: TextButton(
                     onPressed: () {
-                      // Handle forgot password
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const ForgotPasswordScreen(),
+                        ),
+                      );
                     },
                     child: const Text(
                       'Forgot Password?',
@@ -179,6 +206,7 @@ class _LoginScreenState extends State<LoginScreen> {
     required String label,
     IconData? suffixIcon,
     bool isPassword = false,
+    VoidCallback? onSuffixTap,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -187,7 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          obscureText: isPassword,
+          obscureText: isPassword && _obscurePassword,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
             contentPadding: EdgeInsets.zero,
@@ -199,7 +227,10 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             suffixIcon:
                 suffixIcon != null
-                    ? Icon(suffixIcon, color: Colors.white)
+                    ? GestureDetector(
+                      onTap: onSuffixTap,
+                      child: Icon(suffixIcon, color: Colors.white),
+                    )
                     : null,
           ),
         ),

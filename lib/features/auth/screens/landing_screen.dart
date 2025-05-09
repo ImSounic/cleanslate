@@ -1,6 +1,11 @@
+// lib/features/auth/screens/landing_screen.dart
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/auth/screens/signup_screen.dart';
 
@@ -9,12 +14,24 @@ class LandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Access the theme provider
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors:
+                isDarkMode
+                    ? AppColors.authGradientDark
+                    : AppColors.authGradient,
+          ),
           image: DecorationImage(
             image: AssetImage('assets/images/background.png'),
             fit: BoxFit.cover,
+            opacity: isDarkMode ? 0.5 : 1.0, // Reduce opacity in dark mode
           ),
         ),
         child: SafeArea(

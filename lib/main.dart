@@ -52,7 +52,6 @@ class _MyAppState extends State<MyApp> {
     _initializeApp();
   }
 
-  // lib/main.dart - Update the _initializeApp method
   Future<void> _initializeApp() async {
     setState(() {
       _isLoading = true;

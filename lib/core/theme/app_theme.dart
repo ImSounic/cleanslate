@@ -30,10 +30,57 @@ class AppTheme {
         foregroundColor: AppColors.tabInactive,
       ),
     ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.textLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    iconTheme: IconThemeData(color: AppColors.iconPrimary),
+    dialogTheme: DialogTheme(
+      backgroundColor: AppColors.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.primary,
+      elevation: 0,
+      iconTheme: IconThemeData(color: AppColors.primary),
+      titleTextStyle: TextStyle(
+        color: AppColors.primary,
+        fontFamily: 'Switzer',
+        fontWeight: FontWeight.bold,
+        fontSize: 20,
+      ),
+    ),
+    cardTheme: CardTheme(
+      color: AppColors.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.border),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: AppColors.surface,
+      filled: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.primary),
+      ),
+    ),
     fontFamily: 'VarelaRound',
   );
 
-  // New dark theme
+  // Dark theme
   static ThemeData darkTheme = ThemeData(
     primaryColor: AppColors.primaryDark,
     scaffoldBackgroundColor: AppColors.backgroundDark,
@@ -62,9 +109,57 @@ class AppTheme {
         foregroundColor: AppColors.tabInactiveDark,
       ),
     ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.textLight,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    ),
+    iconTheme: IconThemeData(color: AppColors.iconPrimaryDark),
+    dialogTheme: DialogTheme(
+      backgroundColor: AppColors.surfaceDark,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+    ),
+    appBarTheme: AppBarTheme(
+      backgroundColor: AppColors.backgroundDark,
+      foregroundColor: AppColors.textPrimaryDark,
+      elevation: 0,
+      iconTheme: IconThemeData(color: AppColors.textPrimaryDark),
+      titleTextStyle: TextStyle(
+        color: AppColors.textPrimaryDark,
+        fontFamily: 'Switzer',
+        fontWeight: FontWeight.bold,
+        fontSize: 20,
+      ),
+    ),
+    cardTheme: CardTheme(
+      color: AppColors.surfaceDark,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: AppColors.borderDark),
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      fillColor: AppColors.surfaceDark,
+      filled: true,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.borderDark),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.borderDark),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.primaryDark),
+      ),
+      hintStyle: TextStyle(color: AppColors.textSecondaryDark),
+      labelStyle: TextStyle(color: AppColors.textSecondaryDark),
+    ),
     dividerColor: AppColors.dividerDark,
     dialogBackgroundColor: AppColors.surfaceDark,
-    cardColor: AppColors.surfaceDark,
     textTheme: TextTheme(
       // Apply the text colors for dark theme
       bodyLarge: TextStyle(color: AppColors.textPrimaryDark),

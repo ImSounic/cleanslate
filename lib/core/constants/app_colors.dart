@@ -101,6 +101,12 @@ class AppColors {
     Color(0xFF2185D0), // Light blue
   ];
 
+  // Dark mode auth gradient
+  static const List<Color> authGradientDark = [
+    Color(0xFF151A2C), // Darker blue
+    Color(0xFF1E2642), // Dark purple-blue
+  ];
+
   // Helper methods for opacity variations
   static Color withOpacity(Color color, double opacity) {
     return color.withOpacity(opacity);
