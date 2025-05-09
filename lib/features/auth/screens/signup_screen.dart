@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/features/auth/screens/otp_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -48,28 +49,34 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      await _supabaseService.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-        userData: {'full_name': _nameController.text.trim()},
-      );
+      final email = _emailController.text.trim();
+
+      // Send OTP for verification
+      await _supabaseService.sendEmailOtp(email: email);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Check your email to confirm your account'),
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Store user data to save after verification
+        final userData = {'full_name': _nameController.text.trim()};
+
+        // Navigate to OTP verification screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) =>
+                    OtpVerificationScreen(email: email, userData: userData),
           ),
         );
-        Navigator.pop(context);
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${error.toString()}')));
-      }
-    } finally {
-      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -116,6 +123,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   const SizedBox(height: 40),
+
                   _buildTextField(
                     controller: _nameController,
                     label: 'Full Name',
@@ -127,9 +135,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
+
                   _buildTextField(
                     controller: _emailController,
-                    label: 'Email Address/Phone Number',
+                    label: 'Email Address',
                     suffixIcon: Icons.email_outlined,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -143,6 +152,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       return null;
                     },
                   ),
+
                   const SizedBox(height: 20),
                   _buildTextField(
                     controller: _passwordController,
@@ -263,6 +273,7 @@ class _SignupScreenState extends State<SignupScreen> {
     IconData? suffixIcon,
     bool isPassword = false,
     VoidCallback? onSuffixTap,
+    TextInputType? keyboardType,
     required String? Function(String?) validator,
   }) {
     return Column(
@@ -273,6 +284,7 @@ class _SignupScreenState extends State<SignupScreen> {
         TextFormField(
           controller: controller,
           obscureText: isPassword && _obscurePassword,
+          keyboardType: keyboardType,
           validator: validator,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(

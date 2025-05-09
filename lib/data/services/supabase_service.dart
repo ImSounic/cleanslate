@@ -163,6 +163,52 @@ class SupabaseService {
     }
   }
 
+  // Send OTP to email or phone
+  Future<void> sendOtp({
+    required String contactInfo,
+    required bool isEmail,
+  }) async {
+    try {
+      if (isEmail) {
+        // Send email OTP
+        await client.auth.signInWithOtp(email: contactInfo);
+      } else {
+        // Send phone OTP
+        await client.auth.signInWithOtp(phone: contactInfo);
+      }
+    } catch (e) {
+      throw Exception('Failed to send verification code: $e');
+    }
+  }
+
+  // Verify OTP
+  // Add these methods to lib/data/services/supabase_service.dart
+  // These should be added within the SupabaseService class
+
+  // Send OTP to email
+  Future<void> sendEmailOtp({required String email}) async {
+    try {
+      await client.auth.signInWithOtp(email: email);
+    } catch (e) {
+      throw Exception('Failed to send verification code: $e');
+    }
+  }
+
+  // Verify OTP
+  Future<bool> verifyOtp({required String email, required String otp}) async {
+    try {
+      final AuthResponse response = await client.auth.verifyOTP(
+        email: email,
+        token: otp,
+        type: OtpType.signup,
+      );
+
+      return response.session != null;
+    } catch (e) {
+      throw Exception('Failed to verify code: $e');
+    }
+  }
+
   // Check if user is logged in
   bool get isAuthenticated => client.auth.currentUser != null;
 
