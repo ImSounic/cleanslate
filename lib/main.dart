@@ -1,3 +1,4 @@
+// lib/main.dart
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
@@ -20,6 +22,9 @@ Future<void> main() async {
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
+
+  // Initialize notification service
+  await NotificationService().initialize();
 
   runApp(const MyApp());
 }
@@ -55,6 +60,9 @@ class _MyAppState extends State<MyApp> {
       // Initialize household data if user is logged in
       try {
         await _householdService.initializeHousehold();
+
+        // Check for notifications
+        await NotificationService().checkNotifications();
       } catch (e) {
         print('Error initializing household: $e');
         // Continue even if household initialization fails

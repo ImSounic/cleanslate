@@ -10,6 +10,8 @@ import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
+import 'package:cleanslate/data/repositories/notification_repository.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
