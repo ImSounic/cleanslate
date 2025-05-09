@@ -11,6 +11,7 @@ import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/navigation_provider.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -282,8 +283,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Check if dark mode is enabled
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Use direct provider access to rebuild when theme changes
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
 
     // Get the navigation provider
     final navigationProvider = Provider.of<NavigationProvider>(context);

@@ -65,11 +65,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Access the theme provider to check if dark mode is enabled
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Always listen to theme provider changes
     final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
 
-    // Access the NavigationProvider
+    // Get the navigation provider
     final navigationProvider = Provider.of<NavigationProvider>(
       context,
       listen: false,
