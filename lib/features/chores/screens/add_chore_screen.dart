@@ -1,6 +1,7 @@
 // lib/features/chores/screens/add_chore_screen.dart
 import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
@@ -205,6 +206,9 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _dueDate,
@@ -213,7 +217,17 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: AppColors.primary),
+            colorScheme: ColorScheme.light(
+              primary: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+              onPrimary: Colors.white,
+              surface: isDarkMode ? AppColors.surfaceDark : Colors.white,
+              onSurface:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+            dialogBackgroundColor:
+                isDarkMode ? AppColors.backgroundDark : Colors.white,
           ),
           child: child!,
         );
@@ -227,13 +241,26 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   }
 
   Future<void> _selectTime(BuildContext context) async {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: _dueTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: ColorScheme.light(primary: AppColors.primary),
+            colorScheme: ColorScheme.light(
+              primary: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+              onPrimary: Colors.white,
+              surface: isDarkMode ? AppColors.surfaceDark : Colors.white,
+              onSurface:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+            dialogBackgroundColor:
+                isDarkMode ? AppColors.backgroundDark : Colors.white,
           ),
           child: child!,
         );
@@ -248,19 +275,24 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F3EE),
+      backgroundColor:
+          isDarkMode ? AppColors.backgroundDark : const Color(0xFFF4F3EE),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF4F3EE),
+        backgroundColor:
+            isDarkMode ? AppColors.backgroundDark : const Color(0xFFF4F3EE),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           "Add New Chore",
           style: TextStyle(
-            color: AppColors.primary,
+            color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
             fontFamily: 'Switzer',
             fontWeight: FontWeight.bold,
           ),
@@ -275,13 +307,19 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Chore Title
-              _buildSectionTitle('Chore Title'),
+              _buildSectionTitle('Chore Title', isDarkMode),
               TextFormField(
                 controller: _titleController,
                 decoration: InputDecoration(
                   hintText: 'e.g. Buy groceries',
                   filled: true,
-                  fillColor: Colors.white,
+                  fillColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+                  hintStyle: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(16),
                     borderSide: BorderSide.none,
@@ -290,6 +328,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                     horizontal: 16,
                     vertical: 14,
                   ),
+                ),
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
                 ),
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
@@ -301,23 +345,35 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               const SizedBox(height: 20),
 
               // Description
-              _buildSectionTitle('Description'),
+              _buildSectionTitle('Description', isDarkMode),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(
                   children: [
                     TextFormField(
                       controller: _descriptionController,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         hintText:
                             'Add details about the chore. For sub-items or steps to follow, click on the to-do icon.',
+                        hintStyle: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.all(16),
+                        contentPadding: const EdgeInsets.all(16),
                       ),
                       maxLines: 4,
+                      style: TextStyle(
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
                     ),
 
                     // To-do items list
@@ -328,11 +384,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Divider(),
-                            const Text(
+                            Text(
                               'To-do Items:',
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
                                 fontFamily: 'VarelaRound',
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -344,10 +404,23 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                                     Icon(
                                       Icons.check_box_outline_blank,
                                       size: 20,
-                                      color: AppColors.textSecondary,
+                                      color:
+                                          isDarkMode
+                                              ? AppColors.textSecondaryDark
+                                              : AppColors.textSecondary,
                                     ),
                                     const SizedBox(width: 8),
-                                    Expanded(child: Text(_todoItems[index])),
+                                    Expanded(
+                                      child: Text(
+                                        _todoItems[index],
+                                        style: TextStyle(
+                                          color:
+                                              isDarkMode
+                                                  ? AppColors.textPrimaryDark
+                                                  : AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
                                     // Delete button for to-do item
                                     GestureDetector(
                                       onTap: () {
@@ -358,7 +431,10 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                                       child: Icon(
                                         Icons.clear,
                                         size: 20,
-                                        color: AppColors.textSecondary,
+                                        color:
+                                            isDarkMode
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
                                       ),
                                     ),
                                   ],
@@ -381,9 +457,21 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                                 Expanded(
                                   child: TextField(
                                     controller: _todoTextController,
-                                    decoration: const InputDecoration(
+                                    decoration: InputDecoration(
                                       hintText: 'Enter a to-do item',
+                                      hintStyle: TextStyle(
+                                        color:
+                                            isDarkMode
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondary,
+                                      ),
                                       border: InputBorder.none,
+                                    ),
+                                    style: TextStyle(
+                                      color:
+                                          isDarkMode
+                                              ? AppColors.textPrimaryDark
+                                              : AppColors.textPrimary,
                                     ),
                                     onSubmitted: (_) => _addTodoItem(),
                                   ),
@@ -391,7 +479,10 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                                 IconButton(
                                   icon: Icon(
                                     Icons.add_circle,
-                                    color: AppColors.primary,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.primaryDark
+                                            : AppColors.primary,
                                   ),
                                   onPressed: _addTodoItem,
                                 ),
@@ -417,14 +508,20 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                           children: [
                             Icon(
                               Icons.checklist,
-                              color: AppColors.primary,
+                              color:
+                                  isDarkMode
+                                      ? AppColors.primaryDark
+                                      : AppColors.primary,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
                               'Click on the icon to insert to-do blocks',
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
                                 fontSize: 12,
                                 fontFamily: 'VarelaRound',
                               ),
@@ -439,28 +536,38 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               const SizedBox(height: 20),
 
               // Assign To
-              _buildSectionTitle('Assign to'),
+              _buildSectionTitle('Assign to', isDarkMode),
               Container(
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String?>(
                     isExpanded: true,
+                    dropdownColor:
+                        isDarkMode ? AppColors.surfaceDark : Colors.white,
                     hint: Row(
                       children: [
                         Icon(
                           Icons.person_outline,
-                          color: AppColors.textSecondary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Select household member',
-                          style: TextStyle(color: AppColors.textSecondary),
+                          style: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -469,7 +576,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         _members.map((member) {
                           return DropdownMenuItem<String>(
                             value: member['id'],
-                            child: Text(member['name']),
+                            child: Text(
+                              member['name'],
+                              style: TextStyle(
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
+                              ),
+                            ),
                           );
                         }).toList(),
                     onChanged: (value) {
@@ -477,9 +592,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         _selectedMemberId = value;
                       });
                     },
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.arrow_drop_down,
-                      color: AppColors.primary,
+                      color:
+                          isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
                     ),
                   ),
                 ),
@@ -487,17 +605,19 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               const SizedBox(height: 20),
 
               // Priority
-              _buildSectionTitle('Priority'),
+              _buildSectionTitle('Priority', isDarkMode),
               Container(
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
                     isExpanded: true,
+                    dropdownColor:
+                        isDarkMode ? AppColors.surfaceDark : Colors.white,
                     value: _priority,
                     items:
                         _priorities.map((priority) {
@@ -516,7 +636,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                                   size: 20,
                                 ),
                                 const SizedBox(width: 8),
-                                Text(priority),
+                                Text(
+                                  priority,
+                                  style: TextStyle(
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.textPrimaryDark
+                                            : AppColors.textPrimary,
+                                  ),
+                                ),
                               ],
                             ),
                           );
@@ -526,9 +654,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         _priority = value!;
                       });
                     },
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.arrow_drop_down,
-                      color: AppColors.primary,
+                      color:
+                          isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
                     ),
                   ),
                 ),
@@ -536,13 +667,13 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               const SizedBox(height: 20),
 
               // Due Date
-              _buildSectionTitle('Due date'),
+              _buildSectionTitle('Due date', isDarkMode),
               GestureDetector(
                 onTap: () => _selectDate(context),
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -550,13 +681,30 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                     children: [
                       Icon(
                         Icons.calendar_today,
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
-                      Text(_formatDate(_dueDate)),
+                      Text(
+                        _formatDate(_dueDate),
+                        style: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
+                      ),
                       const Spacer(),
-                      Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                      ),
                     ],
                   ),
                 ),
@@ -564,13 +712,13 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               const SizedBox(height: 20),
 
               // Due Time
-              _buildSectionTitle('Due Time'),
+              _buildSectionTitle('Due Time', isDarkMode),
               GestureDetector(
                 onTap: () => _selectTime(context),
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                     borderRadius: BorderRadius.circular(16),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -578,7 +726,10 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                     children: [
                       Icon(
                         Icons.access_time,
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
                         size: 20,
                       ),
                       const SizedBox(width: 8),
@@ -586,9 +737,21 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         _dueTime == null
                             ? 'Set time'
                             : _dueTime!.format(context),
+                        style: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                        ),
                       ),
                       const Spacer(),
-                      Icon(Icons.arrow_drop_down, color: AppColors.primary),
+                      Icon(
+                        Icons.arrow_drop_down,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                      ),
                     ],
                   ),
                 ),
@@ -596,22 +759,27 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               const SizedBox(height: 20),
 
               // Repeat
-              _buildSectionTitle('Repeat (Optional)'),
+              _buildSectionTitle('Repeat (Optional)', isDarkMode),
               Container(
                 height: 50,
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String?>(
                     isExpanded: true,
+                    dropdownColor:
+                        isDarkMode ? AppColors.surfaceDark : Colors.white,
                     hint: Row(
                       children: [
                         Icon(
                           Icons.repeat,
-                          color: AppColors.textSecondary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
@@ -619,7 +787,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         Expanded(
                           child: Text(
                             'Set repeat schedule',
-                            style: TextStyle(color: AppColors.textSecondary),
+                            style: TextStyle(
+                              color:
+                                  isDarkMode
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondary,
+                            ),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -630,7 +803,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         _repeatOptions.map((option) {
                           return DropdownMenuItem<String>(
                             value: option.toLowerCase(),
-                            child: Text(option),
+                            child: Text(
+                              option,
+                              style: TextStyle(
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textPrimaryDark
+                                        : AppColors.textPrimary,
+                              ),
+                            ),
                           );
                         }).toList(),
                     onChanged: (value) {
@@ -638,9 +819,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                         _repeatPattern = value;
                       });
                     },
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.arrow_drop_down,
-                      color: AppColors.primary,
+                      color:
+                          isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
                     ),
                   ),
                 ),
@@ -654,11 +838,16 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _handleAddChore,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
+                    backgroundColor:
+                        isDarkMode ? AppColors.primaryDark : AppColors.primary,
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
+                    disabledBackgroundColor:
+                        isDarkMode
+                            ? AppColors.primaryDark.withOpacity(0.5)
+                            : AppColors.primary.withOpacity(0.5),
                   ),
                   child:
                       _isLoading
@@ -681,7 +870,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isDarkMode) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
@@ -689,7 +878,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
         style: TextStyle(
           fontSize: 16,
           fontFamily: 'VarelaRound',
-          color: AppColors.primary,
+          color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
         ),
       ),
     );
