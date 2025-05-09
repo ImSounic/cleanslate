@@ -9,9 +9,10 @@ import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
-import 'package:cleanslate/features/home/screens/home_screen.dart';
+import 'package:cleanslate/features/main_navigation_screen.dart';
 import 'package:cleanslate/core/theme/app_theme.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/providers/navigation_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,8 +27,11 @@ Future<void> main() async {
   );
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) => NavigationProvider()),
+      ],
       child: const MyApp(),
     ),
   );
@@ -89,12 +93,9 @@ class _MyAppState extends State<MyApp> {
               _isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : _isLoggedIn
-                  ? const HomeScreen()
+                  ? const MainNavigationScreen() // Use the new main navigation screen
                   : const LandingScreen(),
-          routes: {
-            '/login': (context) => const LoginScreen(),
-            '/home': (context) => const HomeScreen(),
-          },
+          routes: {'/login': (context) => const LoginScreen()},
         );
       },
     );

@@ -14,6 +14,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/widgets/theme_toggle_button.dart';
+import 'package:cleanslate/core/providers/navigation_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -204,12 +205,10 @@ class _HomeScreenState extends State<HomeScreen>
                   title: 'App Settings',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
+                    Provider.of<NavigationProvider>(
                       context,
-                      MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
-                      ),
-                    );
+                      listen: false,
+                    ).setIndex(3);
                   },
                 ),
                 _buildProfileMenuItem(
@@ -529,6 +528,12 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
+    // Get the navigation provider
+    final navigationProvider = Provider.of<NavigationProvider>(
+      context,
+      listen: false,
+    );
+
     // Ensure the animation state matches the theme
     if (isDarkMode && _toggleController.value == 0.0) {
       _toggleController.value = 1.0;
@@ -757,44 +762,10 @@ class _HomeScreenState extends State<HomeScreen>
           ),
         ),
         child: BottomNavigationBar(
-          currentIndex: _selectedNavIndex,
-          onTap: (index) async {
-            // Handle navigation based on selected index
-            if (index == 1) {
-              // Members tab
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MembersScreen()),
-              );
-              // Reset the selected index to home after returning from members screen
-              setState(() {
-                _selectedNavIndex = 0;
-              });
-            } else if (index == 2) {
-              // Schedule tab - Add this section
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ScheduleScreen()),
-              );
-              // Reset the selected index to home after returning from schedule screen
-              setState(() {
-                _selectedNavIndex = 0;
-              });
-            } else if (index == 3) {
-              // Settings tab
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-              // Reset the selected index to home after returning from settings screen
-              setState(() {
-                _selectedNavIndex = 0;
-              });
-            } else {
-              setState(() {
-                _selectedNavIndex = index;
-              });
-            }
+          currentIndex: navigationProvider.currentIndex,
+          onTap: (index) {
+            // Set the index in the provider
+            navigationProvider.setIndex(index);
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor:
@@ -815,7 +786,7 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
+                  navigationProvider.currentIndex == 0
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -833,7 +804,7 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
+                  navigationProvider.currentIndex == 1
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -851,7 +822,7 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
+                  navigationProvider.currentIndex == 2
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -869,7 +840,7 @@ class _HomeScreenState extends State<HomeScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 3
+                  navigationProvider.currentIndex == 3
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
