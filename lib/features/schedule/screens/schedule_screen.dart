@@ -9,8 +9,8 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
-import 'package:cleanslate/features/members/screens/members_screen.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:cleanslate/core/providers/navigation_provider.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -30,7 +30,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   bool _isLoading = true;
   bool _showRecurringChores = false;
   String _userName = '';
-  int _selectedNavIndex = 2; // Schedule tab selected
 
   // List to store regular and recurring chores
   List<Map<String, dynamic>> _chores = [];
@@ -286,6 +285,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     // Check if dark mode is enabled
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
+    // Get the navigation provider
+    final navigationProvider = Provider.of<NavigationProvider>(context);
+
     return Scaffold(
       backgroundColor:
           isDarkMode ? AppColors.backgroundDark : AppColors.background,
@@ -302,7 +304,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap: () => Navigator.pop(context),
+                        onTap: () {
+                          // Use NavigationProvider to navigate to the Home screen
+                          navigationProvider.setIndex(0);
+                        },
                         child: Icon(
                           Icons.arrow_back_ios,
                           color:
@@ -552,35 +557,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           ),
         ),
         child: BottomNavigationBar(
-          currentIndex: _selectedNavIndex,
+          currentIndex: navigationProvider.currentIndex,
           onTap: (index) {
-            if (index != _selectedNavIndex) {
-              setState(() {
-                _selectedNavIndex = index;
-              });
-
-              // Handle navigation
-              if (index == 0) {
-                // Navigate to Home
-                Navigator.pop(context);
-              } else if (index == 1) {
-                // Members tab
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MembersScreen(),
-                  ),
-                );
-              } else if (index == 3) {
-                // Settings tab
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              }
-            }
+            // Update the index in the provider
+            navigationProvider.setIndex(index);
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor:
@@ -601,7 +581,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
+                  navigationProvider.currentIndex == 0
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -619,7 +599,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
+                  navigationProvider.currentIndex == 1
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -637,7 +617,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
+                  navigationProvider.currentIndex == 2
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -655,7 +635,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 3
+                  navigationProvider.currentIndex == 3
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
