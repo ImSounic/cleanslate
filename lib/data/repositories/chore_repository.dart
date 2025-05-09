@@ -91,4 +91,61 @@ class ChoreRepository {
         .update({'status': 'pending', 'completed_at': null})
         .eq('id', assignmentId);
   }
+
+  // Delete a chore assignment
+  Future<void> deleteChoreAssignment(String assignmentId) async {
+    // First, check if the assignment exists
+    final assignment =
+        await _client
+            .from('chore_assignments')
+            .select('id')
+            .eq('id', assignmentId)
+            .maybeSingle();
+
+    if (assignment == null) {
+      throw Exception('Chore assignment not found');
+    }
+
+    // Delete the assignment
+    await _client.from('chore_assignments').delete().eq('id', assignmentId);
+  }
+
+  // Delete a chore and all its assignments
+  Future<void> deleteChore(String choreId) async {
+    try {
+      // Start a transaction to ensure both operations complete
+      await _client.rpc(
+        'delete_chore_and_assignments',
+        params: {'chore_id': choreId},
+      );
+    } catch (e) {
+      // If RPC fails or isn't available, fallback to sequential operations
+      // 1. Delete all assignments for this chore
+      await _client.from('chore_assignments').delete().eq('chore_id', choreId);
+      // 2. Delete the chore itself
+      await _client.from('chores').delete().eq('id', choreId);
+    }
+  }
+
+  // Update a chore assignment
+  Future<void> updateChoreAssignment({
+    required String assignmentId,
+    String? assignedTo,
+    DateTime? dueDate,
+    String? priority,
+    String? status,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (assignedTo != null) updates['assigned_to'] = assignedTo;
+    if (dueDate != null) updates['due_date'] = dueDate.toIso8601String();
+    if (priority != null) updates['priority'] = priority;
+    if (status != null) updates['status'] = status;
+
+    if (updates.isEmpty) return; // No updates to make
+
+    await _client
+        .from('chore_assignments')
+        .update(updates)
+        .eq('id', assignmentId);
+  }
 }

@@ -347,6 +347,40 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
+  // Method to delete a chore assignment
+  Future<void> _deleteChore(String assignmentId) async {
+    try {
+      // Show loading indicator
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Call the delete method - Note: This function doesn't exist in the repository
+      // You would need to implement it in the ChoreRepository class
+      await _choreRepository.deleteChoreAssignment(assignmentId);
+
+      // Refresh chores list after deletion
+      await _loadChores();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chore deleted successfully')),
+        );
+      }
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting chore: $e')));
+      }
+    }
+  }
+
   // Method to show task details overlay
   void _showTaskDetailsOverlay(
     Map<String, dynamic> chore,
@@ -1464,11 +1498,65 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  // Show delete confirmation
+                  _confirmDeleteChore(assignment['id']);
                 },
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  // Add confirmation dialog for chore deletion
+  void _confirmDeleteChore(String assignmentId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+
+        return AlertDialog(
+          title: Text(
+            'Delete Chore',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this chore? This action cannot be undone.',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteChore(assignmentId);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
         );
       },
     );
