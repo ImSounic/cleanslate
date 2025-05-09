@@ -70,6 +70,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // This ensures chores are reloaded when returning to this screen
+    _loadChores();
+  }
+
+  @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
@@ -123,7 +130,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           recurring.add(chore);
         } else {
           // Regular chore - check if it has an assignment
-          final assignments = chore['chore_assignments'] as List;
+          final assignments = chore['chore_assignments'] as List? ?? [];
           if (assignments.isNotEmpty) {
             for (final assignment in assignments) {
               regular.add({...chore, 'assignment': assignment});
@@ -134,11 +141,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         }
       }
 
-      setState(() {
-        _chores = regular;
-        _recurringChores = recurring;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _chores = regular;
+          _recurringChores = recurring;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -277,6 +286,29 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error updating chore: $e')));
+      }
+    }
+  }
+
+  // Delete a recurring chore
+  Future<void> _deleteRecurringChore(String choreId) async {
+    try {
+      await _choreRepository.deleteChore(choreId);
+
+      // Refresh chores list after deletion
+      await _loadChores();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Recurring chore deleted successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting chore: $e')));
       }
     }
   }
@@ -496,9 +528,16 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                       : AppColors.primary,
                             ),
                           )
-                          : ListView(
-                            padding: const EdgeInsets.only(bottom: 100),
-                            children: _buildChoresList(isDarkMode),
+                          : RefreshIndicator(
+                            onRefresh: _loadChores,
+                            color:
+                                isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                            child: ListView(
+                              padding: const EdgeInsets.only(bottom: 100),
+                              children: _buildChoresList(isDarkMode),
+                            ),
                           ),
                 ),
               ],
@@ -1164,6 +1203,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   ),
                   onPressed: () {
                     // Show chore options menu
+                    _showChoreOptions(chore, assignment);
                   },
                 ),
               ],
@@ -1390,6 +1430,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                                   ),
                                   onPressed: () {
                                     // Show chore options menu
+                                    _showRecurringChoreOptions(chore);
                                   },
                                 ),
                               ],
@@ -1403,6 +1444,276 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           ],
         ),
       ),
+    );
+  }
+
+  // Show options for a regular chore
+  void _showChoreOptions(
+    Map<String, dynamic> chore,
+    Map<String, dynamic>? assignment,
+  ) {
+    if (assignment == null) return;
+
+    final isCompleted = assignment['status'] == 'completed';
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.edit, color: AppColors.primary),
+                title: Text(
+                  'Edit Chore',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to edit chore screen
+                },
+              ),
+              if (!isCompleted)
+                ListTile(
+                  leading: Icon(Icons.check_circle, color: AppColors.primary),
+                  title: Text(
+                    'Mark as Complete',
+                    style: TextStyle(
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _toggleChoreComplete(assignment['id'], false);
+                  },
+                ),
+              if (isCompleted)
+                ListTile(
+                  leading: Icon(
+                    Icons.radio_button_unchecked,
+                    color: AppColors.primary,
+                  ),
+                  title: Text(
+                    'Mark as Pending',
+                    style: TextStyle(
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _toggleChoreComplete(assignment['id'], true);
+                  },
+                ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text(
+                  'Delete Chore',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteChore(chore['id']);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Show options for a recurring chore
+  void _showRecurringChoreOptions(Map<String, dynamic> chore) {
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.edit, color: AppColors.primary),
+                title: Text(
+                  'Edit Recurring Chore',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Navigate to edit chore screen
+                },
+              ),
+              ListTile(
+                leading: Icon(
+                  Icons.assignment_turned_in,
+                  color: AppColors.primary,
+                ),
+                title: Text(
+                  'Assign to Member',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  // Show assign dialog
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete_outline, color: Colors.red),
+                title: const Text(
+                  'Delete Recurring Chore',
+                  style: TextStyle(color: Colors.red),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _confirmDeleteRecurringChore(chore['id']);
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Add confirmation dialog for chore deletion
+  void _confirmDeleteChore(String choreId) {
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Delete Chore',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this chore? This action cannot be undone.',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteRecurringChore(choreId);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add confirmation dialog for recurring chore deletion
+  void _confirmDeleteRecurringChore(String choreId) {
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Delete Recurring Chore',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this recurring chore? This will remove all future occurrences and cannot be undone.',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteRecurringChore(choreId);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
     );
   }
 }
