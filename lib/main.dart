@@ -13,6 +13,7 @@ import 'package:cleanslate/features/main_navigation_screen.dart';
 import 'package:cleanslate/core/theme/app_theme.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/providers/navigation_provider.dart';
+import 'package:cleanslate/core/constants/app_colors.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -82,6 +83,7 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
+    // Ensure we use Consumer to rebuild everything when theme changes
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
         return MaterialApp(
@@ -91,7 +93,14 @@ class _MyAppState extends State<MyApp> {
           themeMode: themeProvider.themeMode,
           home:
               _isLoading
-                  ? const Center(child: CircularProgressIndicator())
+                  ? Center(
+                    child: CircularProgressIndicator(
+                      color:
+                          themeProvider.isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
+                    ),
+                  )
                   : _isLoggedIn
                   ? const MainNavigationScreen() // Use the new main navigation screen
                   : const LandingScreen(),

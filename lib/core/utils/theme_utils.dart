@@ -8,57 +8,58 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 class ThemeUtils {
   /// Get current theme colors based on the theme mode
   static Color getTextPrimaryColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    // Change this to 'true' for getting live updates
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode
         ? AppColors.textPrimaryDark
         : AppColors.textPrimary;
   }
 
   static Color getTextSecondaryColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode
         ? AppColors.textSecondaryDark
         : AppColors.textSecondary;
   }
 
   static Color getBackgroundColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode
         ? AppColors.backgroundDark
         : AppColors.background;
   }
 
   static Color getSurfaceColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode ? AppColors.surfaceDark : AppColors.surface;
   }
 
   static Color getBorderColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode ? AppColors.borderDark : AppColors.border;
   }
 
   static Color getBorderPrimaryColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode
         ? AppColors.borderPrimaryDark
         : AppColors.borderPrimary;
   }
 
   static Color getDividerColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode ? AppColors.dividerDark : AppColors.divider;
   }
 
   static Color getIconColor(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode
         ? AppColors.iconPrimaryDark
         : AppColors.iconPrimary;
   }
 
   static List<Color> getAuthGradient(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode
         ? AppColors.authGradientDark
         : AppColors.authGradient;
@@ -69,7 +70,7 @@ class ThemeUtils {
     BuildContext context, {
     Color? customColor,
   }) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     final color =
         customColor ??
         (themeProvider.isDarkMode
@@ -81,7 +82,7 @@ class ThemeUtils {
 
   /// Check if current theme is dark mode
   static bool isDarkMode(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: true);
     return themeProvider.isDarkMode;
   }
 }
