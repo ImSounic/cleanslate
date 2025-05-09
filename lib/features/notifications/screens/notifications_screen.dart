@@ -1,4 +1,6 @@
 // lib/features/notifications/screens/notifications_screen.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
@@ -22,7 +24,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       NotificationRepository();
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
-  int _selectedNavIndex = 0; // Home tab
+  final int _selectedNavIndex = 0; // Home tab
   bool _showUnreadOnly = false;
 
   @override

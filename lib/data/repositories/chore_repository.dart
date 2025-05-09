@@ -1,4 +1,6 @@
 // lib/data/repositories/chore_repository.dart
+// ignore_for_file: unused_import, unused_local_variable, avoid_print
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/repositories/notification_repository.dart';
 import 'package:cleanslate/data/models/notification_model.dart';

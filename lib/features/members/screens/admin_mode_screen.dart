@@ -1,5 +1,5 @@
 // lib/features/members/screens/admin_mode_screen.dart
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously, avoid_print
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,7 +14,7 @@ import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 
 class AdminModeScreen extends StatefulWidget {
-  const AdminModeScreen({Key? key}) : super(key: key);
+  const AdminModeScreen({super.key});
 
   @override
   State<AdminModeScreen> createState() => _AdminModeScreenState();
