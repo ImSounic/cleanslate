@@ -89,6 +89,7 @@ class NotificationRepository {
         message: message,
         timestamp: timestamp,
         type: type,
+        isRead: false,
         relatedItemId: relatedItemId,
       );
     } catch (e) {

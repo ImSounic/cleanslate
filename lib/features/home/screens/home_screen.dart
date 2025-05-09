@@ -30,6 +30,7 @@ class _HomeScreenState extends State<HomeScreen>
       []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
+  int _unreadNotificationsCount = 0;
   int _selectedNavIndex = 0;
   final bool _hasNotifications = false;
   bool _isDarkMode = false;

@@ -18,7 +18,8 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationRepository _notificationRepository = NotificationRepository();
+  final NotificationRepository _notificationRepository =
+      NotificationRepository();
   List<NotificationModel> _notifications = [];
   bool _isLoading = true;
   int _selectedNavIndex = 0; // Home tab
@@ -45,7 +46,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       setState(() {
         _isLoading = false;
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error loading notifications: $e')),
@@ -58,11 +59,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await _notificationRepository.markAllAsRead();
       setState(() {
-        _notifications = _notifications.map((notification) {
-          return notification.copyWith(isRead: true);
-        }).toList();
+        _notifications =
+            _notifications.map((notification) {
+              return notification.copyWith(isRead: true);
+            }).toList();
       });
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('All notifications marked as read')),
@@ -81,12 +83,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await _notificationRepository.markAsRead(notificationId);
       setState(() {
-        _notifications = _notifications.map((notification) {
-          if (notification.id == notificationId) {
-            return notification.copyWith(isRead: true);
-          }
-          return notification;
-        }).toList();
+        _notifications =
+            _notifications.map((notification) {
+              if (notification.id == notificationId) {
+                return notification.copyWith(isRead: true);
+              }
+              return notification;
+            }).toList();
       });
     } catch (e) {
       if (mounted) {
@@ -101,13 +104,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       await _notificationRepository.deleteNotification(notificationId);
       setState(() {
-        _notifications.removeWhere((notification) => notification.id == notificationId);
-      });
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification deleted')),
+        _notifications.removeWhere(
+          (notification) => notification.id == notificationId,
         );
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Notification deleted')));
       }
     } catch (e) {
       if (mounted) {
@@ -120,7 +125,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   List<NotificationModel> get _filteredNotifications {
     if (_showUnreadOnly) {
-      return _notifications.where((notification) => !notification.isRead).toList();
+      return _notifications
+          .where((notification) => !notification.isRead)
+          .toList();
     } else {
       return _notifications;
     }
@@ -162,14 +169,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           // Mark all as read
           IconButton(
             icon: Icon(Icons.done_all, color: AppColors.primary),
-            onPressed: _notifications.any((n) => !n.isRead) ? _markAllAsRead : null,
+            onPressed:
+                _notifications.any((n) => !n.isRead) ? _markAllAsRead : null,
             tooltip: 'Mark all as read',
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _buildNotificationsList(),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _buildNotificationsList(),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           border: Border(top: BorderSide(color: AppColors.border, width: 1)),
@@ -190,19 +199,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 case 1: // Members
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const MembersScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const MembersScreen(),
+                    ),
                   );
                   break;
                 case 2: // Schedule
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const ScheduleScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const ScheduleScreen(),
+                    ),
                   );
                   break;
                 case 3: // Settings
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
                   );
                   break;
               }
@@ -304,7 +319,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             const SizedBox(height: 8),
             Text(
               _showUnreadOnly
-                  ? 'You're all caught up!'
+                  ? "You're all caught up!"
                   : 'Notifications will appear here when you have updates',
               style: TextStyle(
                 fontSize: 16,
@@ -313,7 +328,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            if (_showUnreadOnly) ...[
+            if (_showUnreadOnly && _notifications.isNotEmpty) ...[
               const SizedBox(height: 24),
               TextButton.icon(
                 onPressed: () {
@@ -357,10 +372,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           borderRadius: BorderRadius.circular(16),
         ),
         alignment: Alignment.centerRight,
-        child: const Icon(
-          Icons.delete,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
       direction: DismissDirection.endToStart,
       onDismissed: (direction) {
@@ -377,14 +389,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: notification.isRead
-                ? AppColors.background
-                : AppColors.surface,
+            color:
+                notification.isRead ? AppColors.background : AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: notification.isRead
-                  ? AppColors.borderPrimary
-                  : notification.color,
+              color:
+                  notification.isRead
+                      ? AppColors.borderPrimary
+                      : notification.color,
               width: notification.isRead ? 1 : 2,
             ),
           ),
@@ -406,7 +418,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 ),
               ),
               const SizedBox(width: 16),
-              
+
               // Notification content
               Expanded(
                 child: Column(
@@ -426,7 +438,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             ),
                           ),
                         ),
-                        
+
                         // Unread indicator
                         if (!notification.isRead)
                           Container(
@@ -440,7 +452,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ],
                     ),
                     const SizedBox(height: 4),
-                    
+
                     // Message
                     Text(
                       notification.message,
@@ -451,7 +463,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    
+
                     // Timestamp
                     Text(
                       _formatTimestamp(notification.timestamp),
@@ -474,7 +486,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   String _formatTimestamp(DateTime timestamp) {
     final now = DateTime.now();
     final difference = now.difference(timestamp);
-    
+
     if (difference.inDays > 7) {
       return DateFormat('MMM d, yyyy').format(timestamp);
     } else if (difference.inDays > 0) {

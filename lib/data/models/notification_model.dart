@@ -34,13 +34,22 @@ class NotificationModel {
       title: json['title'] as String,
       message: json['message'] as String,
       timestamp: DateTime.parse(json['timestamp'] as String),
-      type: NotificationType.values.firstWhere(
-        (e) => e.toString() == 'NotificationType.${json['type']}',
-        orElse: () => NotificationType.taskAssigned,
-      ),
+      type: _typeFromString(json['type'] as String),
       isRead: json['is_read'] as bool,
       relatedItemId: json['related_item_id'] as String?,
     );
+  }
+
+  // Helper method to convert string to NotificationType
+  static NotificationType _typeFromString(String typeStr) {
+    try {
+      return NotificationType.values.firstWhere(
+        (e) => e.toString().split('.').last == typeStr,
+        orElse: () => NotificationType.taskAssigned,
+      );
+    } catch (e) {
+      return NotificationType.taskAssigned;
+    }
   }
 
   Map<String, dynamic> toJson() {

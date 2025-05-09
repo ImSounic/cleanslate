@@ -10,6 +10,7 @@ import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
+import 'package:cleanslate/core/theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,7 @@ Future<void> main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL']!,
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
+    debug: false,
   );
 
   // Initialize notification service
@@ -39,6 +41,7 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   final SupabaseService _supabaseService = SupabaseService();
   final HouseholdService _householdService = HouseholdService();
+  final NotificationService _notificationService = NotificationService();
   bool _isLoading = true;
   bool _isLoggedIn = false;
 
@@ -48,7 +51,6 @@ class _MyAppState extends State<MyApp> {
     _initializeApp();
   }
 
-  // lib/main.dart - Update the _initializeApp method
   Future<void> _initializeApp() async {
     setState(() {
       _isLoading = true;
@@ -62,10 +64,10 @@ class _MyAppState extends State<MyApp> {
         await _householdService.initializeHousehold();
 
         // Check for notifications
-        await NotificationService().checkNotifications();
+        await _notificationService.checkNotifications();
       } catch (e) {
-        print('Error initializing household: $e');
-        // Continue even if household initialization fails
+        print('Error initializing app: $e');
+        // Continue even if initialization fails
         // The user will see appropriate UI options in the members screen
       }
     }
@@ -80,11 +82,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'CleanSlate',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
       home:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
