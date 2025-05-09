@@ -4,14 +4,16 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/features/members/screens/members_screen.dart';
+import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
+import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/widgets/theme_toggle_button.dart';
-import 'package:cleanslate/core/providers/navigation_provider.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,9 +28,11 @@ class _HomeScreenState extends State<HomeScreen>
   final _choreRepository = ChoreRepository();
   String _userName = '';
   List<Map<String, dynamic>> _myChores = [];
-  List<Map<String, dynamic>> _completedChores = [];
+  List<Map<String, dynamic>> _completedChores =
+      []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
+  int _selectedNavIndex = 0;
   final bool _hasNotifications = false;
 
   late AnimationController _toggleController;
@@ -134,12 +138,6 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
-    // Access the NavigationProvider
-    final navigationProvider = Provider.of<NavigationProvider>(
-      context,
-      listen: false,
-    );
-
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -206,7 +204,12 @@ class _HomeScreenState extends State<HomeScreen>
                   title: 'App Settings',
                   onTap: () {
                     Navigator.pop(context);
-                    navigationProvider.setIndex(3);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SettingsScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildProfileMenuItem(
@@ -526,12 +529,6 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
-    // Get the navigation provider
-    final navigationProvider = Provider.of<NavigationProvider>(
-      context,
-      listen: true,
-    );
-
     // Ensure the animation state matches the theme
     if (isDarkMode && _toggleController.value == 0.0) {
       _toggleController.value = 1.0;
@@ -750,7 +747,143 @@ class _HomeScreenState extends State<HomeScreen>
           }
         },
       ),
-      // REMOVED: Bottom navigation bar is now handled by MainNavigationScreen
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedNavIndex,
+          onTap: (index) async {
+            // Handle navigation based on selected index
+            if (index == 1) {
+              // Members tab
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MembersScreen()),
+              );
+              // Reset the selected index to home after returning from members screen
+              setState(() {
+                _selectedNavIndex = 0;
+              });
+            } else if (index == 2) {
+              // Schedule tab - Add this section
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ScheduleScreen()),
+              );
+              // Reset the selected index to home after returning from schedule screen
+              setState(() {
+                _selectedNavIndex = 0;
+              });
+            } else if (index == 3) {
+              // Settings tab
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+              // Reset the selected index to home after returning from settings screen
+              setState(() {
+                _selectedNavIndex = 0;
+              });
+            } else {
+              setState(() {
+                _selectedNavIndex = index;
+              });
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
+          elevation: 0,
+          items: [
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/home.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 0
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/members.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 1
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Members',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/schedule.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 2
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Calendar',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/settings.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 3
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      ),
     );
   }
 

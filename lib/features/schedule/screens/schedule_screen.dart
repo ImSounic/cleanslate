@@ -9,9 +9,8 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
-import 'package:provider/provider.dart';
-import 'package:cleanslate/core/providers/navigation_provider.dart';
-import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/features/members/screens/members_screen.dart';
+import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -31,6 +30,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   bool _isLoading = true;
   bool _showRecurringChores = false;
   String _userName = '';
+  int _selectedNavIndex = 2; // Schedule tab selected
 
   // List to store regular and recurring chores
   List<Map<String, dynamic>> _chores = [];
@@ -283,12 +283,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Use direct provider access to rebuild when theme changes
-    final themeProvider = Provider.of<ThemeProvider>(context);
-    final isDarkMode = themeProvider.isDarkMode;
-
-    // Get the navigation provider
-    final navigationProvider = Provider.of<NavigationProvider>(context);
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
 
     return Scaffold(
       backgroundColor:
@@ -296,6 +292,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       body: SafeArea(
         child: Stack(
           children: [
+            // Main content
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -305,10 +302,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                   child: Row(
                     children: [
                       GestureDetector(
-                        onTap: () {
-                          // Use NavigationProvider to navigate to the Home screen
-                          navigationProvider.setIndex(0);
-                        },
+                        onTap: () => Navigator.pop(context),
                         child: Icon(
                           Icons.arrow_back_ios,
                           color:
@@ -548,7 +542,134 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           ],
         ),
       ),
-      // REMOVED: Bottom navigation bar is now handled by MainNavigationScreen
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedNavIndex,
+          onTap: (index) {
+            if (index != _selectedNavIndex) {
+              setState(() {
+                _selectedNavIndex = index;
+              });
+
+              // Handle navigation
+              if (index == 0) {
+                // Navigate to Home
+                Navigator.pop(context);
+              } else if (index == 1) {
+                // Members tab
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MembersScreen(),
+                  ),
+                );
+              } else if (index == 3) {
+                // Settings tab
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsScreen(),
+                  ),
+                );
+              }
+            }
+          },
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
+          elevation: 0,
+          items: [
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/home.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 0
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/members.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 1
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Members',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/schedule.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 2
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Calendar',
+            ),
+            BottomNavigationBarItem(
+              icon: SvgPicture.asset(
+                'assets/images/icons/settings.svg',
+                height: 24,
+                width: 24,
+                colorFilter: ColorFilter.mode(
+                  _selectedNavIndex == 3
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
+                  BlendMode.srcIn,
+                ),
+              ),
+              label: 'Settings',
+            ),
+          ],
+        ),
+      ),
     );
   }
 
