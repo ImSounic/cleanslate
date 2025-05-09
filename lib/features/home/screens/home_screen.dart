@@ -34,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen>
   int _selectedTabIndex = 0;
   int _selectedNavIndex = 0;
   final bool _hasNotifications = false;
-  bool _isDarkMode = false;
 
   late AnimationController _toggleController;
   late Animation<double> _toggleAnimation;
@@ -62,6 +61,16 @@ class _HomeScreenState extends State<HomeScreen>
     _toggleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _toggleController, curve: Curves.easeInOut),
     );
+
+    // Set initial animation state based on current theme
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+      if (themeProvider.isDarkMode) {
+        _toggleController.value = 1.0;
+      } else {
+        _toggleController.value = 0.0;
+      }
+    });
   }
 
   @override
@@ -125,11 +134,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _showProfileMenu() {
+    // Get the current theme state
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -159,7 +172,10 @@ class _HomeScreenState extends State<HomeScreen>
                   _supabaseService.currentUser?.email ?? 'sounic@example.com',
                   style: TextStyle(
                     fontSize: 14,
-                    color: AppColors.textSecondary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                     fontFamily: 'VarelaRound',
                   ),
                 ),
@@ -234,6 +250,10 @@ class _HomeScreenState extends State<HomeScreen>
     bool isDarkModeOption = false,
     VoidCallback? onTap,
   }) {
+    // Get the current theme provider
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     return ListTile(
       leading: Icon(
         icon,
@@ -243,7 +263,12 @@ class _HomeScreenState extends State<HomeScreen>
       title: Text(
         title,
         style: TextStyle(
-          color: isDestructive ? Colors.red : AppColors.textPrimary,
+          color:
+              isDestructive
+                  ? Colors.red
+                  : isDarkMode
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimary,
           fontSize: 14,
           fontFamily: 'VarelaRound',
         ),
@@ -251,16 +276,18 @@ class _HomeScreenState extends State<HomeScreen>
       trailing:
           isDarkModeOption
               ? Switch(
-                value: _isDarkMode,
+                value: isDarkMode,
                 onChanged: (value) {
-                  setState(() {
-                    _isDarkMode = value;
-                    if (_isDarkMode) {
-                      _toggleController.forward();
-                    } else {
-                      _toggleController.reverse();
-                    }
-                  });
+                  // Toggle the theme using the provider
+                  themeProvider.toggleTheme();
+
+                  // Update the animation based on the new theme
+                  if (value) {
+                    _toggleController.forward();
+                  } else {
+                    _toggleController.reverse();
+                  }
+
                   Navigator.pop(context);
                 },
                 activeColor: AppColors.primary,
@@ -325,6 +352,10 @@ class _HomeScreenState extends State<HomeScreen>
     Map<String, dynamic> chore,
     Map<String, dynamic> assignment,
   ) {
+    // Get the current theme state
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
     // Parse the description to look for to-do items
     final description = chore['description'] as String? ?? '';
     List<Map<String, dynamic>> todoItems = [];
@@ -356,6 +387,7 @@ class _HomeScreenState extends State<HomeScreen>
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           child: Container(
             width: double.infinity,
             padding: const EdgeInsets.all(20),
@@ -392,10 +424,11 @@ class _HomeScreenState extends State<HomeScreen>
                 // Task title and description
                 Text(
                   chore['name'] ?? 'Untitled Task',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color:
+                        isDarkMode ? AppColors.textPrimaryDark : Colors.black87,
                     fontFamily: 'VarelaRound',
                   ),
                 ),
@@ -404,9 +437,12 @@ class _HomeScreenState extends State<HomeScreen>
                   const SizedBox(height: 8),
                   Text(
                     cleanDescription,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Colors.black54,
+                      color:
+                          isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : Colors.black54,
                       fontFamily: 'VarelaRound',
                     ),
                   ),
@@ -440,7 +476,10 @@ class _HomeScreenState extends State<HomeScreen>
                               style: TextStyle(
                                 fontSize: 14,
                                 fontFamily: 'VarelaRound',
-                                color: Colors.black87,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textPrimaryDark
+                                        : Colors.black87,
                                 decoration:
                                     todo['completed']
                                         ? TextDecoration.lineThrough
@@ -486,8 +525,20 @@ class _HomeScreenState extends State<HomeScreen>
     // Extract first name from full name
     final firstName = _userName.split(' ').first;
 
+    // Access the theme provider to check if dark mode is enabled
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
+
+    // Ensure the animation state matches the theme
+    if (isDarkMode && _toggleController.value == 0.0) {
+      _toggleController.value = 1.0;
+    } else if (!isDarkMode && _toggleController.value == 1.0) {
+      _toggleController.value = 0.0;
+    }
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor:
+          isDarkMode ? AppColors.backgroundDark : AppColors.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -501,20 +552,19 @@ class _HomeScreenState extends State<HomeScreen>
                   // Theme toggle
                   GestureDetector(
                     onTap: () {
-                      setState(() {
-                        _isDarkMode = !_isDarkMode;
-                        if (_isDarkMode) {
-                          _toggleController.forward();
-                        } else {
-                          _toggleController.reverse();
-                        }
-                      });
+                      // Toggle theme using the provider
+                      themeProvider.toggleTheme();
+
+                      // Animation will update automatically based on didUpdateWidget
                     },
                     child: Container(
                       height: 32,
                       width: 64,
                       decoration: BoxDecoration(
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       padding: const EdgeInsets.all(2),
@@ -530,7 +580,10 @@ class _HomeScreenState extends State<HomeScreen>
                                   width: 28,
                                   height: 28,
                                   decoration: BoxDecoration(
-                                    color: AppColors.surface,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.surfaceDark
+                                            : AppColors.surface,
                                     shape: BoxShape.circle,
                                   ),
                                 ),
@@ -557,7 +610,10 @@ class _HomeScreenState extends State<HomeScreen>
                                   child: Icon(
                                     Icons.dark_mode,
                                     size: 16,
-                                    color: AppColors.primary,
+                                    color:
+                                        isDarkMode
+                                            ? AppColors.textLight
+                                            : AppColors.primary,
                                   ),
                                 ),
                               ),
@@ -583,7 +639,9 @@ class _HomeScreenState extends State<HomeScreen>
                           _hasNotifications
                               ? null
                               : ColorFilter.mode(
-                                AppColors.iconPrimary,
+                                isDarkMode
+                                    ? AppColors.iconPrimaryDark
+                                    : AppColors.iconPrimary,
                                 BlendMode.srcIn,
                               ),
                     ),
@@ -613,20 +671,26 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   Text(
                     'Hello $firstName!',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 48,
                       fontFamily: 'Switzer',
                       fontWeight: FontWeight.w600,
                       letterSpacing: -3,
-                      color: AppColors.textPrimary,
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
                     ),
                   ),
-                  const Text(
+                  Text(
                     'Have a nice day.',
                     style: TextStyle(
                       fontSize: 23,
                       fontFamily: 'VarelaRound',
-                      color: AppColors.textSecondary,
+                      color:
+                          isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -643,7 +707,7 @@ class _HomeScreenState extends State<HomeScreen>
                 itemBuilder: (context, index) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8),
-                    child: _buildTabButton(index),
+                    child: _buildTabButton(index, isDarkMode),
                   );
                 },
               ),
@@ -653,8 +717,15 @@ class _HomeScreenState extends State<HomeScreen>
             Expanded(
               child:
                   _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _buildChoreContent(),
+                      ? Center(
+                        child: CircularProgressIndicator(
+                          color:
+                              isDarkMode
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary,
+                        ),
+                      )
+                      : _buildChoreContent(isDarkMode),
             ),
           ],
         ),
@@ -678,7 +749,12 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedNavIndex,
@@ -721,11 +797,16 @@ class _HomeScreenState extends State<HomeScreen>
             }
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.navSelected,
-          unselectedItemColor: AppColors.navUnselected,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          backgroundColor: AppColors.background,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
           elevation: 0,
           items: [
             BottomNavigationBarItem(
@@ -735,8 +816,12 @@ class _HomeScreenState extends State<HomeScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 0
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -749,8 +834,12 @@ class _HomeScreenState extends State<HomeScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 1
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -763,8 +852,12 @@ class _HomeScreenState extends State<HomeScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 2
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -777,8 +870,12 @@ class _HomeScreenState extends State<HomeScreen>
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 3
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -791,29 +888,31 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   // Method to show appropriate content based on selected tab
-  Widget _buildChoreContent() {
+  Widget _buildChoreContent(bool isDarkMode) {
     // Show appropriate content based on selected tab
     switch (_selectedTabIndex) {
       case 0: // My Tasks
         return _myChores.isEmpty
-            ? _buildEmptyState()
-            : _buildChoresList(_myChores);
+            ? _buildEmptyState(isDarkMode)
+            : _buildChoresList(_myChores, isDarkMode);
       case 3: // Completed
         return _completedChores.isEmpty
             ? _buildEmptyStateWithMessage(
               'No completed chores',
               'Complete your tasks to see them here',
+              isDarkMode,
             )
-            : _buildChoresList(_completedChores);
+            : _buildChoresList(_completedChores, isDarkMode);
       default: // Other tabs - placeholder for now
         return _buildEmptyStateWithMessage(
           'Coming Soon',
           'This tab is under development',
+          isDarkMode,
         );
     }
   }
 
-  Widget _buildTabButton(int index) {
+  Widget _buildTabButton(int index, bool isDarkMode) {
     final isSelected = _selectedTabIndex == index;
     return OutlinedButton(
       onPressed: () {
@@ -823,11 +922,21 @@ class _HomeScreenState extends State<HomeScreen>
       },
       style: OutlinedButton.styleFrom(
         side: BorderSide(
-          color: isSelected ? AppColors.borderPrimary : AppColors.tabInactive,
+          color:
+              isSelected
+                  ? AppColors.borderPrimary
+                  : isDarkMode
+                  ? AppColors.tabInactiveDark
+                  : AppColors.tabInactive,
         ),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         backgroundColor: Colors.transparent,
-        foregroundColor: isSelected ? AppColors.primary : AppColors.tabInactive,
+        foregroundColor:
+            isSelected
+                ? AppColors.primary
+                : isDarkMode
+                ? AppColors.tabInactiveDark
+                : AppColors.tabInactive,
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       ),
       child: Text(
@@ -837,7 +946,7 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildEmptyState() {
+  Widget _buildEmptyState(bool isDarkMode) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -845,7 +954,10 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             Icons.assignment_outlined,
             size: 80,
-            color: AppColors.textSecondary,
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
           ),
           const SizedBox(height: 16),
           Text(
@@ -853,7 +965,10 @@ class _HomeScreenState extends State<HomeScreen>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
               fontFamily: 'Switzer',
             ),
           ),
@@ -862,7 +977,10 @@ class _HomeScreenState extends State<HomeScreen>
             'Add chores to get started',
             style: TextStyle(
               fontSize: 16,
-              color: AppColors.textSecondary,
+              color:
+                  isDarkMode
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
               fontFamily: 'VarelaRound',
             ),
           ),
@@ -893,7 +1011,11 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildEmptyStateWithMessage(String title, String message) {
+  Widget _buildEmptyStateWithMessage(
+    String title,
+    String message,
+    bool isDarkMode,
+  ) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -901,7 +1023,10 @@ class _HomeScreenState extends State<HomeScreen>
           Icon(
             Icons.assignment_outlined,
             size: 80,
-            color: AppColors.textSecondary,
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
           ),
           const SizedBox(height: 16),
           Text(
@@ -909,7 +1034,10 @@ class _HomeScreenState extends State<HomeScreen>
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
               fontFamily: 'Switzer',
             ),
           ),
@@ -918,7 +1046,10 @@ class _HomeScreenState extends State<HomeScreen>
             message,
             style: TextStyle(
               fontSize: 16,
-              color: AppColors.textSecondary,
+              color:
+                  isDarkMode
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
               fontFamily: 'VarelaRound',
             ),
             textAlign: TextAlign.center,
@@ -928,9 +1059,10 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  Widget _buildChoresList(List<Map<String, dynamic>> chores) {
+  Widget _buildChoresList(List<Map<String, dynamic>> chores, bool isDarkMode) {
     return RefreshIndicator(
       onRefresh: _loadChores,
+      color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: chores.length,
@@ -939,7 +1071,7 @@ class _HomeScreenState extends State<HomeScreen>
           final chore = choreAssignment['chores'] as Map<String, dynamic>;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: _buildChoreCard(choreAssignment, chore),
+            child: _buildChoreCard(choreAssignment, chore, isDarkMode),
           );
         },
       ),
@@ -949,6 +1081,7 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildChoreCard(
     Map<String, dynamic> assignment,
     Map<String, dynamic> chore,
+    bool isDarkMode,
   ) {
     // Determine priority color
     Color priorityColor;
@@ -1003,9 +1136,11 @@ class _HomeScreenState extends State<HomeScreen>
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderPrimary),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
       ),
       // Reduced height for the card
       height: 110,
@@ -1030,7 +1165,11 @@ class _HomeScreenState extends State<HomeScreen>
                 shape: BoxShape.circle,
                 border: Border.all(
                   color:
-                      isCompleted ? AppColors.primary : AppColors.borderPrimary,
+                      isCompleted
+                          ? AppColors.primary
+                          : isDarkMode
+                          ? AppColors.borderDark
+                          : AppColors.borderPrimary,
                   width: 2,
                 ),
                 color: isCompleted ? AppColors.primary : Colors.transparent,
@@ -1056,7 +1195,10 @@ class _HomeScreenState extends State<HomeScreen>
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                     fontFamily: 'Switzer',
-                    color: AppColors.textPrimary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
                   maxLines: 1,
@@ -1073,7 +1215,10 @@ class _HomeScreenState extends State<HomeScreen>
                       style: TextStyle(
                         fontSize: 12,
                         fontFamily: 'VarelaRound',
-                        color: AppColors.textSecondary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                       ),
                     ),
                     CircleAvatar(
@@ -1095,7 +1240,10 @@ class _HomeScreenState extends State<HomeScreen>
                       style: TextStyle(
                         fontSize: 12,
                         fontFamily: 'VarelaRound',
-                        color: AppColors.textSecondary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                       ),
                     ),
 
@@ -1113,7 +1261,9 @@ class _HomeScreenState extends State<HomeScreen>
                             height: 14,
                             width: 14,
                             colorFilter: ColorFilter.mode(
-                              AppColors.textPrimary,
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
                               BlendMode.srcIn,
                             ),
                           ),
@@ -1171,7 +1321,10 @@ class _HomeScreenState extends State<HomeScreen>
                     },
                     child: Icon(
                       Icons.more_vert,
-                      color: AppColors.textSecondary,
+                      color:
+                          isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                       size: 20,
                     ),
                   ),
@@ -1187,7 +1340,9 @@ class _HomeScreenState extends State<HomeScreen>
                     height: 12,
                     width: 12,
                     colorFilter: ColorFilter.mode(
-                      AppColors.textSecondary,
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
                       BlendMode.srcIn,
                     ),
                   ),
@@ -1197,7 +1352,10 @@ class _HomeScreenState extends State<HomeScreen>
                     style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'VarelaRound',
-                      color: AppColors.textSecondary,
+                      color:
+                          isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -1214,9 +1372,12 @@ class _HomeScreenState extends State<HomeScreen>
     Map<String, dynamic> chore,
   ) {
     final isCompleted = assignment['status'] == 'completed';
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -1228,7 +1389,15 @@ class _HomeScreenState extends State<HomeScreen>
             children: [
               ListTile(
                 leading: Icon(Icons.edit, color: AppColors.primary),
-                title: const Text('Edit Chore'),
+                title: Text(
+                  'Edit Chore',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   // Navigate to edit chore screen
@@ -1237,7 +1406,15 @@ class _HomeScreenState extends State<HomeScreen>
               if (!isCompleted)
                 ListTile(
                   leading: Icon(Icons.check_circle, color: AppColors.primary),
-                  title: const Text('Mark as Complete'),
+                  title: Text(
+                    'Mark as Complete',
+                    style: TextStyle(
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _completeChore(assignment['id']);
@@ -1249,7 +1426,15 @@ class _HomeScreenState extends State<HomeScreen>
                     Icons.radio_button_unchecked,
                     color: AppColors.primary,
                   ),
-                  title: const Text('Mark as Pending'),
+                  title: Text(
+                    'Mark as Pending',
+                    style: TextStyle(
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                  ),
                   onTap: () {
                     Navigator.pop(context);
                     _uncompleteChore(assignment['id']);
@@ -1257,7 +1442,15 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
               ListTile(
                 leading: Icon(Icons.person_add, color: AppColors.primary),
-                title: const Text('Reassign Chore'),
+                title: Text(
+                  'Reassign Chore',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
                 onTap: () {
                   Navigator.pop(context);
                   // Show reassign dialog
