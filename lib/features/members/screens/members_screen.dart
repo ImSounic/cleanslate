@@ -10,7 +10,6 @@ import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
-// Import the admin mode screen (you'll need to create this)
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 
