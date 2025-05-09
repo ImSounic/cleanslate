@@ -24,7 +24,6 @@ class _MembersScreenState extends State<MembersScreen> {
   final TextEditingController _searchController = TextEditingController();
   final HouseholdRepository _householdRepository = HouseholdRepository();
   final HouseholdService _householdService = HouseholdService();
-  // Removed unused SupabaseService instance
   final TextEditingController _householdNameController =
       TextEditingController();
   final TextEditingController _householdCodeController =
@@ -687,7 +686,6 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   // Navigate to Admin Mode screen
-  // Inside your MembersScreen class
   void _navigateToAdminMode() {
     if (_householdService.currentHousehold != null) {
       Navigator.push(
@@ -766,8 +764,7 @@ class _MembersScreenState extends State<MembersScreen> {
                               fontSize: 14,
                             ),
                             decoration: InputDecoration(
-                              hintText:
-                                  'Search for your flats, household or rooms',
+                              hintText: 'Search for members',
                               hintStyle: TextStyle(
                                 color:
                                     isDarkMode
@@ -776,23 +773,23 @@ class _MembersScreenState extends State<MembersScreen> {
                                 fontFamily: 'VarelaRound',
                                 fontSize: 14,
                               ),
-                              prefixIcon: Padding(
-                                padding: const EdgeInsets.all(10.0),
-                                child: Icon(
-                                  Icons.search,
-                                  color:
-                                      isDarkMode
-                                          ? AppColors.textSecondaryDark
-                                          : AppColors.textSecondary,
-                                  size: 20,
-                                ),
+                              prefixIcon: Icon(
+                                Icons.search,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
+                                size: 20,
+                              ),
+                              prefixIconConstraints: const BoxConstraints(
+                                minWidth: 36,
+                                maxWidth: 36,
                               ),
                               border: InputBorder.none,
                               contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 0,
-                                vertical: 12,
+                                vertical: 10,
+                                horizontal: 4,
                               ),
-                              isDense: true,
                             ),
                             textAlignVertical: TextAlignVertical.center,
                           ),
@@ -1301,7 +1298,7 @@ class _MembersScreenState extends State<MembersScreen> {
     _showCreateOrJoinOptionsDialog();
   }
 
-  // This new widget displays both the member list and the add flatmates content
+  // This widget displays both the member list and the add flatmates content
   Widget _buildMembersListWithAddContent(bool isDarkMode) {
     // Only show admin users first
     final adminMembers = _members.where((m) => m.role == 'admin').toList();
@@ -1374,6 +1371,11 @@ class _MembersScreenState extends State<MembersScreen> {
       roleBadgeColor = AppColors.primary;
     }
 
+    // Determine if email needs to be truncated
+    final email = member.email ?? 'No email';
+    final displayEmail =
+        email.length > 20 ? '${email.substring(0, 20)}...' : email;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -1428,65 +1430,60 @@ class _MembersScreenState extends State<MembersScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  member.email ?? 'No email',
+                  displayEmail,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: 13, // Reduced font size for email
                     fontFamily: 'VarelaRound',
                     color:
                         isDarkMode
                             ? AppColors.textSecondaryDark
                             : AppColors.textSecondary,
                   ),
+                  overflow:
+                      TextOverflow.ellipsis, // Add ellipsis if text overflows
                 ),
               ],
             ),
           ),
 
-          // Role badges - show both Admin and Relation if needed
-          Row(
-            children: [
-              // Admin badge
-              if (member.role == 'admin')
-                Container(
-                  margin: const EdgeInsets.only(right: 6),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: roleBadgeColor,
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    'Admin',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontFamily: 'VarelaRound',
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                ),
-
-              // Relation badge (for example purposes)
-            ],
+          // Role badge with reduced right margin
+          Container(
+            margin: const EdgeInsets.only(right: 4), // Reduced from 6
+            padding: const EdgeInsets.symmetric(
+              horizontal: 10, // Reduced from 12
+              vertical: 6,
+            ),
+            decoration: BoxDecoration(
+              color: roleBadgeColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Text(
+              'Admin',
+              style: TextStyle(
+                fontSize: 12,
+                fontFamily: 'VarelaRound',
+                color: AppColors.textLight,
+              ),
+            ),
           ),
 
-          // Edit icon - only show for admins
-          if (_canEditMember())
-            IconButton(
-              icon: SvgPicture.asset(
-                'assets/images/icons/pencil.svg',
-                height: 18,
-                width: 18,
-                colorFilter: ColorFilter.mode(
-                  isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                  BlendMode.srcIn,
-                ),
+          // Edit icon - reduced size and padding
+          IconButton(
+            icon: SvgPicture.asset(
+              'assets/images/icons/pencil.svg',
+              height: 16, // Reduced from 18
+              width: 16, // Reduced from 18
+              colorFilter: ColorFilter.mode(
+                isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                BlendMode.srcIn,
               ),
-              onPressed: () {
-                _showEditMemberDialog(member);
-              },
             ),
+            onPressed: () {
+              _showEditMemberDialog(member);
+            },
+            padding: const EdgeInsets.all(4),
+            constraints: const BoxConstraints(),
+          ),
         ],
       ),
     );
