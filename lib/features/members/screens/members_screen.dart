@@ -29,8 +29,6 @@ class _MembersScreenState extends State<MembersScreen> {
   final TextEditingController _householdCodeController =
       TextEditingController();
 
-  int _selectedNavIndex = 1; // Members tab selected
-
   List<HouseholdMemberModel> _members = [];
   bool _isLoading = true;
   String _householdName = '';
@@ -941,110 +939,110 @@ class _MembersScreenState extends State<MembersScreen> {
           ],
         ),
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? AppColors.borderDark : AppColors.border,
-              width: 1,
+      // Removed bottomNavigationBar to fix the duplicate navigation issue
+    );
+  }
+
+  // New method to show options dialog
+  void _showCreateOrJoinOptionsDialog() {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return SimpleDialog(
+          title: Text(
+            'Household Options',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
             ),
           ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: navigationProvider.currentIndex,
-          onTap: (index) {
-            // Use NavigationProvider instead of setting state locally
-            navigationProvider.setIndex(index);
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor:
-              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
-          unselectedItemColor:
-              isDarkMode
-                  ? AppColors.navUnselectedDark
-                  : AppColors.navUnselected,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
           backgroundColor:
-              isDarkMode ? AppColors.backgroundDark : AppColors.background,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/home.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  navigationProvider.currentIndex == 0
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
+              isDarkMode ? AppColors.surfaceDark : AppColors.surface,
+          children: [
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _showCreateHouseholdDialog();
+              },
+              child: ListTile(
+                leading: Icon(
+                  Icons.add_home,
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+                title: Text(
+                  'Create New Household',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
                 ),
               ),
-              label: 'Home',
             ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/members.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  navigationProvider.currentIndex == 1
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+                _showJoinHouseholdDialog();
+              },
+              child: ListTile(
+                leading: Icon(
+                  Icons.group_add,
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+                title: Text(
+                  'Join Existing Household',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
                 ),
               ),
-              label: 'Members',
             ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/schedule.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  navigationProvider.currentIndex == 2
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(dialogContext);
+              },
+              child: ListTile(
+                leading: Icon(
+                  Icons.cancel,
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+                title: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
                 ),
               ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/settings.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  navigationProvider.currentIndex == 3
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Settings',
             ),
           ],
+        );
+      },
+    );
+  }
+
+  // New method to show options when no household is selected
+  void _showNoHouseholdOptionsDialog() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'No household selected. Create or join a household first.',
         ),
       ),
     );
+
+    _showCreateOrJoinOptionsDialog();
   }
 
   Widget _buildErrorView(bool isDarkMode) {
@@ -1179,108 +1177,6 @@ class _MembersScreenState extends State<MembersScreen> {
         ],
       ),
     );
-  }
-
-  // New method to show options dialog
-  void _showCreateOrJoinOptionsDialog() {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
-
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return SimpleDialog(
-          title: Text(
-            'Household Options',
-            style: TextStyle(
-              color:
-                  isDarkMode
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
-            ),
-          ),
-          backgroundColor:
-              isDarkMode ? AppColors.surfaceDark : AppColors.surface,
-          children: [
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _showCreateHouseholdDialog();
-              },
-              child: ListTile(
-                leading: Icon(
-                  Icons.add_home,
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                ),
-                title: Text(
-                  'Create New Household',
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-                _showJoinHouseholdDialog();
-              },
-              child: ListTile(
-                leading: Icon(
-                  Icons.group_add,
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                ),
-                title: Text(
-                  'Join Existing Household',
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-            SimpleDialogOption(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: ListTile(
-                leading: Icon(
-                  Icons.cancel,
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                ),
-                title: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // New method to show options when no household is selected
-  void _showNoHouseholdOptionsDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'No household selected. Create or join a household first.',
-        ),
-      ),
-    );
-
-    _showCreateOrJoinOptionsDialog();
   }
 
   // This widget displays both the member list and the add flatmates content
