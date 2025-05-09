@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
@@ -194,6 +195,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showHouseholdCode(String code) {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -229,7 +233,10 @@ class _MembersScreenState extends State<MembersScreen> {
                     vertical: 16,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.background,
+                    color:
+                        isDarkMode
+                            ? AppColors.backgroundDark
+                            : AppColors.background,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: AppColors.primary),
                   ),
@@ -256,7 +263,10 @@ class _MembersScreenState extends State<MembersScreen> {
                 'Tap to copy',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.textSecondary,
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
                   fontStyle: FontStyle.italic,
                 ),
               ),
@@ -276,6 +286,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showCreateHouseholdDialog() {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     // Clear previous input
     _householdNameController.clear();
 
@@ -286,7 +299,15 @@ class _MembersScreenState extends State<MembersScreen> {
       context: currentContext,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Create New Household'),
+          title: Text(
+            'Create New Household',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
           content: TextField(
             controller: _householdNameController,
             decoration: InputDecoration(
@@ -294,15 +315,35 @@ class _MembersScreenState extends State<MembersScreen> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              hintStyle: TextStyle(
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
             ),
             autofocus: true,
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -323,7 +364,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 // Call create household method
                 _createHousehold(householdName);
               },
-              child: const Text('Create'),
+              child: Text('Create', style: TextStyle(color: AppColors.primary)),
             ),
           ],
         );
@@ -332,6 +373,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showJoinHouseholdDialog() {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     // Clear previous input
     _householdCodeController.clear();
 
@@ -342,7 +386,15 @@ class _MembersScreenState extends State<MembersScreen> {
       context: currentContext,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Join Household'),
+          title: Text(
+            'Join Household',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
           content: TextField(
             controller: _householdCodeController,
             decoration: InputDecoration(
@@ -350,17 +402,37 @@ class _MembersScreenState extends State<MembersScreen> {
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
+              hintStyle: TextStyle(
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
             ),
             maxLength: 8,
             textCapitalization: TextCapitalization.characters,
             autofocus: true,
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -382,7 +454,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 // Call join household method
                 _joinHousehold(householdCode);
               },
-              child: const Text('Join'),
+              child: Text('Join', style: TextStyle(color: AppColors.primary)),
             ),
           ],
         );
@@ -391,29 +463,74 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showEditMemberDialog(HouseholdMemberModel member) {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Edit Member'),
+          title: Text(
+            'Edit Member',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Name: ${member.fullName ?? 'N/A'}'),
+              Text(
+                'Name: ${member.fullName ?? 'N/A'}',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text('Email: ${member.email ?? 'N/A'}'),
+              Text(
+                'Email: ${member.email ?? 'N/A'}',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 16),
-              const Text('Role:'),
+              Text(
+                'Role:',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                ),
+              ),
               const SizedBox(height: 8),
               DropdownButton<String>(
                 value: member.role,
                 isExpanded: true,
+                dropdownColor:
+                    isDarkMode ? AppColors.surfaceDark : AppColors.surface,
                 items:
                     ['member', 'admin'].map((String role) {
                       return DropdownMenuItem<String>(
                         value: role,
-                        child: Text(_capitalizeRole(role)),
+                        child: Text(
+                          _capitalizeRole(role),
+                          style: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimary,
+                          ),
+                        ),
                       );
                     }).toList(),
                 onChanged: (String? newRole) {
@@ -438,7 +555,15 @@ class _MembersScreenState extends State<MembersScreen> {
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
             ),
           ],
         );
@@ -476,6 +601,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _confirmRemoveMember(HouseholdMemberModel member) {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     // Capture context before showing dialog
     final BuildContext currentContext = context;
 
@@ -483,16 +611,38 @@ class _MembersScreenState extends State<MembersScreen> {
       context: currentContext,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Remove Member'),
+          title: Text(
+            'Remove Member',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
           content: Text(
             'Are you sure you want to remove ${member.fullName ?? 'this member'} from the household?',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Cancel'),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -558,8 +708,12 @@ class _MembersScreenState extends State<MembersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor:
+          isDarkMode ? AppColors.backgroundDark : AppColors.background,
       body: SafeArea(
         child: Stack(
           children: [
@@ -573,7 +727,13 @@ class _MembersScreenState extends State<MembersScreen> {
                     children: [
                       // Back button
                       IconButton(
-                        icon: Icon(Icons.arrow_back, color: AppColors.primary),
+                        icon: Icon(
+                          Icons.arrow_back,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
+                        ),
                         onPressed: () => Navigator.pop(context),
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
@@ -584,14 +744,25 @@ class _MembersScreenState extends State<MembersScreen> {
                         child: Container(
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color:
+                                isDarkMode
+                                    ? AppColors.surfaceDark
+                                    : AppColors.surface,
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color:
+                                  isDarkMode
+                                      ? AppColors.borderDark
+                                      : AppColors.border,
+                            ),
                           ),
                           child: TextField(
                             controller: _searchController,
                             style: TextStyle(
-                              color: AppColors.textPrimary,
+                              color:
+                                  isDarkMode
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
                               fontFamily: 'VarelaRound',
                               fontSize: 14,
                             ),
@@ -599,7 +770,10 @@ class _MembersScreenState extends State<MembersScreen> {
                               hintText:
                                   'Search for your flats, household or rooms',
                               hintStyle: TextStyle(
-                                color: AppColors.textSecondary,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
                                 fontFamily: 'VarelaRound',
                                 fontSize: 14,
                               ),
@@ -607,7 +781,10 @@ class _MembersScreenState extends State<MembersScreen> {
                                 padding: const EdgeInsets.all(10.0),
                                 child: Icon(
                                   Icons.search,
-                                  color: AppColors.textSecondary,
+                                  color:
+                                      isDarkMode
+                                          ? AppColors.textSecondaryDark
+                                          : AppColors.textSecondary,
                                   size: 20,
                                 ),
                               ),
@@ -671,7 +848,10 @@ class _MembersScreenState extends State<MembersScreen> {
                           fontSize: 38,
                           fontFamily: 'Switzer',
                           fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
                         ),
                       ),
                       Text(
@@ -679,7 +859,10 @@ class _MembersScreenState extends State<MembersScreen> {
                         style: TextStyle(
                           fontSize: 20,
                           fontFamily: 'VarelaRound',
-                          color: AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
                         ),
                       ),
                     ],
@@ -690,14 +873,25 @@ class _MembersScreenState extends State<MembersScreen> {
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: _refreshHouseholdData,
+                    color:
+                        isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                    backgroundColor:
+                        isDarkMode ? AppColors.surfaceDark : Colors.white,
                     child:
                         _isLoading
-                            ? const Center(child: CircularProgressIndicator())
+                            ? Center(
+                              child: CircularProgressIndicator(
+                                color:
+                                    isDarkMode
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary,
+                              ),
+                            )
                             : _errorMessage != null
-                            ? _buildErrorView()
+                            ? _buildErrorView(isDarkMode)
                             : _householdService.currentHousehold == null
-                            ? _buildNoHouseholdView()
-                            : _buildMembersListWithAddContent(),
+                            ? _buildNoHouseholdView(isDarkMode)
+                            : _buildMembersListWithAddContent(isDarkMode),
                   ),
                 ),
               ],
@@ -743,7 +937,12 @@ class _MembersScreenState extends State<MembersScreen> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedNavIndex,
@@ -777,11 +976,16 @@ class _MembersScreenState extends State<MembersScreen> {
             }
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.navSelected,
-          unselectedItemColor: AppColors.navUnselected,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          backgroundColor: AppColors.background,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
           elevation: 0,
           items: [
             BottomNavigationBarItem(
@@ -791,8 +995,12 @@ class _MembersScreenState extends State<MembersScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 0
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -805,8 +1013,12 @@ class _MembersScreenState extends State<MembersScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 1
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -819,8 +1031,12 @@ class _MembersScreenState extends State<MembersScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 2
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -833,8 +1049,12 @@ class _MembersScreenState extends State<MembersScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 3
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -846,66 +1066,7 @@ class _MembersScreenState extends State<MembersScreen> {
     );
   }
 
-  // This new widget displays both the member list and the add flatmates content
-  Widget _buildMembersListWithAddContent() {
-    // Only show admin users first
-    final adminMembers = _members.where((m) => m.role == 'admin').toList();
-
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      children: [
-        // Display admin members at the top
-        ...adminMembers.map((member) => _buildMemberCard(member)),
-
-        // Other members if there are any
-        if (_members.length > adminMembers.length)
-          ..._members
-              .where((m) => m.role != 'admin')
-              .map((member) => _buildMemberCard(member)),
-
-        // Add the "Add your flatmates" section if admin is the only member
-        if (_members.length <= 1) _buildAddFlatmatesSection(),
-
-        // Add some space at the bottom for the Admin Mode button
-        const SizedBox(height: 60),
-      ],
-    );
-  }
-
-  // Section for "Add your flatmates" with SVG and text
-  Widget _buildAddFlatmatesSection() {
-    return Column(
-      children: [
-        const SizedBox(height: 10), // Reduced top spacing
-        // SVG image of people moving boxes - smaller height
-        SvgPicture.asset(
-          'assets/images/no_members.svg', // Adjust path as needed
-          height: 280, // Reduced from 392 to make it smaller
-          fit: BoxFit.contain,
-        ),
-        const SizedBox(height: 12), // Reduced spacing between SVG and text
-        Text(
-          'Add your Flatmates by sharing',
-          style: TextStyle(
-            fontSize: 18, // Slightly smaller font
-            color: AppColors.textSecondary,
-            fontFamily: 'VarelaRound',
-          ),
-        ),
-        Text(
-          'room code through socials',
-          style: TextStyle(
-            fontSize: 18, // Slightly smaller font
-            color: AppColors.textSecondary,
-            fontFamily: 'VarelaRound',
-          ),
-        ),
-        const SizedBox(height: 20), // Reduced bottom spacing
-      ],
-    );
-  }
-
-  Widget _buildErrorView() {
+  Widget _buildErrorView(bool isDarkMode) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -926,7 +1087,13 @@ class _MembersScreenState extends State<MembersScreen> {
             const SizedBox(height: 8),
             Text(
               _errorMessage!,
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 14,
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
@@ -952,7 +1119,7 @@ class _MembersScreenState extends State<MembersScreen> {
     );
   }
 
-  Widget _buildNoHouseholdView() {
+  Widget _buildNoHouseholdView(bool isDarkMode) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -960,7 +1127,10 @@ class _MembersScreenState extends State<MembersScreen> {
           Icon(
             Icons.home_outlined,
             size: 80,
-            color: AppColors.textSecondary.withOpacity(0.5),
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark.withOpacity(0.5)
+                    : AppColors.textSecondary.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
@@ -968,13 +1138,22 @@ class _MembersScreenState extends State<MembersScreen> {
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Create a new household or join an existing one',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+            style: TextStyle(
+              fontSize: 14,
+              color:
+                  isDarkMode
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
@@ -1023,20 +1202,44 @@ class _MembersScreenState extends State<MembersScreen> {
 
   // New method to show options dialog
   void _showCreateOrJoinOptionsDialog() {
+    // Check dark mode
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return SimpleDialog(
-          title: const Text('Household Options'),
+          title: Text(
+            'Household Options',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor:
+              isDarkMode ? AppColors.surfaceDark : AppColors.surface,
           children: [
             SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(dialogContext);
                 _showCreateHouseholdDialog();
               },
-              child: const ListTile(
-                leading: Icon(Icons.add_home),
-                title: Text('Create New Household'),
+              child: ListTile(
+                leading: Icon(
+                  Icons.add_home,
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+                title: Text(
+                  'Create New Household',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
               ),
             ),
             SimpleDialogOption(
@@ -1044,18 +1247,40 @@ class _MembersScreenState extends State<MembersScreen> {
                 Navigator.pop(dialogContext);
                 _showJoinHouseholdDialog();
               },
-              child: const ListTile(
-                leading: Icon(Icons.group_add),
-                title: Text('Join Existing Household'),
+              child: ListTile(
+                leading: Icon(
+                  Icons.group_add,
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+                title: Text(
+                  'Join Existing Household',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
               ),
             ),
             SimpleDialogOption(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const ListTile(
-                leading: Icon(Icons.cancel),
-                title: Text('Cancel'),
+              child: ListTile(
+                leading: Icon(
+                  Icons.cancel,
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+                title: Text(
+                  'Cancel',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
               ),
             ),
           ],
@@ -1077,7 +1302,79 @@ class _MembersScreenState extends State<MembersScreen> {
     _showCreateOrJoinOptionsDialog();
   }
 
-  Widget _buildMemberCard(HouseholdMemberModel member) {
+  // This new widget displays both the member list and the add flatmates content
+  Widget _buildMembersListWithAddContent(bool isDarkMode) {
+    // Only show admin users first
+    final adminMembers = _members.where((m) => m.role == 'admin').toList();
+
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      children: [
+        // Display admin members at the top
+        ...adminMembers.map((member) => _buildMemberCard(member, isDarkMode)),
+
+        // Other members if there are any
+        if (_members.length > adminMembers.length)
+          ..._members
+              .where((m) => m.role != 'admin')
+              .map((member) => _buildMemberCard(member, isDarkMode)),
+
+        // Add the "Add your flatmates" section if admin is the only member
+        if (_members.length <= 1) _buildAddFlatmatesSection(isDarkMode),
+
+        // Add some space at the bottom for the Admin Mode button
+        const SizedBox(height: 60),
+      ],
+    );
+  }
+
+  // Section for "Add your flatmates" with SVG and text
+  Widget _buildAddFlatmatesSection(bool isDarkMode) {
+    return Column(
+      children: [
+        const SizedBox(height: 10), // Reduced top spacing
+        // SVG image of people moving boxes - smaller height
+        SvgPicture.asset(
+          'assets/images/no_members.svg', // Adjust path as needed
+          height: 280, // Reduced from 392 to make it smaller
+          colorFilter:
+              isDarkMode
+                  ? ColorFilter.mode(
+                    Colors.white.withOpacity(0.8),
+                    BlendMode.srcIn,
+                  )
+                  : null,
+          fit: BoxFit.contain,
+        ),
+        const SizedBox(height: 12), // Reduced spacing between SVG and text
+        Text(
+          'Add your Flatmates by sharing',
+          style: TextStyle(
+            fontSize: 18, // Slightly smaller font
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+            fontFamily: 'VarelaRound',
+          ),
+        ),
+        Text(
+          'room code through socials',
+          style: TextStyle(
+            fontSize: 18, // Slightly smaller font
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+            fontFamily: 'VarelaRound',
+          ),
+        ),
+        const SizedBox(height: 20), // Reduced bottom spacing
+      ],
+    );
+  }
+
+  Widget _buildMemberCard(HouseholdMemberModel member, bool isDarkMode) {
     // Determine role badge color
     Color roleBadgeColor = AppColors.primary;
     if (member.role == 'admin') {
@@ -1088,16 +1385,18 @@ class _MembersScreenState extends State<MembersScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderPrimary),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
       ),
       child: Row(
         children: [
           // Profile picture
           CircleAvatar(
             radius: 24,
-            backgroundColor: Colors.grey[200],
+            backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
             backgroundImage:
                 member.profileImageUrl != null &&
                         member.profileImageUrl!.isNotEmpty
@@ -1128,7 +1427,10 @@ class _MembersScreenState extends State<MembersScreen> {
                     fontSize: 16,
                     fontFamily: 'Switzer',
                     fontWeight: FontWeight.w600,
-                    color: AppColors.primary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1137,7 +1439,10 @@ class _MembersScreenState extends State<MembersScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontFamily: 'VarelaRound',
-                    color: AppColors.textSecondary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -1181,7 +1486,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 height: 18,
                 width: 18,
                 colorFilter: ColorFilter.mode(
-                  AppColors.primary,
+                  isDarkMode ? AppColors.primaryDark : AppColors.primary,
                   BlendMode.srcIn,
                 ),
               ),
