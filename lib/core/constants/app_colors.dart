@@ -1,6 +1,4 @@
 // lib/core/constants/app_colors.dart
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -13,21 +11,58 @@ class AppColors {
   ); // Light blue for secondary text
 
   // Background Colors
-  static const Color background = Color(0xFFF4F3EE); // Main background
-  static const Color surface = Color(0xFFFFFFFF); // Surface color for cards
+  static const Color background = Color(
+    0xFFF4F3EE,
+  ); // Main background (Light mode)
+  static const Color surface = Color(
+    0xFFFFFFFF,
+  ); // Surface color for cards (Light mode)
+
+  // Dark mode Colors
+  static const Color backgroundDark = Color(0xFF151A2C); // Dark mode background
+  static const Color surfaceDark = Color(
+    0xFF1E2642,
+  ); // Dark mode surface color for cards
+  static const Color primaryDark = Color(
+    0xFF586AAF,
+  ); // Same primary color for dark mode
+  static const Color primaryLightDark = Color(
+    0xFF7896B6,
+  ); // Same primary light for dark mode
 
   // Tab Colors
   static const Color tabInactive = Color(0xFFDEDDD8); // Unselected tab color
+  static const Color tabInactiveDark = Color(
+    0xFF3A4060,
+  ); // Dark mode unselected tab color
 
   // Text Colors
-  static const Color textPrimary = Color(0xFF586AAF); // Primary text color
-  static const Color textSecondary = Color(0xFF7896B6); // Secondary text color
+  static const Color textPrimary = Color(
+    0xFF586AAF,
+  ); // Primary text color (Light mode)
+  static const Color textSecondary = Color(
+    0xFF7896B6,
+  ); // Secondary text color (Light mode)
   static const Color textLight = Color(0xFFFFFFFF); // White text
   static const Color textDark = Color(0xFF1A1A1A); // Dark text
+
+  // Dark mode text colors
+  static const Color textPrimaryDark = Color(
+    0xFFFFFFFF,
+  ); // Primary text color (Dark mode)
+  static const Color textSecondaryDark = Color(
+    0xFFB4BCD0,
+  ); // Secondary text color (Dark mode)
 
   // Border Colors
   static const Color border = Color(0xFFE5E5E5); // Light border
   static const Color borderPrimary = Color(0xFF586AAF); // Primary border
+
+  // Dark mode border colors
+  static const Color borderDark = Color(0xFF2A3050); // Dark mode border
+  static const Color borderPrimaryDark = Color(
+    0xFF586AAF,
+  ); // Dark mode primary border
 
   // Status Colors
   static const Color success = Color(0xFF4CAF50);
@@ -48,11 +83,17 @@ class AppColors {
 
   // Additional UI Element Colors
   static const Color iconPrimary = Color(0xFF586AAF);
+  static const Color iconPrimaryDark = Color(0xFFFFFFFF); // Dark mode icons
   static const Color divider = Color(0xFFE5E5E5);
+  static const Color dividerDark = Color(0xFF2A3050); // Dark mode divider
 
   // Navigation Colors
   static const Color navSelected = Color(0xFF586AAF);
   static const Color navUnselected = Colors.grey;
+
+  // Dark mode navigation colors
+  static const Color navSelectedDark = Color(0xFFFFFFFF);
+  static const Color navUnselectedDark = Color(0xFF6D7A9F);
 
   // Authentication Gradient
   static const List<Color> authGradient = [

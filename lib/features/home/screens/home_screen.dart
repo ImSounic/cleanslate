@@ -11,6 +11,10 @@ import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:intl/intl.dart';
 
+import 'package:provider/provider.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/widgets/theme_toggle_button.dart';
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 

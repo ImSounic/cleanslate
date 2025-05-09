@@ -1,13 +1,17 @@
+// lib/main.dart
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
+import 'package:cleanslate/core/theme/app_theme.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +25,12 @@ Future<void> main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY']!,
   );
 
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => ThemeProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -70,22 +79,24 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'CleanSlate',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-        useMaterial3: true,
-      ),
-      home:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : _isLoggedIn
-              ? const HomeScreen()
-              : const LandingScreen(),
-      routes: {
-        '/login': (context) => const LoginScreen(),
-        '/home': (context) => const HomeScreen(),
+    return Consumer<ThemeProvider>(
+      builder: (context, themeProvider, child) {
+        return MaterialApp(
+          title: 'CleanSlate',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeProvider.themeMode,
+          home:
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _isLoggedIn
+                  ? const HomeScreen()
+                  : const LandingScreen(),
+          routes: {
+            '/login': (context) => const LoginScreen(),
+            '/home': (context) => const HomeScreen(),
+          },
+        );
       },
     );
   }
