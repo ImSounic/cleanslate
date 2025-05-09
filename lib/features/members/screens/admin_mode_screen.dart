@@ -1,14 +1,19 @@
 // lib/features/members/screens/admin_mode_screen.dart
-// ignore_for_file: deprecated_member_use
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/data/repositories/chore_repository.dart';
+import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
+import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 
 class AdminModeScreen extends StatefulWidget {
-  // ignore: use_super_parameters
   const AdminModeScreen({Key? key}) : super(key: key);
 
   @override
@@ -17,59 +22,135 @@ class AdminModeScreen extends StatefulWidget {
 
 class _AdminModeScreenState extends State<AdminModeScreen> {
   final HouseholdService _householdService = HouseholdService();
+  final HouseholdRepository _householdRepository = HouseholdRepository();
+  final ChoreRepository _choreRepository = ChoreRepository();
   final TextEditingController _deleteConfirmController =
       TextEditingController();
+
   int _selectedNavIndex = 1; // Members tab selected
+  bool _isLoading = true;
+  String _errorMessage = '';
 
-  // Sample data for the UI demo - in a real app this would come from your repository
-  final List<Map<String, dynamic>> _joinRequests = [
-    {
-      'id': '1',
-      'name': 'Alice Johnson',
-      'profileImage': 'assets/images/profile_pictures/alice.png',
-    },
-    {
-      'id': '2',
-      'name': 'Jamie',
-      'profileImage': 'assets/images/profile_pictures/jamie.png',
-    },
-    {
-      'id': '3',
-      'name': 'Donnie',
-      'profileImage': 'assets/images/profile_pictures/donnie.png',
-    },
-  ];
+  // Store real data
+  List<Map<String, dynamic>> _joinRequests = [];
+  List<Map<String, dynamic>> _memberStats = [];
+  String _householdName = '';
+  String _householdCode = '';
 
-  final List<Map<String, dynamic>> _memberStats = [
-    {
-      'id': '1',
-      'name': 'Eva White',
-      'profileImage': 'assets/images/profile_pictures/eva.png',
-      'choresCompleted': 9,
-      'choresAssigned': 12,
-    },
-    {
-      'id': '2',
-      'name': 'Jane Cooper',
-      'profileImage': 'assets/images/profile_pictures/jane.png',
-      'choresCompleted': 37,
-      'choresAssigned': 4,
-    },
-    {
-      'id': '3',
-      'name': 'Jacob Jones',
-      'profileImage': 'assets/images/profile_pictures/jacob.png',
-      'choresCompleted': 48,
-      'choresAssigned': 12,
-    },
-    {
-      'id': '4',
-      'name': 'Robert Fox',
-      'profileImage': 'assets/images/profile_pictures/robert.png',
-      'choresCompleted': 37,
-      'choresAssigned': 4,
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadAdminData();
+  }
+
+  Future<void> _loadAdminData() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = '';
+    });
+
+    try {
+      // Get current household
+      final currentHousehold = _householdService.currentHousehold;
+      if (currentHousehold == null) {
+        setState(() {
+          _errorMessage = 'No household selected';
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Set household name and code
+      _householdName = currentHousehold.name;
+      _householdCode = currentHousehold.code;
+
+      // Load household members
+      final members = await _householdRepository.getHouseholdMembers(
+        currentHousehold.id,
+      );
+
+      // Load pending join requests
+      // Note: In a real app, you would have a separate table for join requests
+      // For now, we're leaving this empty as there's no join request table in your data model
+      // This would be implemented once you add that functionality to your backend
+      _joinRequests = [];
+
+      // Calculate member statistics
+      await _calculateMemberStats(members, currentHousehold.id);
+
+      setState(() {
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Error loading data: $e';
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _calculateMemberStats(
+    List<HouseholdMemberModel> members,
+    String householdId,
+  ) async {
+    _memberStats = [];
+
+    try {
+      // Get all chores for the household
+      final chores = await _choreRepository.getChoresForHousehold(householdId);
+
+      // Create stats for each member
+      for (var member in members) {
+        // Count completed and assigned chores for this member
+        int choresCompleted = 0;
+        int choresAssigned = 0;
+
+        for (var chore in chores) {
+          final assignments = chore['chore_assignments'] as List? ?? [];
+
+          for (var assignment in assignments) {
+            if (assignment['assigned_to'] == member.userId) {
+              choresAssigned++;
+
+              if (assignment['status'] == 'completed') {
+                choresCompleted++;
+              }
+            }
+          }
+        }
+
+        // Add member stats
+        _memberStats.add({
+          'id': member.userId,
+          'name': member.fullName ?? member.email ?? 'User',
+          'email': member.email ?? '',
+          'profileImageUrl': member.profileImageUrl,
+          'role': member.role,
+          'choresCompleted': choresCompleted,
+          'choresAssigned': choresAssigned,
+        });
+      }
+
+      // Sort by chores completed (highest first)
+      _memberStats.sort(
+        (a, b) => b['choresCompleted'].compareTo(a['choresCompleted']),
+      );
+    } catch (e) {
+      print('Error calculating member stats: $e');
+      // Still maintain the basic member list even if chore stats fail
+      for (var member in members) {
+        _memberStats.add({
+          'id': member.userId,
+          'name': member.fullName ?? member.email ?? 'User',
+          'email': member.email ?? '',
+          'profileImageUrl': member.profileImageUrl,
+          'role': member.role,
+          'choresCompleted': 0,
+          'choresAssigned': 0,
+        });
+      }
+    }
+  }
 
   void _showOptionsOverlay() {
     showDialog(
@@ -124,8 +205,8 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                 // Transfer Ownership option
                 GestureDetector(
                   onTap: () {
-                    // Handle transfer ownership
                     Navigator.of(context).pop();
+                    _showTransferOwnershipDialog();
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 12),
@@ -135,6 +216,31 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                         const SizedBox(width: 16),
                         Text(
                           'Transfer Ownership',
+                          style: TextStyle(
+                            color: AppColors.primary,
+                            fontSize: 16,
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Share Household Code
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    _showHouseholdCodeDialog();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Row(
+                      children: [
+                        Icon(Icons.share, color: AppColors.primary),
+                        const SizedBox(width: 16),
+                        Text(
+                          'Share Household Code',
                           style: TextStyle(
                             color: AppColors.primary,
                             fontSize: 16,
@@ -178,10 +284,217 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     );
   }
 
+  void _showHouseholdCodeDialog() {
+    final code = _householdCode;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Household Code'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Share this code with others to invite them to your household:',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () {
+                  // Copy to clipboard when tapped
+                  Clipboard.setData(ClipboardData(text: code));
+
+                  // Show a snackbar to confirm copy action
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Code copied to clipboard!'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.background,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        code,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 2,
+                          color: AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(Icons.copy, color: AppColors.primary, size: 24),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tap to copy',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showTransferOwnershipDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        // Filter members who are not admins
+        final eligibleMembers =
+            _memberStats.where((member) => member['role'] != 'admin').toList();
+
+        if (eligibleMembers.isEmpty) {
+          return AlertDialog(
+            title: const Text('Transfer Ownership'),
+            content: const Text(
+              'There are no other members to transfer ownership to. Invite more members first.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        }
+
+        String? selectedMemberId;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Transfer Ownership'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Select a member to transfer household ownership to:',
+                  ),
+                  const SizedBox(height: 16),
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        hint: const Text('Select a member'),
+                        value: selectedMemberId,
+                        items:
+                            eligibleMembers.map((member) {
+                              return DropdownMenuItem<String>(
+                                value: member['id'],
+                                child: Text(member['name']),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedMemberId = value;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Warning: This will give admin privileges to the selected member and you will no longer be the owner.',
+                    style: TextStyle(color: Colors.red, fontSize: 12),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed:
+                      selectedMemberId == null
+                          ? null
+                          : () async {
+                            Navigator.pop(context);
+                            await _transferOwnership(selectedMemberId!);
+                          },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                  ),
+                  child: const Text('Transfer'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _transferOwnership(String newOwnerId) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // This would typically be implemented in your backend
+      // For now, simulate updating member roles
+      await _householdRepository.updateMemberRole(newOwnerId, 'admin');
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ownership transferred successfully')),
+      );
+
+      // Reload data
+      await _loadAdminData();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to transfer ownership: $e')),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
   void _showDeleteConfirmation() {
     _deleteConfirmController.clear();
-    final currentHousehold = _householdService.currentHousehold;
-    final householdName = currentHousehold?.name ?? 'Household';
+    final householdName = _householdName;
 
     showDialog(
       context: context,
@@ -274,19 +587,12 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           if (_deleteConfirmController.text.trim() ==
                               householdName) {
                             // Delete the household
                             Navigator.of(context).pop();
-                            Navigator.of(
-                              context,
-                            ).pop(); // Go back to members screen
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Household deleted'),
-                              ),
-                            );
+                            await _deleteHousehold();
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -331,18 +637,67 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     );
   }
 
-  void _handleRequestAction(String requestId, bool isApproved) {
-    // Here you would typically call your repository to accept/reject the request
-    // For now, just remove it from the UI list
+  Future<void> _deleteHousehold() async {
+    final currentHousehold = _householdService.currentHousehold;
+    if (currentHousehold == null) return;
+
     setState(() {
-      _joinRequests.removeWhere((request) => request['id'] == requestId);
+      _isLoading = true;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(isApproved ? 'Request approved' : 'Request rejected'),
-      ),
-    );
+    try {
+      await _householdRepository.deleteHousehold(currentHousehold.id);
+
+      // Clear current household in service
+      _householdService.clearCurrentHousehold();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Household deleted successfully')),
+      );
+
+      // Navigate back to members screen
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        (route) => false,
+      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+        _errorMessage = 'Failed to delete household: $e';
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error deleting household: $e')));
+    }
+  }
+
+  Future<void> _handleRequestAction(String requestId, bool isApproved) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // This would typically call a method to accept/reject the request
+      // For now, simulate by removing from the local list
+      setState(() {
+        _joinRequests.removeWhere((request) => request['id'] == requestId);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isApproved ? 'Request approved' : 'Request rejected'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _handleNavigation(int index) {
@@ -363,9 +718,11 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         case 1: // Members - already on this screen, just close admin mode
           Navigator.pop(context);
           break;
-        case 2: // Calendar - would implement if you have a CalendarScreen
-          Navigator.pop(context); // For now, just go back to members screen
-          // In a real app: Navigator.push(context, MaterialPageRoute(builder: (context) => const CalendarScreen()));
+        case 2: // Calendar
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const ScheduleScreen()),
+          );
           break;
         case 3: // Settings
           Navigator.pushReplacement(
@@ -379,8 +736,6 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Removed unused variable 'householdName'
-
     return Scaffold(
       backgroundColor: AppColors.primary,
       appBar: AppBar(
@@ -398,85 +753,251 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Admin Mode',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      fontFamily: 'Switzer',
-                    ),
-                  ),
-                  const Text(
-                    'Manage those requests like\nyou manage those chores.',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: Colors.white,
-                      fontFamily: 'VarelaRound',
-                    ),
-                  ),
-                ],
+        child:
+            _isLoading
+                ? const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                )
+                : _errorMessage.isNotEmpty
+                ? _buildErrorState()
+                : _buildContent(),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedNavIndex,
+        onTap: _handleNavigation, // Use the navigation handler
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: AppColors.primary,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.white.withOpacity(0.6),
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        items: [
+          BottomNavigationBarItem(
+            icon: SvgPicture.asset(
+              'assets/images/icons/home.svg',
+              height: 24,
+              width: 24,
+              colorFilter: ColorFilter.mode(
+                _selectedNavIndex == 0
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.6),
+                BlendMode.srcIn,
               ),
             ),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: SvgPicture.asset(
+              'assets/images/icons/members.svg',
+              height: 24,
+              width: 24,
+              colorFilter: ColorFilter.mode(
+                _selectedNavIndex == 1
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.6),
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Members',
+          ),
+          BottomNavigationBarItem(
+            icon: SvgPicture.asset(
+              'assets/images/icons/schedule.svg',
+              height: 24,
+              width: 24,
+              colorFilter: ColorFilter.mode(
+                _selectedNavIndex == 2
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.6),
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Calendar',
+          ),
+          BottomNavigationBarItem(
+            icon: SvgPicture.asset(
+              'assets/images/icons/settings.svg',
+              height: 24,
+              width: 24,
+              colorFilter: ColorFilter.mode(
+                _selectedNavIndex == 3
+                    ? Colors.white
+                    : Colors.white.withOpacity(0.6),
+                BlendMode.srcIn,
+              ),
+            ),
+            label: 'Settings',
+          ),
+        ],
+      ),
+    );
+  }
 
-            // Join Requests
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Join Requests Section
-                    if (_joinRequests.isNotEmpty)
-                      ..._joinRequests.map(
-                        (request) => _buildRequestCard(request),
-                      ),
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 64),
+            const SizedBox(height: 16),
+            Text(
+              'Something went wrong',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                fontFamily: 'Switzer',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _errorMessage,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.8),
+                fontSize: 16,
+                fontFamily: 'VarelaRound',
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadAdminData,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-                    // Manage section with stats
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: Divider(
-                              color: Colors.white.withOpacity(0.3),
-                              thickness: 1,
-                            ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Text(
-                              'Manage',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontFamily: 'VarelaRound',
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            child: Divider(
-                              color: Colors.white.withOpacity(0.3),
-                              thickness: 1,
-                            ),
-                          ),
-                        ],
-                      ),
+  Widget _buildContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Admin Mode',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  fontFamily: 'Switzer',
+                ),
+              ),
+              Text(
+                'Manage household: $_householdName',
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: Colors.white,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Join Requests
+        Expanded(
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Join Requests Section (if any)
+                if (_joinRequests.isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Divider(
+                            color: Colors.white.withOpacity(0.3),
+                            thickness: 1,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Join Requests',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontFamily: 'VarelaRound',
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: Divider(
+                            color: Colors.white.withOpacity(0.3),
+                            thickness: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  ..._joinRequests.map((request) => _buildRequestCard(request)),
+                ],
 
-                    // Member Statistics - Using ListView instead of GridView
-                    Padding(
+                // Manage section with stats
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withOpacity(0.3),
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Member Statistics',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withOpacity(0.3),
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Member Statistics
+                _memberStats.isEmpty
+                    ? _buildEmptyMembersState()
+                    : Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: ListView.builder(
                         shrinkWrap: true,
@@ -505,51 +1026,73 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                                     ),
                                   ),
                                 ),
+                              // Add empty space if odd number of members
+                              if (rowIndex * 2 + 1 >= _memberStats.length)
+                                const Spacer(),
                             ],
                           );
                         },
                       ),
                     ),
 
-                    const SizedBox(height: 24),
-                  ],
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyMembersState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.people_outline,
+              size: 64,
+              color: Colors.white.withOpacity(0.7),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No members to display',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontFamily: 'Switzer',
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Share your household code to invite members',
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 16,
+                fontFamily: 'VarelaRound',
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: _showHouseholdCodeDialog,
+              icon: const Icon(Icons.share),
+              label: const Text('Share Code'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
                 ),
               ),
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedNavIndex,
-        onTap: _handleNavigation, // Use the navigation handler
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.primary, // Match the background color
-        selectedItemColor: const Color(
-          0xFFF4F3EE,
-        ), // The requested color for icons
-        unselectedItemColor: const Color(
-          0xFFF4F3EE,
-        ).withOpacity(0.6), // Lighter version for unselected
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.people_outline),
-            label: 'Members',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.calendar_today_outlined),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings_outlined),
-            label: 'Settings',
-          ),
-        ],
       ),
     );
   }
@@ -565,13 +1108,24 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
         leading: CircleAvatar(
-          backgroundImage: AssetImage(request['profileImage']),
-          radius: 24,
+          backgroundColor: Colors.grey[300],
+          backgroundImage:
+              request['profileImageUrl'] != null
+                  ? NetworkImage(request['profileImageUrl'])
+                  : null,
+          child:
+              request['profileImageUrl'] == null
+                  ? Text(
+                    _getInitials(request['name']),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  )
+                  : null,
         ),
         title: Text(
-          request['name'] == 'Alice Johnson'
-              ? '${request['name']} is requesting to join your household'
-              : '${request['name']} is requesting to join your household',
+          "${request['name']} is requesting to join your household",
           style: const TextStyle(
             color: Colors.white,
             fontSize: 16,
@@ -587,7 +1141,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               child: Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.green,
                   shape: BoxShape.circle,
                 ),
@@ -601,7 +1155,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               child: Container(
                 width: 36,
                 height: 36,
-                decoration: BoxDecoration(
+                decoration: const BoxDecoration(
                   color: Colors.red,
                   shape: BoxShape.circle,
                 ),
@@ -615,9 +1169,16 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
   }
 
   Widget _buildMemberStatCard(Map<String, dynamic> member) {
-    // Using a fixed height container to prevent overflow
+    // Define avatar color based on role
+    Color avatarColor =
+        member['role'] == 'admin' ? Colors.orange : AppColors.avatarGreen;
+
+    // Get just the first name for display
+    String displayName = _getFirstName(member['name']);
+
+    // Using a fixed height container to prevent overflow - increase height to accommodate two-line labels
     return Container(
-      height: 170, // Significantly increased height
+      height: 195, // Increased further to fix 12px overflow
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.1),
         borderRadius: BorderRadius.circular(16),
@@ -634,7 +1195,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
             children: [
               Flexible(
                 child: Text(
-                  member['name'],
+                  displayName, // Now showing first name only
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -645,15 +1206,51 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                 ),
               ),
               CircleAvatar(
-                backgroundImage: AssetImage(member['profileImage']),
+                backgroundColor: avatarColor,
+                backgroundImage:
+                    member['profileImageUrl'] != null
+                        ? NetworkImage(member['profileImageUrl'])
+                        : null,
                 radius: 12,
+                child:
+                    member['profileImageUrl'] == null
+                        ? Text(
+                          _getInitials(member['name']),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                        : null,
               ),
             ],
           ),
+
+          // Role badge
+          if (member['role'] == 'admin')
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Admin',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
+            ),
+
           const SizedBox(height: 12),
 
           // Chores completed
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
@@ -662,13 +1259,13 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 11,
                     fontFamily: 'VarelaRound',
+                    height: 1.2,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2, // Allow up to 2 lines
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.star, color: Colors.yellow, size: 16),
+              const Icon(Icons.star, color: Colors.yellow, size: 16),
             ],
           ),
           const SizedBox(height: 4),
@@ -685,6 +1282,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
 
           // Chores assigned
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(
                 child: Text(
@@ -693,13 +1291,13 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                     color: Colors.white.withOpacity(0.7),
                     fontSize: 11,
                     fontFamily: 'VarelaRound',
+                    height: 1.2,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: 2, // Allow up to 2 lines
                 ),
               ),
               const SizedBox(width: 4),
-              Icon(Icons.assignment_ind, color: Colors.white, size: 16),
+              const Icon(Icons.assignment_ind, color: Colors.white, size: 16),
             ],
           ),
           const SizedBox(height: 4),
@@ -715,5 +1313,25 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         ],
       ),
     );
+  }
+
+  // Helper function to get initials from a name
+  String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+
+    List<String> nameParts = name.split(' ');
+    if (nameParts.length > 1) {
+      return (nameParts[0][0] + nameParts[1][0]).toUpperCase();
+    } else {
+      return name[0].toUpperCase();
+    }
+  }
+
+  // Helper function to get just the first name from a full name
+  String _getFirstName(String fullName) {
+    if (fullName.isEmpty) return '';
+
+    List<String> nameParts = fullName.split(' ');
+    return nameParts[0];
   }
 }
