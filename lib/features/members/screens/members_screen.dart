@@ -4,14 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:cleanslate/core/providers/navigation_provider.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({Key? key}) : super(key: key);
@@ -708,6 +708,12 @@ class _MembersScreenState extends State<MembersScreen> {
     // Check dark mode
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
+    // Access the NavigationProvider
+    final navigationProvider = Provider.of<NavigationProvider>(
+      context,
+      listen: false,
+    );
+
     return Scaffold(
       backgroundColor:
           isDarkMode ? AppColors.backgroundDark : AppColors.background,
@@ -731,7 +737,10 @@ class _MembersScreenState extends State<MembersScreen> {
                                   ? AppColors.textPrimaryDark
                                   : AppColors.primary,
                         ),
-                        onPressed: () => Navigator.pop(context),
+                        onPressed: () {
+                          // Use NavigationProvider to go back to Home
+                          navigationProvider.setIndex(0);
+                        },
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -844,6 +853,7 @@ class _MembersScreenState extends State<MembersScreen> {
                           fontSize: 38,
                           fontFamily: 'Switzer',
                           fontWeight: FontWeight.w600,
+                          letterSpacing: -3,
                           color:
                               isDarkMode
                                   ? AppColors.textPrimaryDark
@@ -941,35 +951,10 @@ class _MembersScreenState extends State<MembersScreen> {
           ),
         ),
         child: BottomNavigationBar(
-          currentIndex: _selectedNavIndex,
+          currentIndex: navigationProvider.currentIndex,
           onTap: (index) {
-            if (index != _selectedNavIndex) {
-              setState(() {
-                _selectedNavIndex = index;
-              });
-
-              // Handle navigation
-              if (index == 0) {
-                // Navigate back to home
-                Navigator.pop(context);
-              } else if (index == 2) {
-                // Navigate to Schedule screen
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ScheduleScreen(),
-                  ),
-                );
-              } else if (index == 3) {
-                // Settings tab
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              }
-            }
+            // Use NavigationProvider instead of setting state locally
+            navigationProvider.setIndex(index);
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor:
@@ -990,7 +975,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
+                  navigationProvider.currentIndex == 0
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -1008,7 +993,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
+                  navigationProvider.currentIndex == 1
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -1026,7 +1011,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
+                  navigationProvider.currentIndex == 2
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -1044,7 +1029,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 3
+                  navigationProvider.currentIndex == 3
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)

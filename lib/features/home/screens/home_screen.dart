@@ -4,11 +4,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
-import 'package:cleanslate/features/members/screens/members_screen.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
@@ -29,11 +26,9 @@ class _HomeScreenState extends State<HomeScreen>
   final _choreRepository = ChoreRepository();
   String _userName = '';
   List<Map<String, dynamic>> _myChores = [];
-  List<Map<String, dynamic>> _completedChores =
-      []; // Added completed chores list
+  List<Map<String, dynamic>> _completedChores = [];
   bool _isLoading = true;
   int _selectedTabIndex = 0;
-  int _selectedNavIndex = 0;
   final bool _hasNotifications = false;
 
   late AnimationController _toggleController;
@@ -139,6 +134,12 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
+    // Access the NavigationProvider
+    final navigationProvider = Provider.of<NavigationProvider>(
+      context,
+      listen: false,
+    );
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -205,10 +206,7 @@ class _HomeScreenState extends State<HomeScreen>
                   title: 'App Settings',
                   onTap: () {
                     Navigator.pop(context);
-                    Provider.of<NavigationProvider>(
-                      context,
-                      listen: false,
-                    ).setIndex(3);
+                    navigationProvider.setIndex(3);
                   },
                 ),
                 _buildProfileMenuItem(
@@ -531,7 +529,7 @@ class _HomeScreenState extends State<HomeScreen>
     // Get the navigation provider
     final navigationProvider = Provider.of<NavigationProvider>(
       context,
-      listen: false,
+      listen: true,
     );
 
     // Ensure the animation state matches the theme

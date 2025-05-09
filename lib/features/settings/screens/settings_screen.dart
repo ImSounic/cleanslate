@@ -7,11 +7,10 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
-import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/providers/navigation_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -27,7 +26,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _profileImageUrl;
   bool _pushNotifications = true;
   bool _reminders = true;
-  int _selectedNavIndex = 3; // Settings tab selected
   bool _isLoading = false;
 
   @override
@@ -71,6 +69,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final isDarkMode = ThemeUtils.isDarkMode(context);
     final themeProvider = Provider.of<ThemeProvider>(context);
 
+    // Access the NavigationProvider
+    final navigationProvider = Provider.of<NavigationProvider>(
+      context,
+      listen: false,
+    );
+
     return Scaffold(
       backgroundColor:
           isDarkMode ? AppColors.backgroundDark : AppColors.background,
@@ -83,7 +87,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icons.arrow_back,
             color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            // Use NavigationProvider to go back to Home
+            navigationProvider.setIndex(0);
+          },
         ),
         title: Text(
           'Settings',
@@ -162,12 +169,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.people_outline,
                         title: 'Members',
                         onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const MembersScreen(),
-                            ),
-                          );
+                          // Use NavigationProvider
+                          navigationProvider.setIndex(1);
                         },
                         isDarkMode: isDarkMode,
                       ),
@@ -178,12 +181,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         icon: Icons.calendar_today_outlined,
                         title: 'Schedule',
                         onTap: () {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const ScheduleScreen(),
-                            ),
-                          );
+                          // Use NavigationProvider
+                          navigationProvider.setIndex(2);
                         },
                         isDarkMode: isDarkMode,
                       ),
@@ -262,33 +261,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         ),
         child: BottomNavigationBar(
-          currentIndex: _selectedNavIndex,
+          currentIndex: navigationProvider.currentIndex,
           onTap: (index) {
-            if (index != _selectedNavIndex) {
-              if (index == 0) {
-                // Navigate to Home
-                Navigator.popUntil(context, (route) => route.isFirst);
-              } else if (index == 1) {
-                // Navigate to Members
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MembersScreen(),
-                  ),
-                );
-              } else if (index == 2) {
-                // Navigate to Schedule
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ScheduleScreen(),
-                  ),
-                );
-              }
-              setState(() {
-                _selectedNavIndex = index;
-              });
-            }
+            // Use NavigationProvider
+            navigationProvider.setIndex(index);
           },
           type: BottomNavigationBarType.fixed,
           selectedItemColor:
@@ -309,7 +285,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
+                  navigationProvider.currentIndex == 0
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -327,7 +303,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
+                  navigationProvider.currentIndex == 1
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -345,7 +321,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
+                  navigationProvider.currentIndex == 2
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
@@ -363,7 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 3
+                  navigationProvider.currentIndex == 3
                       ? (isDarkMode
                           ? AppColors.navSelectedDark
                           : AppColors.navSelected)
