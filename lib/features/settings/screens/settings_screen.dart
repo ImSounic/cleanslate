@@ -4,11 +4,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,7 +27,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _profileImageUrl;
   bool _pushNotifications = true;
   bool _reminders = true;
-  bool _darkMode = false;
   int _selectedNavIndex = 3; // Settings tab selected
   bool _isLoading = false;
 
@@ -65,19 +67,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Access the theme provider to check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor:
+          isDarkMode ? AppColors.backgroundDark : AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor:
+            isDarkMode ? AppColors.backgroundDark : AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Settings',
           style: TextStyle(
-            color: AppColors.primary,
+            color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
             fontFamily: 'Switzer',
             fontWeight: FontWeight.bold,
           ),
@@ -85,7 +96,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: CircularProgressIndicator(
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+              )
               : SingleChildScrollView(
                 child: Padding(
                   padding: const EdgeInsets.all(16.0),
@@ -93,13 +108,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // User Profile Card
-                      _buildProfileCard(),
+                      _buildProfileCard(isDarkMode),
                       const SizedBox(height: 24),
 
                       // Notifications Section
-                      _buildSectionTitle('Notifications'),
+                      _buildSectionTitle('Notifications', isDarkMode),
                       _buildSectionSubtitle(
                         'Manage your notification preferences',
+                        isDarkMode,
                       ),
                       const SizedBox(height: 12),
                       _buildToggleItem(
@@ -111,6 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _pushNotifications = value;
                           });
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 12),
                       _buildToggleItem(
@@ -122,21 +139,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             _reminders = value;
                           });
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 24),
 
                       // Appearance Section
-                      _buildSectionTitle('Others'),
+                      _buildSectionTitle('Others', isDarkMode),
                       const SizedBox(height: 12),
                       _buildToggleItem(
                         icon: Icons.dark_mode_outlined,
                         title: 'Dark Mode',
-                        value: _darkMode,
+                        value: isDarkMode,
                         onChanged: (value) {
-                          setState(() {
-                            _darkMode = value;
-                          });
+                          themeProvider.toggleTheme();
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 12),
 
@@ -152,6 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           );
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 12),
 
@@ -167,6 +185,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                           );
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 12),
 
@@ -177,6 +196,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () {
                           // Show language selection dialog
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 12),
                       _buildNavigationItem(
@@ -185,6 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () {
                           // Navigate to Help & Support screen
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 12),
                       _buildNavigationItem(
@@ -194,6 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         onTap: () async {
                           await _handleLogout();
                         },
+                        isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 32),
 
@@ -204,7 +226,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Text(
                               'CleanSlate v1.0.0',
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
                                 fontSize: 12,
                                 fontFamily: 'VarelaRound',
                               ),
@@ -212,7 +237,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             Text(
                               '© 2025 CleanSlate. All rights reserved.',
                               style: TextStyle(
-                                color: AppColors.textSecondary,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.textSecondaryDark
+                                        : AppColors.textSecondary,
                                 fontSize: 12,
                                 fontFamily: 'VarelaRound',
                               ),
@@ -226,7 +254,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
         ),
         child: BottomNavigationBar(
           currentIndex: _selectedNavIndex,
@@ -258,11 +291,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
             }
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.navSelected,
-          unselectedItemColor: AppColors.navUnselected,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          backgroundColor: AppColors.background,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
           elevation: 0,
           items: [
             BottomNavigationBarItem(
@@ -272,8 +310,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 0
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -286,8 +328,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 1
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -300,8 +346,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 2
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -314,8 +364,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 width: 24,
                 colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 3
-                      ? AppColors.navSelected
-                      : AppColors.navUnselected,
+                      ? (isDarkMode
+                          ? AppColors.navSelectedDark
+                          : AppColors.navSelected)
+                      : (isDarkMode
+                          ? AppColors.navUnselectedDark
+                          : AppColors.navUnselected),
                   BlendMode.srcIn,
                 ),
               ),
@@ -327,17 +381,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileCard() {
+  Widget _buildProfileCard(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderPrimary),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
       ),
       child: Row(
         children: [
-          _buildProfileImage(),
+          _buildProfileImage(isDarkMode),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -349,7 +405,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     fontSize: 18,
                     fontFamily: 'Switzer',
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textPrimary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -358,7 +417,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   style: TextStyle(
                     fontSize: 14,
                     fontFamily: 'VarelaRound',
-                    color: AppColors.textSecondary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -379,7 +441,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               });
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.primary,
+              backgroundColor:
+                  isDarkMode ? AppColors.primaryDark : AppColors.primary,
               foregroundColor: AppColors.textLight,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(20),
@@ -396,13 +459,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileImage() {
+  Widget _buildProfileImage(bool isDarkMode) {
     return Container(
       width: 60,
       height: 60,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: AppColors.primary, width: 2),
+        border: Border.all(
+          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+          width: 2,
+        ),
       ),
       child:
           _profileImageUrl != null
@@ -421,6 +487,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 ? loadingProgress.cumulativeBytesLoaded /
                                     loadingProgress.expectedTotalBytes!
                                 : null,
+                        color:
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
                       ),
                     );
                   },
@@ -428,34 +498,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     return Icon(
                       Icons.person,
                       size: 30,
-                      color: AppColors.textSecondary,
+                      color:
+                          isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                     );
                   },
                 ),
               )
-              : Icon(Icons.person, size: 30, color: AppColors.textSecondary),
+              : Icon(
+                Icons.person,
+                size: 30,
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+              ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, bool isDarkMode) {
     return Text(
       title,
       style: TextStyle(
         fontSize: 20,
         fontFamily: 'Switzer',
         fontWeight: FontWeight.bold,
-        color: AppColors.primary,
+        color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
       ),
     );
   }
 
-  Widget _buildSectionSubtitle(String subtitle) {
+  Widget _buildSectionSubtitle(String subtitle, bool isDarkMode) {
     return Text(
       subtitle,
       style: TextStyle(
         fontSize: 14,
         fontFamily: 'VarelaRound',
-        color: AppColors.textSecondary,
+        color:
+            isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
       ),
     );
   }
@@ -465,23 +546,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     required bool value,
     required Function(bool) onChanged,
+    required bool isDarkMode,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderPrimary),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
       ),
       child: ListTile(
-        leading: Icon(icon, color: AppColors.primary),
+        leading: Icon(
+          icon,
+          color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+        ),
         title: Text(
           title,
-          style: TextStyle(fontFamily: 'Switzer', color: AppColors.textPrimary),
+          style: TextStyle(
+            fontFamily: 'Switzer',
+            color:
+                isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
         ),
         trailing: Switch(
           value: value,
           onChanged: onChanged,
-          activeColor: AppColors.primary,
+          activeColor: isDarkMode ? AppColors.primaryDark : AppColors.primary,
         ),
       ),
     );
@@ -493,23 +584,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
     String? trailing,
     bool isDestructive = false,
     required VoidCallback onTap,
+    required bool isDarkMode,
   }) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderPrimary),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
       ),
       child: ListTile(
         leading: Icon(
           icon,
-          color: isDestructive ? AppColors.error : AppColors.primary,
+          color:
+              isDestructive
+                  ? AppColors.error
+                  : (isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.primary),
         ),
         title: Text(
           title,
           style: TextStyle(
             fontFamily: 'Switzer',
-            color: isDestructive ? AppColors.error : AppColors.textPrimary,
+            color:
+                isDestructive
+                    ? AppColors.error
+                    : (isDarkMode
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary),
           ),
         ),
         trailing:
@@ -518,10 +622,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing,
                   style: TextStyle(
                     fontFamily: 'VarelaRound',
-                    color: AppColors.textSecondary,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
                 )
-                : Icon(Icons.chevron_right, color: AppColors.textSecondary),
+                : Icon(
+                  Icons.chevron_right,
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
         onTap: onTap,
       ),
     );

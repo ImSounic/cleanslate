@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
@@ -127,6 +128,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showPhotoOptions() {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     showDialog(
       context: context,
       builder:
@@ -134,28 +138,42 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
             ),
+            backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
+                  Text(
                     'Profile Photo',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       fontFamily: 'Switzer',
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 24),
                   ListTile(
                     leading: Icon(
                       Icons.photo_library,
-                      color: AppColors.primary,
+                      color:
+                          isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Choose from Gallery',
-                      style: TextStyle(fontFamily: 'VarelaRound'),
+                      style: TextStyle(
+                        fontFamily: 'VarelaRound',
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
                     ),
                     onTap: () {
                       Navigator.pop(context);
@@ -163,17 +181,32 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     },
                   ),
                   ListTile(
-                    leading: Icon(Icons.camera_alt, color: AppColors.primary),
-                    title: const Text(
+                    leading: Icon(
+                      Icons.camera_alt,
+                      color:
+                          isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
+                    ),
+                    title: Text(
                       'Take a New Picture',
-                      style: TextStyle(fontFamily: 'VarelaRound'),
+                      style: TextStyle(
+                        fontFamily: 'VarelaRound',
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
                     ),
                     onTap: () {
                       Navigator.pop(context);
                       _pickImage(ImageSource.camera);
                     },
                   ),
-                  Divider(color: AppColors.border),
+                  Divider(
+                    color:
+                        isDarkMode ? AppColors.dividerDark : AppColors.border,
+                  ),
                   ListTile(
                     leading: Icon(Icons.delete, color: AppColors.error),
                     title: Text(
@@ -194,7 +227,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     child: Text(
                       'Cancel',
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -240,33 +276,48 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor:
+          isDarkMode ? AppColors.backgroundDark : AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor:
+            isDarkMode ? AppColors.backgroundDark : AppColors.background,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Edit Profile',
           style: TextStyle(
-            color: AppColors.primary,
+            color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
             fontFamily: 'Switzer',
             fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.check, color: AppColors.primary),
+            icon: Icon(
+              Icons.check,
+              color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+            ),
             onPressed: _isLoading ? null : _saveProfile,
           ),
         ],
       ),
       body:
           _isLoading
-              ? const Center(child: CircularProgressIndicator())
+              ? Center(
+                child: CircularProgressIndicator(
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                ),
+              )
               : SingleChildScrollView(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -280,14 +331,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                             width: 120,
                             height: 120,
                             decoration: BoxDecoration(
-                              color: AppColors.background,
+                              color:
+                                  isDarkMode
+                                      ? AppColors.surfaceDark
+                                      : AppColors.background,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.primary,
+                                color:
+                                    isDarkMode
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary,
                                 width: 2,
                               ),
                             ),
-                            child: _buildProfileImage(),
+                            child: _buildProfileImage(isDarkMode),
                           ),
                           Positioned(
                             bottom: 0,
@@ -298,7 +355,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary,
+                                  color:
+                                      isDarkMode
+                                          ? AppColors.primaryDark
+                                          : AppColors.primary,
                                   shape: BoxShape.circle,
                                 ),
                                 child: Icon(
@@ -318,7 +378,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Text(
                       'Name',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.primary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -326,23 +389,50 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextField(
                       controller: _nameController,
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
                         fontFamily: 'VarelaRound',
                       ),
                       decoration: InputDecoration(
                         hintText: 'Enter your name',
+                        hintStyle: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.primary),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                          ),
                         ),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppColors.surfaceDark : Colors.white,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -351,7 +441,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Text(
                       'Email',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.primary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -360,21 +453,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       controller: _emailController,
                       readOnly: true, // Email can't be changed
                       style: TextStyle(
-                        color: AppColors.textSecondary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                         fontFamily: 'VarelaRound',
                       ),
                       decoration: InputDecoration(
                         hintText: 'Your email address',
+                        hintStyle: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         filled: true,
-                        fillColor: Colors.grey[100],
+                        fillColor:
+                            isDarkMode
+                                ? AppColors.surfaceDark.withOpacity(0.5)
+                                : Colors.grey[100],
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -383,7 +498,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Text(
                       'Phone Number',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.primary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -391,24 +509,51 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextField(
                       controller: _phoneController,
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
                         fontFamily: 'VarelaRound',
                       ),
                       keyboardType: TextInputType.phone,
                       decoration: InputDecoration(
                         hintText: 'Enter your phone number',
+                        hintStyle: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.primary),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                          ),
                         ),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppColors.surfaceDark : Colors.white,
                       ),
                     ),
                     const SizedBox(height: 16),
@@ -417,7 +562,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     Text(
                       'Bio',
                       style: TextStyle(
-                        color: AppColors.primary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.primary,
                         fontFamily: 'VarelaRound',
                       ),
                     ),
@@ -425,24 +573,51 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     TextField(
                       controller: _bioController,
                       style: TextStyle(
-                        color: AppColors.textPrimary,
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
                         fontFamily: 'VarelaRound',
                       ),
                       maxLines: 4,
                       decoration: InputDecoration(
                         hintText: 'Tell others about yourself',
+                        hintStyle: TextStyle(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.border),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.borderDark
+                                    : AppColors.border,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: AppColors.primary),
+                          borderSide: BorderSide(
+                            color:
+                                isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                          ),
                         ),
+                        filled: true,
+                        fillColor:
+                            isDarkMode ? AppColors.surfaceDark : Colors.white,
                       ),
                     ),
                     const SizedBox(height: 32),
@@ -452,7 +627,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          _showDeleteAccountConfirmation();
+                          _showDeleteAccountConfirmation(isDarkMode);
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.error,
@@ -476,7 +651,12 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+          border: Border(
+            top: BorderSide(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+              width: 1,
+            ),
+          ),
         ),
         child: BottomNavigationBar(
           currentIndex: 3, // Settings tab
@@ -487,11 +667,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             }
           },
           type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppColors.navSelected,
-          unselectedItemColor: AppColors.navUnselected,
+          selectedItemColor:
+              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
+          unselectedItemColor:
+              isDarkMode
+                  ? AppColors.navUnselectedDark
+                  : AppColors.navUnselected,
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          backgroundColor: AppColors.background,
+          backgroundColor:
+              isDarkMode ? AppColors.backgroundDark : AppColors.background,
           elevation: 0,
           items: [
             BottomNavigationBarItem(
@@ -500,7 +685,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  AppColors.navUnselected,
+                  isDarkMode
+                      ? AppColors.navUnselectedDark
+                      : AppColors.navUnselected,
                   BlendMode.srcIn,
                 ),
               ),
@@ -512,7 +699,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  AppColors.navUnselected,
+                  isDarkMode
+                      ? AppColors.navUnselectedDark
+                      : AppColors.navUnselected,
                   BlendMode.srcIn,
                 ),
               ),
@@ -524,7 +713,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  AppColors.navUnselected,
+                  isDarkMode
+                      ? AppColors.navUnselectedDark
+                      : AppColors.navUnselected,
                   BlendMode.srcIn,
                 ),
               ),
@@ -536,7 +727,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 height: 24,
                 width: 24,
                 colorFilter: ColorFilter.mode(
-                  AppColors.navSelected,
+                  isDarkMode
+                      ? AppColors.navSelectedDark
+                      : AppColors.navSelected,
                   BlendMode.srcIn,
                 ),
               ),
@@ -548,7 +741,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     );
   }
 
-  Widget _buildProfileImage() {
+  Widget _buildProfileImage(bool isDarkMode) {
     if (_localProfileImage != null) {
       // Show the newly selected image
       return ClipOval(
@@ -576,35 +769,68 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         ? loadingProgress.cumulativeBytesLoaded /
                             loadingProgress.expectedTotalBytes!
                         : null,
+                color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
               ),
             );
           },
           errorBuilder: (context, error, stackTrace) {
-            return Icon(Icons.person, size: 60, color: AppColors.textSecondary);
+            return Icon(
+              Icons.person,
+              size: 60,
+              color:
+                  isDarkMode
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
+            );
           },
         ),
       );
     } else {
       // Show placeholder icon
-      return Icon(Icons.person, size: 60, color: AppColors.textSecondary);
+      return Icon(
+        Icons.person,
+        size: 60,
+        color:
+            isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+      );
     }
   }
 
-  void _showDeleteAccountConfirmation() {
+  void _showDeleteAccountConfirmation(bool isDarkMode) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Account'),
-          content: const Text(
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          title: Text(
+            'Delete Account',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          content: Text(
             'Are you sure you want to delete your account? This action cannot be undone.',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
               child: Text(
                 'Cancel',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
               ),
             ),
             ElevatedButton(
