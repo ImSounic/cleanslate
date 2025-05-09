@@ -12,6 +12,7 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 import 'package:cleanslate/core/providers/navigation_provider.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({Key? key}) : super(key: key);
@@ -191,7 +192,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showHouseholdCode(String code) {
-    // Check dark mode
+    // Get current theme state using ThemeUtils
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
     showDialog(
@@ -282,7 +283,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showCreateHouseholdDialog() {
-    // Check dark mode
+    // Get current theme state using ThemeUtils
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
     // Clear previous input
@@ -369,7 +370,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showJoinHouseholdDialog() {
-    // Check dark mode
+    // Get current theme state using ThemeUtils
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
     // Clear previous input
@@ -459,7 +460,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showEditMemberDialog(HouseholdMemberModel member) {
-    // Check dark mode
+    // Get current theme state using ThemeUtils
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
     showDialog(
@@ -597,7 +598,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _confirmRemoveMember(HouseholdMemberModel member) {
-    // Check dark mode
+    // Get current theme state using ThemeUtils
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
     // Capture context before showing dialog
@@ -703,8 +704,9 @@ class _MembersScreenState extends State<MembersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Get the theme provider
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
 
     // Access the NavigationProvider
     final navigationProvider = Provider.of<NavigationProvider>(
@@ -945,7 +947,7 @@ class _MembersScreenState extends State<MembersScreen> {
 
   // New method to show options dialog
   void _showCreateOrJoinOptionsDialog() {
-    // Check dark mode
+    // Get current theme state using ThemeUtils
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
     showDialog(

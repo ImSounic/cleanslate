@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/navigation_provider.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
@@ -34,8 +35,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Always listen to the theme provider to rebuild on theme changes
     final navigationProvider = Provider.of<NavigationProvider>(context);
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDarkMode = themeProvider.isDarkMode;
 
     return WillPopScope(
       // Handle back button presses
