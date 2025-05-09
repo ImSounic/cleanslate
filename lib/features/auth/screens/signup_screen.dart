@@ -2,10 +2,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:cleanslate/core/constants/app_colors.dart';
-import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
-import 'package:cleanslate/features/auth/screens/otp_verification_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -21,8 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  bool _acceptedTerms = false;
-  bool _obscurePassword = true;
+  final bool _acceptedTerms = false;
 
   @override
   void dispose() {
@@ -33,50 +29,35 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (!_formKey.currentState!.validate() || !_acceptedTerms) {
-      if (!_acceptedTerms) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('You must accept the terms and conditions'),
-          ),
-        );
-      }
-      return;
-    }
+    if (!_formKey.currentState!.validate() || !_acceptedTerms) return;
 
     setState(() {
       _isLoading = true;
     });
 
     try {
-      final email = _emailController.text.trim();
-
-      // Send OTP for verification
-      await _supabaseService.sendEmailOtp(email: email);
+      await _supabaseService.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        userData: {'full_name': _nameController.text.trim()},
+      );
 
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
-        // Store user data to save after verification
-        final userData = {'full_name': _nameController.text.trim()};
-
-        // Navigate to OTP verification screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder:
-                (context) =>
-                    OtpVerificationScreen(email: email, userData: userData),
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Check your email to confirm your account'),
           ),
         );
+        Navigator.pop(context);
       }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error: ${error.toString()}')));
+      }
+    } finally {
+      if (mounted) {
         setState(() {
           _isLoading = false;
         });
@@ -86,18 +67,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = ThemeUtils.isDarkMode(context);
-
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors:
-                isDarkMode
-                    ? AppColors.authGradientDark
-                    : AppColors.authGradient,
+            colors: [Color(0xFF0D2E52), Color(0xFF2185D0)],
           ),
         ),
         child: SafeArea(
@@ -123,7 +99,6 @@ class _SignupScreenState extends State<SignupScreen> {
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                   const SizedBox(height: 40),
-
                   _buildTextField(
                     controller: _nameController,
                     label: 'Full Name',
@@ -135,10 +110,9 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                   ),
                   const SizedBox(height: 20),
-
                   _buildTextField(
                     controller: _emailController,
-                    label: 'Email Address',
+                    label: 'Email Address/Phone Number',
                     suffixIcon: Icons.email_outlined,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -152,21 +126,12 @@ class _SignupScreenState extends State<SignupScreen> {
                       return null;
                     },
                   ),
-
                   const SizedBox(height: 20),
                   _buildTextField(
                     controller: _passwordController,
                     label: 'Password',
                     isPassword: true,
-                    suffixIcon:
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                    onSuffixTap: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    suffixIcon: Icons.lock_outline,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a password';
@@ -178,45 +143,6 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-
-                  // Terms and conditions checkbox
-                  Row(
-                    children: [
-                      Theme(
-                        data: Theme.of(
-                          context,
-                        ).copyWith(unselectedWidgetColor: Colors.white70),
-                        child: Checkbox(
-                          value: _acceptedTerms,
-                          onChanged: (value) {
-                            setState(() {
-                              _acceptedTerms = value ?? false;
-                            });
-                          },
-                          checkColor: AppColors.primary,
-                          fillColor: MaterialStateProperty.resolveWith<Color>(
-                            (states) => Colors.white,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              _acceptedTerms = !_acceptedTerms;
-                            });
-                          },
-                          child: const Text(
-                            'I accept the Terms & Conditions',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
                   GestureDetector(
                     onTap: () {
                       // Show terms and conditions
@@ -272,8 +198,6 @@ class _SignupScreenState extends State<SignupScreen> {
     required String label,
     IconData? suffixIcon,
     bool isPassword = false,
-    VoidCallback? onSuffixTap,
-    TextInputType? keyboardType,
     required String? Function(String?) validator,
   }) {
     return Column(
@@ -283,8 +207,7 @@ class _SignupScreenState extends State<SignupScreen> {
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
-          obscureText: isPassword && _obscurePassword,
-          keyboardType: keyboardType,
+          obscureText: isPassword,
           validator: validator,
           style: const TextStyle(color: Colors.white),
           decoration: InputDecoration(
@@ -303,12 +226,8 @@ class _SignupScreenState extends State<SignupScreen> {
             ),
             suffixIcon:
                 suffixIcon != null
-                    ? GestureDetector(
-                      onTap: onSuffixTap,
-                      child: Icon(suffixIcon, color: Colors.white),
-                    )
+                    ? Icon(suffixIcon, color: Colors.white)
                     : null,
-            errorStyle: const TextStyle(color: Colors.white70, fontSize: 12),
           ),
         ),
       ],
