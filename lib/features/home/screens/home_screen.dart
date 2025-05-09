@@ -1,6 +1,4 @@
 // lib/features/home/screens/home_screen.dart
-// ignore_for_file: avoid_print
-
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
@@ -11,8 +9,6 @@ import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
-import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
-import 'package:cleanslate/data/repositories/notification_repository.dart';
 import 'package:intl/intl.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -26,15 +22,14 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
-  final _notificationRepository = NotificationRepository();
   String _userName = '';
   List<Map<String, dynamic>> _myChores = [];
-  List<Map<String, dynamic>> _completedChores = [];
+  List<Map<String, dynamic>> _completedChores =
+      []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
-  int _unreadNotificationsCount = 0;
   int _selectedNavIndex = 0;
-  bool _hasNotifications = false;
+  final bool _hasNotifications = false;
   bool _isDarkMode = false;
 
   late AnimationController _toggleController;
@@ -53,10 +48,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _loadUserData();
     _loadChores();
-    _loadNotificationCount();
-
-    // Set up periodic notification checks
-    _setupNotificationRefresh();
 
     // Initialize animation controller
     _toggleController = AnimationController(
@@ -67,16 +58,6 @@ class _HomeScreenState extends State<HomeScreen>
     _toggleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _toggleController, curve: Curves.easeInOut),
     );
-  }
-
-  void _setupNotificationRefresh() {
-    // Refresh notification count every 30 seconds
-    Future.delayed(const Duration(seconds: 30), () {
-      if (mounted) {
-        _loadNotificationCount();
-        _setupNotificationRefresh();
-      }
-    });
   }
 
   @override
@@ -98,21 +79,6 @@ class _HomeScreenState extends State<HomeScreen>
           _userName = user.email?.split('@').first ?? 'User';
         });
       }
-    }
-  }
-
-  Future<void> _loadNotificationCount() async {
-    try {
-      final count = await _notificationRepository.getUnreadNotificationsCount();
-      if (mounted) {
-        setState(() {
-          _unreadNotificationsCount = count;
-          _hasNotifications = count > 0;
-        });
-      }
-    } catch (e) {
-      // Silently handle error
-      print('Error loading notification count: $e');
     }
   }
 
@@ -324,9 +290,6 @@ class _HomeScreenState extends State<HomeScreen>
       await _choreRepository.completeChore(assignmentId);
       // Refresh chores list
       _loadChores();
-      // Also refresh notification count since completing a chore
-      // might generate notifications
-      _loadNotificationCount();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -601,70 +564,25 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Notifications with badge
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      GestureDetector(
-                        onTap: () async {
-                          // Navigate to notifications screen
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const NotificationsScreen(),
-                            ),
-                          );
-                          // Refresh notification count after returning
-                          _loadNotificationCount();
-                        },
-                        child: SvgPicture.asset(
+                  // Notifications
+                  GestureDetector(
+                    onTap: () {
+                      // Show notifications
+                    },
+                    child: SvgPicture.asset(
+                      _hasNotifications
+                          ? 'assets/images/icons/red_bell.svg'
+                          : 'assets/images/icons/bell.svg',
+                      height: 24,
+                      width: 24,
+                      colorFilter:
                           _hasNotifications
-                              ? 'assets/images/icons/red_bell.svg'
-                              : 'assets/images/icons/bell.svg',
-                          height: 24,
-                          width: 24,
-                          colorFilter:
-                              _hasNotifications
-                                  ? null
-                                  : ColorFilter.mode(
-                                    AppColors.iconPrimary,
-                                    BlendMode.srcIn,
-                                  ),
-                        ),
-                      ),
-                      // Notification badge
-                      if (_unreadNotificationsCount > 0)
-                        Positioned(
-                          top: -8,
-                          right: -8,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: AppColors.background,
-                                width: 1.5,
+                              ? null
+                              : ColorFilter.mode(
+                                AppColors.iconPrimary,
+                                BlendMode.srcIn,
                               ),
-                            ),
-                            constraints: const BoxConstraints(
-                              minWidth: 16,
-                              minHeight: 16,
-                            ),
-                            child: Text(
-                              _unreadNotificationsCount > 9
-                                  ? '9+'
-                                  : _unreadNotificationsCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                    ],
+                    ),
                   ),
                   const SizedBox(width: 12),
                   // Profile
@@ -751,8 +669,6 @@ class _HomeScreenState extends State<HomeScreen>
           // If a chore was added successfully, refresh the list
           if (result == true) {
             _loadChores();
-            // Adding a chore might create notifications
-            _loadNotificationCount();
           }
         },
       ),
@@ -774,8 +690,6 @@ class _HomeScreenState extends State<HomeScreen>
               setState(() {
                 _selectedNavIndex = 0;
               });
-              // Refresh notification count after returning
-              _loadNotificationCount();
             } else if (index == 2) {
               // Schedule tab - Add this section
               await Navigator.push(
@@ -786,8 +700,6 @@ class _HomeScreenState extends State<HomeScreen>
               setState(() {
                 _selectedNavIndex = 0;
               });
-              // Refresh notification count after returning
-              _loadNotificationCount();
             } else if (index == 3) {
               // Settings tab
               await Navigator.push(
@@ -798,8 +710,6 @@ class _HomeScreenState extends State<HomeScreen>
               setState(() {
                 _selectedNavIndex = 0;
               });
-              // Refresh notification count after returning
-              _loadNotificationCount();
             } else {
               setState(() {
                 _selectedNavIndex = index;
@@ -961,7 +871,6 @@ class _HomeScreenState extends State<HomeScreen>
               );
               if (result == true) {
                 _loadChores();
-                _loadNotificationCount();
               }
             },
             icon: const Icon(Icons.add),
@@ -1017,10 +926,7 @@ class _HomeScreenState extends State<HomeScreen>
 
   Widget _buildChoresList(List<Map<String, dynamic>> chores) {
     return RefreshIndicator(
-      onRefresh: () async {
-        await _loadChores();
-        await _loadNotificationCount();
-      },
+      onRefresh: _loadChores,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: chores.length,
