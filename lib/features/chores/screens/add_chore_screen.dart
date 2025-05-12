@@ -5,6 +5,8 @@ import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 
 class AddChoreScreen extends StatefulWidget {
@@ -206,11 +208,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    // Check if dark mode is enabled
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Store context in a variable to avoid rebuilds
+    final currentContext = context;
+
+    // Check if dark mode is enabled - WITH listen: false to avoid the provider error
+    final isDarkMode =
+        Provider.of<ThemeProvider>(currentContext, listen: false).isDarkMode;
 
     final DateTime? picked = await showDatePicker(
-      context: context,
+      context: currentContext,
       initialDate: _dueDate,
       firstDate: DateTime.now(),
       lastDate: DateTime(2100),
@@ -233,7 +239,9 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
         );
       },
     );
-    if (picked != null && picked != _dueDate) {
+
+    // Check if still mounted to avoid setState on disposed widget
+    if (mounted && picked != null && picked != _dueDate) {
       setState(() {
         _dueDate = picked;
       });
@@ -241,11 +249,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   }
 
   Future<void> _selectTime(BuildContext context) async {
-    // Check if dark mode is enabled
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Store context in a variable to avoid rebuilds
+    final currentContext = context;
+
+    // Check if dark mode is enabled - WITH listen: false to avoid the provider error
+    final isDarkMode =
+        Provider.of<ThemeProvider>(currentContext, listen: false).isDarkMode;
 
     final TimeOfDay? picked = await showTimePicker(
-      context: context,
+      context: currentContext,
       initialTime: _dueTime ?? TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
@@ -266,7 +278,9 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
         );
       },
     );
-    if (picked != null) {
+
+    // Check if still mounted to avoid setState on disposed widget
+    if (mounted && picked != null) {
       setState(() {
         _dueTime = picked;
       });
@@ -666,10 +680,11 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Due Date
+              // Due Date - FIXED
               _buildSectionTitle('Due date', isDarkMode),
-              GestureDetector(
+              InkWell(
                 onTap: () => _selectDate(context),
+                borderRadius: BorderRadius.circular(16),
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(
@@ -711,10 +726,11 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Due Time
+              // Due Time - FIXED
               _buildSectionTitle('Due Time', isDarkMode),
-              GestureDetector(
+              InkWell(
                 onTap: () => _selectTime(context),
+                borderRadius: BorderRadius.circular(16),
                 child: Container(
                   height: 50,
                   decoration: BoxDecoration(

@@ -1,4 +1,6 @@
 // lib/features/home/screens/home_screen.dart
+// Updated with proper chore deletion functionality
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
@@ -343,6 +345,48 @@ class _HomeScreenState extends State<HomeScreen>
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Error uncompleting chore: $e')));
+      }
+    }
+  }
+
+  // Updated: Method to delete a chore by its ID, not just the assignment
+  Future<void> _deleteChore(String choreId, String assignmentId) async {
+    try {
+      // Show loading indicator
+      setState(() {
+        _isLoading = true;
+      });
+
+      // First delete the assignment
+      await _choreRepository.deleteChoreAssignment(assignmentId);
+
+      // Then delete the chore from the chores table
+      await _choreRepository.deleteChore(choreId);
+
+      // Refresh chores list after deletion
+      await _loadChores();
+
+      // Show success message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Chore deleted successfully')),
+        );
+      }
+    } catch (e) {
+      // Show error message
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error deleting chore: $e')));
+      }
+    } finally {
+      if (mounted && _isLoading) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
@@ -1464,11 +1508,65 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  // Show delete confirmation
+                  _confirmDeleteChore(chore['id'], assignment['id']);
                 },
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  // Updated: Confirmation dialog now passes chore ID as well
+  void _confirmDeleteChore(String choreId, String assignmentId) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        final isDarkMode = Provider.of<ThemeProvider>(context).isDarkMode;
+
+        return AlertDialog(
+          title: Text(
+            'Delete Chore',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          content: Text(
+            'Are you sure you want to delete this chore? This action cannot be undone.',
+            style: TextStyle(
+              color:
+                  isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+            ),
+          ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: TextStyle(
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteChore(choreId, assignmentId);
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
         );
       },
     );

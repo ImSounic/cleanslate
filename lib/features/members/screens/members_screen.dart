@@ -4,8 +4,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
@@ -193,89 +195,125 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showHouseholdCode(String code) {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // IMPORTANT: Access theme provider with listen: false to avoid the error
+    // Get the current theme state before going into the dialog builder
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
-          title: const Text('Household Code'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'Share this code with others to invite them to your household:',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () {
-                  // Copy to clipboard when tapped
-                  Clipboard.setData(ClipboardData(text: code));
-
-                  // Show a snackbar to confirm copy action
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Code copied to clipboard!'),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-
-                  // Optionally close the dialog
-                  // Navigator.pop(dialogContext);
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  decoration: BoxDecoration(
+          title: Text(
+            'Household Code',
+            style: TextStyle(
+              fontFamily: 'Switzer',
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+            ),
+          ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          content: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.of(context).size.width * 0.7,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Share this code with others to invite them to your household:',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
                     color:
                         isDarkMode
-                            ? AppColors.backgroundDark
-                            : AppColors.background,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.primary),
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    fontFamily: 'VarelaRound',
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        code,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 2,
-                          color: AppColors.primary,
-                        ),
+                ),
+                const SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () {
+                    // Copy to clipboard when tapped
+                    Clipboard.setData(ClipboardData(text: code));
+
+                    // Show a snackbar to confirm copy action
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Code copied to clipboard!'),
+                        duration: Duration(seconds: 2),
                       ),
-                      const SizedBox(width: 12),
-                      Icon(Icons.copy, color: AppColors.primary, size: 24),
-                    ],
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16, // Reduced padding
+                      vertical: 12, // Reduced padding
+                    ),
+                    decoration: BoxDecoration(
+                      color:
+                          isDarkMode
+                              ? AppColors.backgroundDark
+                              : AppColors.background,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.primary),
+                    ),
+                    child: Row(
+                      mainAxisSize:
+                          MainAxisSize.min, // Make row take minimum space
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            code,
+                            style: TextStyle(
+                              fontSize: 20, // Slightly smaller font
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 1, // Reduced letter spacing
+                              color: AppColors.primary,
+                              fontFamily: 'Switzer',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8), // Reduced space
+                        Icon(
+                          Icons.copy,
+                          color: AppColors.primary,
+                          size: 20,
+                        ), // Smaller icon
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tap to copy',
-                style: TextStyle(
-                  fontSize: 12,
-                  color:
-                      isDarkMode
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondary,
-                  fontStyle: FontStyle.italic,
+                const SizedBox(height: 8),
+                Text(
+                  'Tap to copy',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                    fontStyle: FontStyle.italic,
+                    fontFamily: 'VarelaRound',
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('Close'),
+              child: Text(
+                'Close',
+                style: TextStyle(
+                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
             ),
           ],
         );
@@ -284,8 +322,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showCreateHouseholdDialog() {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Use Provider with listen: false
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     // Clear previous input
     _householdNameController.clear();
@@ -304,8 +343,11 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'Switzer',
+              fontWeight: FontWeight.bold,
             ),
           ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           content: TextField(
             controller: _householdNameController,
             decoration: InputDecoration(
@@ -318,6 +360,7 @@ class _MembersScreenState extends State<MembersScreen> {
                     isDarkMode
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondary,
+                fontFamily: 'VarelaRound',
               ),
             ),
             autofocus: true,
@@ -326,6 +369,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'VarelaRound',
             ),
           ),
           actions: [
@@ -340,6 +384,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
             ),
@@ -362,7 +407,13 @@ class _MembersScreenState extends State<MembersScreen> {
                 // Call create household method
                 _createHousehold(householdName);
               },
-              child: Text('Create', style: TextStyle(color: AppColors.primary)),
+              child: Text(
+                'Create',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
             ),
           ],
         );
@@ -371,8 +422,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showJoinHouseholdDialog() {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Use Provider with listen: false
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     // Clear previous input
     _householdCodeController.clear();
@@ -391,8 +443,11 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'Switzer',
+              fontWeight: FontWeight.bold,
             ),
           ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           content: TextField(
             controller: _householdCodeController,
             decoration: InputDecoration(
@@ -405,6 +460,7 @@ class _MembersScreenState extends State<MembersScreen> {
                     isDarkMode
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondary,
+                fontFamily: 'VarelaRound',
               ),
             ),
             maxLength: 8,
@@ -415,6 +471,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'VarelaRound',
             ),
           ),
           actions: [
@@ -429,6 +486,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
             ),
@@ -452,7 +510,13 @@ class _MembersScreenState extends State<MembersScreen> {
                 // Call join household method
                 _joinHousehold(householdCode);
               },
-              child: Text('Join', style: TextStyle(color: AppColors.primary)),
+              child: Text(
+                'Join',
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
             ),
           ],
         );
@@ -461,8 +525,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _showEditMemberDialog(HouseholdMemberModel member) {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Use Provider with listen: false
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     showDialog(
       context: context,
@@ -475,8 +540,11 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'Switzer',
+              fontWeight: FontWeight.bold,
             ),
           ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -488,6 +556,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
               const SizedBox(height: 8),
@@ -498,6 +567,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
               const SizedBox(height: 16),
@@ -508,6 +578,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textPrimaryDark
                           : AppColors.textPrimary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
               const SizedBox(height: 8),
@@ -527,6 +598,7 @@ class _MembersScreenState extends State<MembersScreen> {
                                 isDarkMode
                                     ? AppColors.textPrimaryDark
                                     : AppColors.textPrimary,
+                            fontFamily: 'VarelaRound',
                           ),
                         ),
                       );
@@ -547,7 +619,10 @@ class _MembersScreenState extends State<MembersScreen> {
                 _confirmRemoveMember(member);
               },
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
-              child: const Text('Remove Member'),
+              child: const Text(
+                'Remove Member',
+                style: TextStyle(fontFamily: 'VarelaRound'),
+              ),
             ),
             TextButton(
               onPressed: () {
@@ -560,6 +635,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
             ),
@@ -599,8 +675,9 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _confirmRemoveMember(HouseholdMemberModel member) {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Use Provider with listen: false
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     // Capture context before showing dialog
     final BuildContext currentContext = context;
@@ -616,8 +693,11 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'Switzer',
+              fontWeight: FontWeight.bold,
             ),
           ),
+          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           content: Text(
             'Are you sure you want to remove ${member.fullName ?? 'this member'} from the household?',
             style: TextStyle(
@@ -625,6 +705,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'VarelaRound',
             ),
           ),
           actions: [
@@ -639,6 +720,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       isDarkMode
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
+                  fontFamily: 'VarelaRound',
                 ),
               ),
             ),
@@ -648,7 +730,10 @@ class _MembersScreenState extends State<MembersScreen> {
                 _removeMember(member.id);
               },
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
-              child: const Text('Remove'),
+              child: const Text(
+                'Remove',
+                style: TextStyle(fontFamily: 'VarelaRound'),
+              ),
             ),
           ],
         );
@@ -1077,6 +1162,7 @@ class _MembersScreenState extends State<MembersScreen> {
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppColors.error,
+                fontFamily: 'Switzer',
               ),
               textAlign: TextAlign.center,
             ),
@@ -1089,6 +1175,7 @@ class _MembersScreenState extends State<MembersScreen> {
                     isDarkMode
                         ? AppColors.textSecondaryDark
                         : AppColors.textSecondary,
+                fontFamily: 'VarelaRound',
               ),
               textAlign: TextAlign.center,
             ),
@@ -1138,6 +1225,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'Switzer',
             ),
           ),
           const SizedBox(height: 8),
@@ -1149,6 +1237,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondary,
+              fontFamily: 'VarelaRound',
             ),
             textAlign: TextAlign.center,
           ),
@@ -1198,8 +1287,9 @@ class _MembersScreenState extends State<MembersScreen> {
 
   // New method to show options dialog
   void _showCreateOrJoinOptionsDialog() {
-    // Check dark mode
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Use Provider with listen: false
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     showDialog(
       context: context,
@@ -1212,6 +1302,8 @@ class _MembersScreenState extends State<MembersScreen> {
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
+              fontFamily: 'Switzer',
+              fontWeight: FontWeight.bold,
             ),
           ),
           backgroundColor:
@@ -1234,6 +1326,7 @@ class _MembersScreenState extends State<MembersScreen> {
                         isDarkMode
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimary,
+                    fontFamily: 'VarelaRound',
                   ),
                 ),
               ),
@@ -1255,6 +1348,7 @@ class _MembersScreenState extends State<MembersScreen> {
                         isDarkMode
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimary,
+                    fontFamily: 'VarelaRound',
                   ),
                 ),
               ),
@@ -1275,6 +1369,7 @@ class _MembersScreenState extends State<MembersScreen> {
                         isDarkMode
                             ? AppColors.textPrimaryDark
                             : AppColors.textPrimary,
+                    fontFamily: 'VarelaRound',
                   ),
                 ),
               ),
