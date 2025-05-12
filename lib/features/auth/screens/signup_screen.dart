@@ -1,8 +1,8 @@
 // lib/features/auth/screens/signup_screen.dart
-// ignore_for_file: deprecated_member_use
-
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
+import 'package:cleanslate/core/constants/app_colors.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -18,7 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _passwordController = TextEditingController();
   final _supabaseService = SupabaseService();
   bool _isLoading = false;
-  final bool _acceptedTerms = false;
+  bool _acceptedTerms = false;
 
   @override
   void dispose() {
@@ -29,7 +29,15 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _handleSignup() async {
-    if (!_formKey.currentState!.validate() || !_acceptedTerms) return;
+    if (!_formKey.currentState!.validate() || !_acceptedTerms) {
+      // Show terms error message if needed
+      if (!_acceptedTerms) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please accept the terms and conditions')),
+        );
+      }
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -67,13 +75,17 @@ class _SignupScreenState extends State<SignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Check if dark mode is enabled
+    final isDarkMode = ThemeUtils.isDarkMode(context);
+    
     return Scaffold(
       body: Container(
+        height: MediaQuery.of(context).size.height, // Ensure container takes full height
+        width: MediaQuery.of(context).size.width, // Ensure container takes full width
         decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFF0D2E52), Color(0xFF2185D0)],
+          image: DecorationImage(
+            image: AssetImage('assets/images/background.png'),
+            fit: BoxFit.cover,
           ),
         ),
         child: SafeArea(
@@ -84,7 +96,18 @@ class _SignupScreenState extends State<SignupScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 60),
+                  // Back button at top left
+                  Align(
+                    alignment: Alignment.topLeft,
+                    child: IconButton(
+                      icon: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                      ),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
                   const Text(
                     'Let\'s Start',
                     style: TextStyle(
@@ -102,6 +125,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   _buildTextField(
                     controller: _nameController,
                     label: 'Full Name',
+                    isDarkMode: isDarkMode,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your name';
@@ -114,6 +138,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     controller: _emailController,
                     label: 'Email Address/Phone Number',
                     suffixIcon: Icons.email_outlined,
+                    isDarkMode: isDarkMode,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
@@ -132,6 +157,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     label: 'Password',
                     isPassword: true,
                     suffixIcon: Icons.lock_outline,
+                    isDarkMode: isDarkMode,
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Please enter a password';
@@ -143,18 +169,45 @@ class _SignupScreenState extends State<SignupScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  GestureDetector(
-                    onTap: () {
-                      // Show terms and conditions
-                    },
-                    child: const Text(
-                      'Terms & Conditions',
-                      style: TextStyle(
-                        color: Colors.white,
-                        decoration: TextDecoration.underline,
+                  
+                  // Terms & Conditions Checkbox
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _acceptedTerms,
+                        onChanged: (bool? value) {
+                          setState(() {
+                            _acceptedTerms = value ?? false;
+                          });
+                        },
+                        checkColor: Colors.white,
+                        fillColor: MaterialStateProperty.resolveWith<Color>(
+                          (Set<MaterialState> states) {
+                            if (states.contains(MaterialState.selected)) {
+                              return AppColors.primary;
+                            }
+                            return Colors.white.withOpacity(0.3);
+                          },
+                        ),
                       ),
-                    ),
+                      GestureDetector(
+                        onTap: () {
+                          // Show terms and conditions
+                          setState(() {
+                            _acceptedTerms = !_acceptedTerms;
+                          });
+                        },
+                        child: const Text(
+                          'I accept the Terms & Conditions',
+                          style: TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
+                  
                   const SizedBox(height: 40),
                   SizedBox(
                     width: double.infinity,
@@ -168,22 +221,22 @@ class _SignupScreenState extends State<SignupScreen> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                       ),
-                      child:
-                          _isLoading
-                              ? const CircularProgressIndicator()
-                              : const Text('SIGN UP'),
+                      child: _isLoading
+                          ? const SizedBox(
+                              width: 24,
+                              height: 24,
+                              child: CircularProgressIndicator(),
+                            )
+                          : const Text(
+                              'SIGN UP',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
-                  const SizedBox(height: 80),
-                  // Bottom illustrations
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Image.asset(
-                      'assets/images/chore_illustrations.png',
-                      height: 100,
-                      color: Colors.white.withOpacity(0.2),
-                    ),
-                  ),
+                  const SizedBox(height: 20), // Add extra space at bottom
                 ],
               ),
             ),
@@ -198,20 +251,31 @@ class _SignupScreenState extends State<SignupScreen> {
     required String label,
     IconData? suffixIcon,
     bool isPassword = false,
+    required bool isDarkMode,
     required String? Function(String?) validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.white)),
+        Text(
+          label, 
+          style: const TextStyle(color: Colors.white)
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           obscureText: isPassword,
           validator: validator,
-          style: const TextStyle(color: Colors.white),
+          textAlign: TextAlign.center, // Center the text horizontally
+          textAlignVertical: TextAlignVertical.center, // Center the text vertically
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'VarelaRound',
+          ),
           decoration: InputDecoration(
-            contentPadding: EdgeInsets.zero,
+            contentPadding: const EdgeInsets.symmetric(vertical: 16.0), // Add padding for vertical centering
+            filled: true,
+            fillColor: Colors.transparent, // Make background transparent
             enabledBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.white70),
             ),
@@ -224,10 +288,12 @@ class _SignupScreenState extends State<SignupScreen> {
             focusedErrorBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.redAccent),
             ),
-            suffixIcon:
-                suffixIcon != null
-                    ? Icon(suffixIcon, color: Colors.white)
-                    : null,
+            errorStyle: const TextStyle(
+              color: Colors.redAccent,
+            ),
+            suffixIcon: suffixIcon != null
+                ? Icon(suffixIcon, color: Colors.white)
+                : null,
           ),
         ),
       ],
