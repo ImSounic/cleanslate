@@ -1,5 +1,5 @@
 // lib/features/home/screens/home_screen.dart
-// Updated with proper chore deletion functionality
+// Updated with proper user profile picture in top right and in profile menu
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -29,9 +29,9 @@ class _HomeScreenState extends State<HomeScreen>
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
   String _userName = '';
+  String? _profileImageUrl; // Added property for profile image URL
   List<Map<String, dynamic>> _myChores = [];
-  List<Map<String, dynamic>> _completedChores =
-      []; // Added completed chores list
+  List<Map<String, dynamic>> _completedChores = []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
   int _selectedNavIndex = 0;
@@ -85,15 +85,16 @@ class _HomeScreenState extends State<HomeScreen>
     final user = _supabaseService.currentUser;
     if (user != null) {
       final userData = user.userMetadata;
-      if (userData != null && userData.containsKey('full_name')) {
-        setState(() {
+      setState(() {
+        if (userData != null && userData.containsKey('full_name')) {
           _userName = userData['full_name'] as String;
-        });
-      } else {
-        setState(() {
+        } else {
+          // If full_name is not available, use email or a default value
           _userName = user.email?.split('@').first ?? 'User';
-        });
-      }
+        }
+        // Add profile image URL loading
+        _profileImageUrl = userData?['profile_image_url'];
+      });
     }
   }
 
@@ -154,11 +155,14 @@ class _HomeScreenState extends State<HomeScreen>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // User profile section
+                // User profile section with profile image
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: AppColors.primary,
-                  child: Icon(Icons.person, color: Colors.white, size: 36),
+                  backgroundImage: _profileImageUrl != null ? NetworkImage(_profileImageUrl!) : null,
+                  child: _profileImageUrl == null
+                      ? Icon(Icons.person, color: Colors.white, size: 36)
+                      : null,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -171,7 +175,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                 ),
                 Text(
-                  _supabaseService.currentUser?.email ?? 'sounic@example.com',
+                  _supabaseService.currentUser?.email ?? 'email@example.com',
                   style: TextStyle(
                     fontSize: 14,
                     color:
@@ -542,18 +546,23 @@ class _HomeScreenState extends State<HomeScreen>
                   alignment: Alignment.bottomRight,
                   child: Container(
                     margin: const EdgeInsets.only(top: 16),
-                    child: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: AppColors.avatarAmber,
-                      child: Text(
-                        _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.textLight,
-                          fontFamily: 'VarelaRound',
-                        ),
-                      ),
-                    ),
+                    child: _profileImageUrl != null
+                        ? CircleAvatar(
+                            radius: 16,
+                            backgroundImage: NetworkImage(_profileImageUrl!),
+                          )
+                        : CircleAvatar(
+                            radius: 16,
+                            backgroundColor: AppColors.avatarAmber,
+                            child: Text(
+                              _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.textLight,
+                                fontFamily: 'VarelaRound',
+                              ),
+                            ),
+                          ),
                   ),
                 ),
               ],
@@ -691,17 +700,53 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Profile
+                  // Profile - Updated to show user profile picture
                   GestureDetector(
                     onTap: _showProfileMenu,
-                    child: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: AppColors.primary,
-                      child: Icon(
-                        Icons.person,
-                        color: AppColors.textLight,
-                        size: 18,
+                    child: Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                          width: 1,
+                        ),
                       ),
+                      child: _profileImageUrl != null
+                          ? ClipOval(
+                              child: Image.network(
+                                _profileImageUrl!,
+                                fit: BoxFit.cover,
+                                width: 32,
+                                height: 32,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Center(
+                                    child: CircularProgressIndicator(
+                                      value: loadingProgress.expectedTotalBytes != null
+                                          ? loadingProgress.cumulativeBytesLoaded /
+                                              loadingProgress.expectedTotalBytes!
+                                          : null,
+                                      color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                                      strokeWidth: 2,
+                                    ),
+                                  );
+                                },
+                                errorBuilder: (context, error, stackTrace) {
+                                  return Icon(
+                                    Icons.person,
+                                    color: AppColors.primary,
+                                    size: 18,
+                                  );
+                                },
+                              ),
+                            )
+                          : Icon(
+                              Icons.person,
+                              color: AppColors.primary,
+                              size: 18,
+                            ),
                     ),
                   ),
                 ],
@@ -1265,18 +1310,23 @@ class _HomeScreenState extends State<HomeScreen>
                                 : AppColors.textSecondary,
                       ),
                     ),
-                    CircleAvatar(
-                      radius: 10,
-                      backgroundColor: AppColors.avatarAmber,
-                      child: Text(
-                        assigneeInitial,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: AppColors.textLight,
-                          fontFamily: 'VarelaRound',
+                    _profileImageUrl != null
+                    ? CircleAvatar(
+                        radius: 10,
+                        backgroundImage: NetworkImage(_profileImageUrl!),
+                      )
+                    : CircleAvatar(
+                        radius: 10,
+                        backgroundColor: AppColors.avatarAmber,
+                        child: Text(
+                          assigneeInitial,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textLight,
+                            fontFamily: 'VarelaRound',
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(width: 4),
                     // Only show first name
                     Text(
