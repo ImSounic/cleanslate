@@ -10,6 +10,7 @@ import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 
@@ -265,9 +266,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           currentIndex: _selectedNavIndex,
           onTap: (index) {
             if (index != _selectedNavIndex) {
+              setState(() {
+                _selectedNavIndex = index;
+              });
+
+              // Handle navigation
               if (index == 0) {
-                // Navigate to Home
-                Navigator.popUntil(context, (route) => route.isFirst);
+                // Navigate to Home - FIXED: Using pushReplacement instead of popUntil
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomeScreen()),
+                );
               } else if (index == 1) {
                 // Navigate to Members
                 Navigator.pushReplacement(
@@ -285,9 +294,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 );
               }
-              setState(() {
-                _selectedNavIndex = index;
-              });
             }
           },
           type: BottomNavigationBarType.fixed,
