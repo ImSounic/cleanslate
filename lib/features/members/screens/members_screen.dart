@@ -150,50 +150,58 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   Future<void> _joinHousehold(String code) async {
-    // Capture context before async operations
-    final BuildContext currentContext = context;
+  // Capture context before async operations
+  final BuildContext currentContext = context;
+
+  setState(() {
+    _isLoading = true;
+    _errorMessage = null; // Clear previous errors
+  });
+
+  try {
+    print("Starting join household process with code: $code");
+    await _householdRepository.joinHouseholdWithCode(code);
+
+    // Initialize household service to set the current household
+    await _householdService.initializeHousehold();
+
+    // Check if widget is still mounted before updating UI
+    if (!mounted) return;
 
     setState(() {
-      _isLoading = true;
+      _isLoading = false;
     });
 
-    try {
-      await _householdRepository.joinHouseholdWithCode(code);
+    // Refresh members with new household
+    await _loadMembers();
 
-      // Initialize household service to set the current household
-      await _householdService.initializeHousehold();
+    // Check again if mounted before showing success message
+    if (!mounted) return;
 
-      // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+    ScaffoldMessenger.of(
+      currentContext,
+    ).showSnackBar(SnackBar(content: Text('Successfully joined household!')));
+  } catch (e) {
+    // Check if widget is still mounted before updating UI
+    if (!mounted) return;
 
-      setState(() {
-        _isLoading = false;
-      });
+    print("Error joining household: $e");
+    
+    setState(() {
+      _isLoading = false;
+      // Extract meaningful error message from exception
+      String errorMsg = e.toString();
+      if (errorMsg.contains('Exception: ')) {
+        errorMsg = errorMsg.split('Exception: ')[1];
+      }
+      _errorMessage = 'Failed to join household: $errorMsg';
+    });
 
-      // Refresh members with new household
-      await _loadMembers();
-
-      // Check again if mounted before showing success message
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(
-        currentContext,
-      ).showSnackBar(SnackBar(content: Text('Successfully joined household!')));
-    } catch (e) {
-      // Check if widget is still mounted before updating UI
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to join household: $e';
-      });
-
-      ScaffoldMessenger.of(
-        currentContext,
-      ).showSnackBar(SnackBar(content: Text('Error joining household: $e')));
-    }
+    ScaffoldMessenger.of(
+      currentContext,
+    ).showSnackBar(SnackBar(content: Text(_errorMessage ?? 'Error joining household')));
   }
-
+}
   void _showHouseholdCode(String code) {
     // IMPORTANT: Access theme provider with listen: false to avoid the error
     // Get the current theme state before going into the dialog builder

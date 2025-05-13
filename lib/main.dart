@@ -2,6 +2,7 @@
 // ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -15,6 +16,11 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Set status bar to be transparent
+  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+  ));
 
   // Load environment variables
   await dotenv.load();
@@ -80,6 +86,19 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
       builder: (context, themeProvider, child) {
+        // Apply system UI overlay based on current theme
+        if (themeProvider.isDarkMode) {
+          SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.dark, // iOS
+            statusBarIconBrightness: Brightness.light, // Android
+          ));
+        } else {
+          SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
+            statusBarBrightness: Brightness.light, // iOS
+            statusBarIconBrightness: Brightness.dark, // Android
+          ));
+        }
+        
         return MaterialApp(
           title: 'CleanSlate',
           theme: AppTheme.lightTheme,

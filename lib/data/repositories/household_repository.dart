@@ -97,41 +97,57 @@ class HouseholdRepository {
   }
 
   // Join household using code
+  // Join household using code
   Future<HouseholdModel> joinHouseholdWithCode(String code) async {
     try {
-      // Find household by code
-      final householdResponse =
-          await _client
-              .from('households')
-              .select()
-              .eq('code', code.toUpperCase())
-              .single();
-
-      // Fixed: Removed unnecessary null check
+      print("Attempting to join household with code: ${code.trim().toUpperCase()}");
+      
+      // Find household by code - MODIFIED to not use .single() directly
+      final householdResults = await _client
+          .from('households')
+          .select()
+          .eq('code', code.trim().toUpperCase());
+      
+      print("Search results: Found ${householdResults.length} households with this code");
+      
+      // Check if any households were found
+      if (householdResults.isEmpty) {
+        throw Exception('No household found with this code. Please check and try again.');
+      }
+      
+      // Get the first matching household
+      final householdResponse = householdResults.first;
       final householdId = householdResponse['id'] as String;
       final userId = _client.auth.currentUser!.id;
+      
+      print("Found household with ID: $householdId, Current user ID: $userId");
 
       // Check if user is already a member
-      final existingMember =
-          await _client
-              .from('household_members')
-              .select()
-              .eq('household_id', householdId)
-              .eq('user_id', userId)
-              .maybeSingle();
+      final existingMemberResults = await _client
+          .from('household_members')
+          .select()
+          .eq('household_id', householdId)
+          .eq('user_id', userId);
+      
+      print("Existing member check: Found ${existingMemberResults.length} matching records");
+      
+      final existingMember = existingMemberResults.isNotEmpty ? existingMemberResults.first : null;
 
       if (existingMember != null) {
         // If user was previously removed, reactivate membership
         if (existingMember['is_active'] == false) {
+          print("Reactivating previously inactive membership");
           await _client
               .from('household_members')
               .update({'is_active': true})
               .eq('id', existingMember['id']);
         } else {
+          print("User is already an active member of this household");
           throw Exception('You are already a member of this household');
         }
       } else {
         // Add user as a new member
+        print("Adding user as a new member of the household");
         await _client.from('household_members').insert({
           'household_id': householdId,
           'user_id': userId,
@@ -142,10 +158,17 @@ class HouseholdRepository {
 
       return HouseholdModel.fromJson(householdResponse);
     } catch (e) {
+      print("Error in joinHouseholdWithCode: $e");
+      if (e is PostgrestException) {
+        throw Exception('Database error: ${e.message}. Please contact support if the issue persists.');
+      }
+      // If it's already an Exception we've created, re-throw it directly
+      if (e is Exception) {
+        rethrow;
+      }
       throw Exception('Failed to join household: $e');
     }
   }
-
   // Get household by code
   Future<HouseholdModel?> getHouseholdByCode(String code) async {
     try {
