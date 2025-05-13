@@ -11,6 +11,7 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
@@ -26,6 +27,7 @@ class _MembersScreenState extends State<MembersScreen> {
   final TextEditingController _searchController = TextEditingController();
   final HouseholdRepository _householdRepository = HouseholdRepository();
   final HouseholdService _householdService = HouseholdService();
+  final SupabaseService _supabaseService = SupabaseService();
   final TextEditingController _householdNameController =
       TextEditingController();
   final TextEditingController _householdCodeController =
@@ -37,6 +39,7 @@ class _MembersScreenState extends State<MembersScreen> {
   bool _isLoading = true;
   String _householdName = '';
   String? _errorMessage;
+  bool _isCurrentUserAdmin = false; // Track if current user is admin
 
   @override
   void initState() {
@@ -69,6 +72,7 @@ class _MembersScreenState extends State<MembersScreen> {
           _isLoading = false;
           _householdName = 'No Household Selected';
           _members = [];
+          _isCurrentUserAdmin = false;
         });
         return;
       }
@@ -84,9 +88,16 @@ class _MembersScreenState extends State<MembersScreen> {
 
       if (!mounted) return;
 
+      // Check if current user is admin
+      final currentUserId = _supabaseService.currentUser?.id;
+      final isAdmin = members.any(
+        (member) => member.userId == currentUserId && member.role == 'admin',
+      );
+
       setState(() {
         _members = members;
         _isLoading = false;
+        _isCurrentUserAdmin = isAdmin;
       });
     } catch (e) {
       // Handle error
@@ -95,6 +106,7 @@ class _MembersScreenState extends State<MembersScreen> {
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error loading members: $e';
+        _isCurrentUserAdmin = false;
       });
 
       ScaffoldMessenger.of(
@@ -150,58 +162,59 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   Future<void> _joinHousehold(String code) async {
-  // Capture context before async operations
-  final BuildContext currentContext = context;
-
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null; // Clear previous errors
-  });
-
-  try {
-    print("Starting join household process with code: $code");
-    await _householdRepository.joinHouseholdWithCode(code);
-
-    // Initialize household service to set the current household
-    await _householdService.initializeHousehold();
-
-    // Check if widget is still mounted before updating UI
-    if (!mounted) return;
+    // Capture context before async operations
+    final BuildContext currentContext = context;
 
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
+      _errorMessage = null; // Clear previous errors
     });
 
-    // Refresh members with new household
-    await _loadMembers();
+    try {
+      print("Starting join household process with code: $code");
+      await _householdRepository.joinHouseholdWithCode(code);
 
-    // Check again if mounted before showing success message
-    if (!mounted) return;
+      // Initialize household service to set the current household
+      await _householdService.initializeHousehold();
 
-    ScaffoldMessenger.of(
-      currentContext,
-    ).showSnackBar(SnackBar(content: Text('Successfully joined household!')));
-  } catch (e) {
-    // Check if widget is still mounted before updating UI
-    if (!mounted) return;
+      // Check if widget is still mounted before updating UI
+      if (!mounted) return;
 
-    print("Error joining household: $e");
-    
-    setState(() {
-      _isLoading = false;
-      // Extract meaningful error message from exception
-      String errorMsg = e.toString();
-      if (errorMsg.contains('Exception: ')) {
-        errorMsg = errorMsg.split('Exception: ')[1];
-      }
-      _errorMessage = 'Failed to join household: $errorMsg';
-    });
+      setState(() {
+        _isLoading = false;
+      });
 
-    ScaffoldMessenger.of(
-      currentContext,
-    ).showSnackBar(SnackBar(content: Text(_errorMessage ?? 'Error joining household')));
+      // Refresh members with new household
+      await _loadMembers();
+
+      // Check again if mounted before showing success message
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        currentContext,
+      ).showSnackBar(SnackBar(content: Text('Successfully joined household!')));
+    } catch (e) {
+      // Check if widget is still mounted before updating UI
+      if (!mounted) return;
+
+      print("Error joining household: $e");
+
+      setState(() {
+        _isLoading = false;
+        // Extract meaningful error message from exception
+        String errorMsg = e.toString();
+        if (errorMsg.contains('Exception: ')) {
+          errorMsg = errorMsg.split('Exception: ')[1];
+        }
+        _errorMessage = 'Failed to join household: $errorMsg';
+      });
+
+      ScaffoldMessenger.of(currentContext).showSnackBar(
+        SnackBar(content: Text(_errorMessage ?? 'Error joining household')),
+      );
+    }
   }
-}
+
   void _showHouseholdCode(String code) {
     // IMPORTANT: Access theme provider with listen: false to avoid the error
     // Get the current theme state before going into the dialog builder
@@ -537,6 +550,14 @@ class _MembersScreenState extends State<MembersScreen> {
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
+    // Only admin can change roles or remove members
+    if (!_isCurrentUserAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only admins can edit member roles')),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
@@ -654,6 +675,14 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   Future<void> _updateMemberRole(String memberId, String newRole) async {
+    // Check if user is admin
+    if (!_isCurrentUserAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only admins can change member roles')),
+      );
+      return;
+    }
+
     // Capture context before async operations
     final BuildContext currentContext = context;
 
@@ -683,6 +712,14 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   void _confirmRemoveMember(HouseholdMemberModel member) {
+    // Check if user is admin
+    if (!_isCurrentUserAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only admins can remove members')),
+      );
+      return;
+    }
+
     // Use Provider with listen: false
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
@@ -750,6 +787,14 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   Future<void> _removeMember(String memberId) async {
+    // Check if user is admin
+    if (!_isCurrentUserAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only admins can remove members')),
+      );
+      return;
+    }
+
     // Capture context before async operations
     final BuildContext currentContext = context;
 
@@ -780,6 +825,14 @@ class _MembersScreenState extends State<MembersScreen> {
 
   // Navigate to Admin Mode screen
   void _navigateToAdminMode() {
+    // Only allow admins to access Admin Mode
+    if (!_isCurrentUserAdmin) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Only admins can access Admin Mode')),
+      );
+      return;
+    }
+
     if (_householdService.currentHousehold != null) {
       Navigator.push(
         context,
@@ -986,41 +1039,42 @@ class _MembersScreenState extends State<MembersScreen> {
               ],
             ),
 
-            // Admin Mode button positioned at the bottom center of the screen
-            Positioned(
-              bottom: 16,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: ElevatedButton.icon(
-                  onPressed: _navigateToAdminMode,
-                  icon: Icon(
-                    Icons.admin_panel_settings,
-                    color: AppColors.textLight,
-                  ),
-                  label: const Text(
-                    'Admin Mode',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontFamily: 'VarelaRound',
-                      fontSize: 16,
+            // Admin Mode button positioned at the bottom center of the screen - only visible for admins
+            if (_isCurrentUserAdmin)
+              Positioned(
+                bottom: 16,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: ElevatedButton.icon(
+                    onPressed: _navigateToAdminMode,
+                    icon: Icon(
+                      Icons.admin_panel_settings,
+                      color: AppColors.textLight,
                     ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textLight,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
+                    label: const Text(
+                      'Admin Mode',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontFamily: 'VarelaRound',
+                        fontSize: 16,
+                      ),
                     ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: AppColors.textLight,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      elevation: 3,
                     ),
-                    elevation: 3,
                   ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -1479,6 +1533,9 @@ class _MembersScreenState extends State<MembersScreen> {
     final displayEmail =
         email.length > 20 ? '${email.substring(0, 20)}...' : email;
 
+    // Get current user ID
+    final currentUserId = _supabaseService.currentUser?.id;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
@@ -1561,7 +1618,7 @@ class _MembersScreenState extends State<MembersScreen> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Text(
-              'Admin',
+              member.role == 'admin' ? 'Admin' : 'Member',
               style: TextStyle(
                 fontSize: 12,
                 fontFamily: 'VarelaRound',
@@ -1570,23 +1627,35 @@ class _MembersScreenState extends State<MembersScreen> {
             ),
           ),
 
-          // Edit icon - reduced size and padding
-          IconButton(
-            icon: SvgPicture.asset(
-              'assets/images/icons/pencil.svg',
-              height: 16, // Reduced from 18
-              width: 16, // Reduced from 18
-              colorFilter: ColorFilter.mode(
-                isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                BlendMode.srcIn,
+          // Edit icon - only show if user is admin or for their own profile
+          if (_isCurrentUserAdmin || member.userId == currentUserId)
+            IconButton(
+              icon: SvgPicture.asset(
+                'assets/images/icons/pencil.svg',
+                height: 16, // Reduced from 18
+                width: 16, // Reduced from 18
+                colorFilter: ColorFilter.mode(
+                  isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  BlendMode.srcIn,
+                ),
               ),
+              onPressed: () {
+                // If user is editing their own profile but isn't admin,
+                // they should only be able to edit their own info, not role
+                if (!_isCurrentUserAdmin && member.userId == currentUserId) {
+                  // Show user profile edit screen instead
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('You can edit your profile in Settings'),
+                    ),
+                  );
+                } else {
+                  _showEditMemberDialog(member);
+                }
+              },
+              padding: const EdgeInsets.all(4),
+              constraints: const BoxConstraints(),
             ),
-            onPressed: () {
-              _showEditMemberDialog(member);
-            },
-            padding: const EdgeInsets.all(4),
-            constraints: const BoxConstraints(),
-          ),
         ],
       ),
     );
@@ -1606,13 +1675,6 @@ class _MembersScreenState extends State<MembersScreen> {
       print('Error loading profile image: $e');
       return null;
     }
-  }
-
-  // Helper to check if current user is admin
-  bool _canEditMember() {
-    // For now, assume the user can edit members
-    // You might need to implement proper role checking
-    return true;
   }
 
   // Helper to get initials from a name

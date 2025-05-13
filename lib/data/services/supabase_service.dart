@@ -14,11 +14,39 @@ class SupabaseService {
     required String password,
     Map<String, dynamic>? userData,
   }) async {
-    return await client.auth.signUp(
+    final response = await client.auth.signUp(
       email: email,
       password: password,
       data: userData,
     );
+
+    // The trigger will automatically create a profile,
+    // but we can explicitly ensure it exists here for safety
+    if (response.user != null) {
+      try {
+        // Check if profile exists
+        final profile =
+            await client
+                .from('profiles')
+                .select()
+                .eq('id', response.user!.id)
+                .maybeSingle();
+
+        // If profile doesn't exist, create it
+        if (profile == null) {
+          await client.from('profiles').insert({
+            'id': response.user!.id,
+            'full_name': userData?['full_name'],
+            'email': email,
+          });
+        }
+      } catch (e) {
+        print('Error creating profile: $e');
+        // Continue anyway since the trigger should handle this
+      }
+    }
+
+    return response;
   }
 
   Future<AuthResponse> signIn({
@@ -39,7 +67,7 @@ class SupabaseService {
     await client.auth.resetPasswordForEmail(email);
   }
 
-  // Update user profile
+  // Update user profile - now updates both auth metadata and profiles table
   Future<void> updateUserProfile({
     String? fullName,
     String? phoneNumber,
@@ -48,13 +76,30 @@ class SupabaseService {
   }) async {
     if (currentUser == null) throw Exception('No user logged in');
 
+    // Auth metadata updates
     final updates = <String, dynamic>{};
     if (fullName != null) updates['full_name'] = fullName;
     if (phoneNumber != null) updates['phone_number'] = phoneNumber;
     if (bio != null) updates['bio'] = bio;
     if (profileImageUrl != null) updates['profile_image_url'] = profileImageUrl;
 
-    await client.auth.updateUser(UserAttributes(data: updates));
+    if (updates.isNotEmpty) {
+      // Update auth user metadata
+      await client.auth.updateUser(UserAttributes(data: updates));
+
+      // Also update public profile
+      final profileUpdates = <String, dynamic>{};
+      if (fullName != null) profileUpdates['full_name'] = fullName;
+      if (profileImageUrl != null)
+        profileUpdates['profile_image_url'] = profileImageUrl;
+
+      if (profileUpdates.isNotEmpty) {
+        await client
+            .from('profiles')
+            .update(profileUpdates)
+            .eq('id', currentUser!.id);
+      }
+    }
   }
 
   // Upload profile image to storage
@@ -83,6 +128,9 @@ class SupabaseService {
         .from('user-images')
         .getPublicUrl(storagePath);
 
+    // Update profile with new URL
+    await updateUserProfile(profileImageUrl: imageUrl);
+
     return imageUrl;
   }
 
@@ -107,6 +155,9 @@ class SupabaseService {
               files.map((file) => 'profiles/$userId/${file.name}').toList();
           await client.storage.from('user-images').remove(filesToDelete);
         }
+
+        // Clear profile image URL in both auth metadata and profiles table
+        await updateUserProfile(profileImageUrl: null);
       } catch (e) {
         print('Error removing image: $e');
       }
@@ -116,6 +167,19 @@ class SupabaseService {
   // Get user by email
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
+      // Try to get from profiles first (more data)
+      final profileResponse =
+          await client
+              .from('profiles')
+              .select()
+              .eq('email', email)
+              .maybeSingle();
+
+      if (profileResponse != null) {
+        return profileResponse;
+      }
+
+      // Fall back to auth.users if needed
       final response =
           await client
               .from('auth.users')

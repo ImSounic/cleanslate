@@ -27,7 +27,7 @@ class HouseholdRepository {
     try {
       final response = await _client
           .from('households')
-          .select()
+          .select('*, household_members(*)') // Include household members
           .order('created_at', ascending: false);
 
       return List<Map<String, dynamic>>.from(response);
@@ -58,7 +58,7 @@ class HouseholdRepository {
       final response =
           await _client
               .from('households')
-              .select()
+              .select('*, household_members(*)')
               .eq('id', householdId)
               .single();
 
@@ -82,6 +82,14 @@ class HouseholdRepository {
               .select()
               .single();
 
+      // Also create the first household member record (creator as admin)
+      await _client.from('household_members').insert({
+        'household_id': response['id'],
+        'user_id': _client.auth.currentUser!.id,
+        'role': 'admin', // Creator is admin
+        'is_active': true,
+      });
+
       return HouseholdModel.fromJson(response);
     } catch (e) {
       throw Exception('Failed to create household: $e');
@@ -97,7 +105,7 @@ class HouseholdRepository {
         params: {'search_code': code.trim()},
       );
 
-      if (householdResults.length == 0) {
+      if (householdResults.isEmpty) {
         throw Exception(
           'No household found with this code. Please check and try again.',
         );
@@ -129,11 +137,11 @@ class HouseholdRepository {
           throw Exception('You are already a member of this household');
         }
       } else {
-        // Add user as a new member
+        // Add user as a new member - explicitly set role to 'member'
         await _client.from('household_members').insert({
           'household_id': householdId,
           'user_id': userId,
-          'role': 'member',
+          'role': 'member', // Explicitly set to member, not admin
           'is_active': true,
         });
       }
@@ -172,12 +180,12 @@ class HouseholdRepository {
     }
   }
 
-  // Get household members
+  // Get household members - CORRECTED method to fix the relationship error
   Future<List<HouseholdMemberModel>> getHouseholdMembers(
     String householdId,
   ) async {
     try {
-      // Simplified query to get just the household members
+      // First, get the household members
       final response = await _client
           .from('household_members')
           .select('id, household_id, user_id, role, joined_at, is_active')
@@ -185,36 +193,55 @@ class HouseholdRepository {
           .eq('is_active', true)
           .order('joined_at', ascending: false);
 
-      // Convert to list of models with minimal information
+      // If no members are found, return an empty list
+      if (response.isEmpty) {
+        return [];
+      }
+
       final members = <HouseholdMemberModel>[];
+
+      // For each member, fetch their profile information separately
       for (final memberData in response) {
-        // We need to handle the auth user data separately
-        String userId = memberData['user_id'] as String;
+        final userId = memberData['user_id'] as String;
+
+        // Try to get profile data for this user
         String? email;
         String? fullName;
         String? profileImageUrl;
 
         try {
-          // Try to get the user information from the auth.currentSession
-          final currentUser = _client.auth.currentUser;
-          if (currentUser != null && currentUser.id == userId) {
-            // If it's the current user, we can get the info directly
-            email = currentUser.email;
-            final metadata = currentUser.userMetadata;
-            if (metadata != null) {
-              fullName = metadata['full_name'] as String?;
-              profileImageUrl = metadata['profile_image_url'] as String?;
-            }
-          } else {
-            // For other users, use placeholder values
-            email = 'User ${userId.substring(0, 4)}';
-            fullName = 'Member';
+          // Get profile data
+          final profileData =
+              await _client
+                  .from('profiles')
+                  .select('full_name, email, profile_image_url')
+                  .eq('id', userId)
+                  .maybeSingle();
+
+          if (profileData != null) {
+            email = profileData['email'] as String?;
+            fullName = profileData['full_name'] as String?;
+            profileImageUrl = profileData['profile_image_url'] as String?;
           }
         } catch (e) {
-          // Fallback values if we can't get the user data
-          email = 'User ${userId.substring(0, 4)}';
-          fullName = 'Member';
+          // Ignore profile errors and use fallback values
+          print('Error fetching profile for $userId: $e');
         }
+
+        // If this is the current user and profile data is missing, use current user data
+        final currentUser = _client.auth.currentUser;
+        if (currentUser != null && currentUser.id == userId) {
+          email ??= currentUser.email;
+          final metadata = currentUser.userMetadata;
+          if (metadata != null) {
+            fullName ??= metadata['full_name'] as String?;
+            profileImageUrl ??= metadata['profile_image_url'] as String?;
+          }
+        }
+
+        // Fallback values if we still don't have data
+        email ??= 'User ${userId.substring(0, 4)}';
+        fullName ??= 'Member';
 
         members.add(
           HouseholdMemberModel(
