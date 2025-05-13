@@ -82,14 +82,6 @@ class HouseholdRepository {
               .select()
               .single();
 
-      // Also add the creator as a member with admin role
-      await _client.from('household_members').insert({
-        'household_id': response['id'],
-        'user_id': _client.auth.currentUser!.id,
-        'role': 'admin',
-        'is_active': true,
-      });
-
       return HouseholdModel.fromJson(response);
     } catch (e) {
       throw Exception('Failed to create household: $e');
@@ -97,30 +89,24 @@ class HouseholdRepository {
   }
 
   // Join household using code
-  // Join household using code
   Future<HouseholdModel> joinHouseholdWithCode(String code) async {
     try {
-      print("Attempting to join household with code: ${code.trim().toUpperCase()}");
-      
-      // Find household by code - MODIFIED to not use .single() directly
-      final householdResults = await _client
-          .from('households')
-          .select()
-          .eq('code', code.trim().toUpperCase());
-      
-      print("Search results: Found ${householdResults.length} households with this code");
-      
-      // Check if any households were found
-      if (householdResults.isEmpty) {
-        throw Exception('No household found with this code. Please check and try again.');
+      // Use the secure RPC function to find the household by code
+      final householdResults = await _client.rpc(
+        'find_household_by_code',
+        params: {'search_code': code.trim()},
+      );
+
+      if (householdResults.length == 0) {
+        throw Exception(
+          'No household found with this code. Please check and try again.',
+        );
       }
-      
+
       // Get the first matching household
-      final householdResponse = householdResults.first;
+      final householdResponse = householdResults[0];
       final householdId = householdResponse['id'] as String;
       final userId = _client.auth.currentUser!.id;
-      
-      print("Found household with ID: $householdId, Current user ID: $userId");
 
       // Check if user is already a member
       final existingMemberResults = await _client
@@ -128,26 +114,22 @@ class HouseholdRepository {
           .select()
           .eq('household_id', householdId)
           .eq('user_id', userId);
-      
-      print("Existing member check: Found ${existingMemberResults.length} matching records");
-      
-      final existingMember = existingMemberResults.isNotEmpty ? existingMemberResults.first : null;
+
+      final existingMember =
+          existingMemberResults.isNotEmpty ? existingMemberResults[0] : null;
 
       if (existingMember != null) {
         // If user was previously removed, reactivate membership
         if (existingMember['is_active'] == false) {
-          print("Reactivating previously inactive membership");
           await _client
               .from('household_members')
               .update({'is_active': true})
               .eq('id', existingMember['id']);
         } else {
-          print("User is already an active member of this household");
           throw Exception('You are already a member of this household');
         }
       } else {
         // Add user as a new member
-        print("Adding user as a new member of the household");
         await _client.from('household_members').insert({
           'household_id': householdId,
           'user_id': userId,
@@ -158,9 +140,10 @@ class HouseholdRepository {
 
       return HouseholdModel.fromJson(householdResponse);
     } catch (e) {
-      print("Error in joinHouseholdWithCode: $e");
       if (e is PostgrestException) {
-        throw Exception('Database error: ${e.message}. Please contact support if the issue persists.');
+        throw Exception(
+          'Database error: ${e.message}. Please contact support if the issue persists.',
+        );
       }
       // If it's already an Exception we've created, re-throw it directly
       if (e is Exception) {
@@ -169,14 +152,17 @@ class HouseholdRepository {
       throw Exception('Failed to join household: $e');
     }
   }
+
   // Get household by code
   Future<HouseholdModel?> getHouseholdByCode(String code) async {
     try {
+      // Use the secure RPC function to find the household
       final response =
           await _client
-              .from('households')
-              .select()
-              .eq('code', code.toUpperCase())
+              .rpc(
+                'find_household_by_code',
+                params: {'search_code': code.trim()},
+              )
               .maybeSingle();
 
       if (response == null) return null;
@@ -221,16 +207,11 @@ class HouseholdRepository {
             }
           } else {
             // For other users, use placeholder values
-            // Fixed: Using string interpolation instead of concatenation
             email = 'User ${userId.substring(0, 4)}';
             fullName = 'Member';
           }
         } catch (e) {
-          // Fixed: Removed print statement and used proper logging
-          // Note: Consider implementing a proper logging system
-
           // Fallback values if we can't get the user data
-          // Fixed: Using string interpolation instead of concatenation
           email = 'User ${userId.substring(0, 4)}';
           fullName = 'Member';
         }
