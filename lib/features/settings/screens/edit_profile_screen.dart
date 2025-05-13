@@ -5,6 +5,8 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'dart:io';
 
 class EditProfileScreen extends StatefulWidget {
@@ -128,8 +130,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showPhotoOptions() {
-    // Check if dark mode is enabled
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    // Check if dark mode is enabled - WITH listen: false to avoid the provider error
+    final isDarkMode =
+        Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
 
     showDialog(
       context: context,
@@ -797,16 +800,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _showDeleteAccountConfirmation(bool isDarkMode) {
+    // Using listen: false to avoid the Provider error in dialog callbacks
+    final isDarkModeSafe =
+        Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           title: Text(
             'Delete Account',
             style: TextStyle(
               color:
-                  isDarkMode
+                  isDarkModeSafe
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
             ),
@@ -815,11 +821,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             'Are you sure you want to delete your account? This action cannot be undone.',
             style: TextStyle(
               color:
-                  isDarkMode
+                  isDarkModeSafe
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
             ),
           ),
+          backgroundColor:
+              isDarkModeSafe ? AppColors.surfaceDark : Colors.white,
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -827,18 +835,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 'Cancel',
                 style: TextStyle(
                   color:
-                      isDarkMode
+                      isDarkModeSafe
                           ? AppColors.textSecondaryDark
                           : AppColors.textSecondary,
                 ),
               ),
             ),
-            ElevatedButton(
+            TextButton(
               onPressed: () async {
                 Navigator.of(context).pop();
                 await _deleteAccount();
               },
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+              style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text(
                 'Delete',
                 style: TextStyle(color: Colors.white),
