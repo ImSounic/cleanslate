@@ -11,7 +11,10 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+
+# Environment files
 .env
+.env.*
 
 # IntelliJ related
 *.iml
@@ -44,3 +47,30 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Android signing and sensitive files
+android/key.properties
+android/app/upload-keystore.jks
+android/app/*.keystore
+*.jks
+*.keystore
+
+# Google Services (if you add Firebase later)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+
+# Local properties
+android/local.properties
+ios/Flutter/flutter_export_environment.sh
+
+# Temporary files
+*.tmp
+*.cache
+*.lock
+
+# Coverage
+coverage/
+*.lcov
+
+# Exceptions to above rules.
+!/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages

@@ -20,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _supabaseService = SupabaseService();
   final _householdService = HouseholdService();
   bool _isLoading = false;
+  bool _isGoogleLoading = false;
 
   @override
   void dispose() {
@@ -49,9 +50,22 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${error.toString()}')));
+        String errorMessage = error.toString();
+
+        // Handle specific error messages
+        if (errorMessage.contains('Google sign-in')) {
+          errorMessage =
+              'This email is registered with Google. Please use "Sign in with Google" instead.';
+        } else if (errorMessage.contains('Invalid login credentials')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.error,
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -62,15 +76,63 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    setState(() {
+      _isGoogleLoading = true;
+    });
+
+    try {
+      await _supabaseService.signInWithGoogle();
+
+      // Initialize household service after successful login
+      await _householdService.initializeHousehold();
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        String errorMessage = error.toString();
+
+        // Handle specific error messages
+        if (errorMessage.contains('already exists')) {
+          errorMessage =
+              'This email is already registered. Please sign in with your password or reset it if forgotten.';
+        } else if (errorMessage.contains('cancelled')) {
+          // User cancelled, don't show error
+          setState(() {
+            _isGoogleLoading = false;
+          });
+          return;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGoogleLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Check if dark mode is enabled
     final isDarkMode = ThemeUtils.isDarkMode(context);
-    
+
     return Scaffold(
       body: Container(
-        height: MediaQuery.of(context).size.height, // Ensure container takes full height
-        width: MediaQuery.of(context).size.width, // Ensure container takes full width
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
         decoration: const BoxDecoration(
           image: DecorationImage(
             image: AssetImage('assets/images/background.png'),
@@ -81,7 +143,10 @@ class _LoginScreenState extends State<LoginScreen> {
           child: SingleChildScrollView(
             child: ConstrainedBox(
               constraints: BoxConstraints(
-                minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.top - MediaQuery.of(context).padding.bottom,
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
@@ -92,10 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     Align(
                       alignment: Alignment.topLeft,
                       child: IconButton(
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                        ),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ),
@@ -116,9 +178,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 40),
                     _buildTextField(
                       controller: _emailController,
-                      label: 'Email Address/Phone Number',
+                      label: 'Email Address',
                       suffixIcon: Icons.email_outlined,
                       isDarkMode: isDarkMode,
+                      keyboardType: TextInputType.emailAddress,
                     ),
                     const SizedBox(height: 24),
                     _buildTextField(
@@ -127,6 +190,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       isPassword: true,
                       suffixIcon: Icons.lock_outline,
                       isDarkMode: isDarkMode,
+                    ),
+                    const SizedBox(height: 16),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () {
+                          // Navigate to forgot password screen
+                          Navigator.pushNamed(context, '/forgot-password');
+                        },
+                        child: const Text(
+                          'Forgot Password?',
+                          style: TextStyle(
+                            color: Colors.white,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 24),
                     const Center(
@@ -138,15 +218,30 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 24),
                     Center(
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          // Handle Google sign in
-                        },
-                        icon: SvgPicture.asset(
-                          'assets/images/google_logo.svg',
-                          height: 24,
-                          width: 24,
+                        onPressed:
+                            _isGoogleLoading ? null : _handleGoogleSignIn,
+                        icon:
+                            _isGoogleLoading
+                                ? SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.grey,
+                                    ),
+                                  ),
+                                )
+                                : SvgPicture.asset(
+                                  'assets/images/google_logo.svg',
+                                  height: 24,
+                                  width: 24,
+                                ),
+                        label: Text(
+                          _isGoogleLoading
+                              ? 'Signing in...'
+                              : 'Sign in with Google',
                         ),
-                        label: const Text('Sign in with Google'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: Colors.black87,
@@ -157,28 +252,18 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(24),
                           ),
+                          minimumSize: const Size(200, 48),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    Center(
-                      child: TextButton(
-                        onPressed: () {
-                          // Handle forgot password
-                        },
-                        child: const Text(
-                          'Forgot Password?',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                    
-                    // Use SizedBox instead of Spacer in scrollable context
                     const SizedBox(height: 40),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _handleLogin,
+                        onPressed:
+                            (_isLoading || _isGoogleLoading)
+                                ? null
+                                : _handleLogin,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: const Color(0xFF2185D0),
@@ -187,22 +272,50 @@ class _LoginScreenState extends State<LoginScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: _isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(),
-                              )
-                            : const Text(
-                                'LOGIN',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
+                        child:
+                            _isLoading
+                                ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(),
+                                )
+                                : const Text(
+                                  'LOGIN',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
-                              ),
                       ),
                     ),
-                    const SizedBox(height: 20), // Added bottom spacing for keyboard
+                    const SizedBox(height: 20),
+                    Center(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Text(
+                            "Don't have an account? ",
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushReplacementNamed(
+                                context,
+                                '/signup',
+                              );
+                            },
+                            child: const Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -219,37 +332,37 @@ class _LoginScreenState extends State<LoginScreen> {
     IconData? suffixIcon,
     bool isPassword = false,
     required bool isDarkMode,
+    TextInputType? keyboardType,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          label, 
-          style: const TextStyle(color: Colors.white)
-        ),
+        Text(label, style: const TextStyle(color: Colors.white)),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
           obscureText: isPassword,
-          textAlign: TextAlign.center, // Center the text horizontally
-          textAlignVertical: TextAlignVertical.center, // Center the text vertically
+          keyboardType: keyboardType,
+          textAlign: TextAlign.center,
+          textAlignVertical: TextAlignVertical.center,
           style: const TextStyle(
             color: Colors.white,
             fontFamily: 'VarelaRound',
           ),
           decoration: InputDecoration(
-            contentPadding: const EdgeInsets.symmetric(vertical: 16.0), // Add padding for vertical centering
+            contentPadding: const EdgeInsets.symmetric(vertical: 16.0),
             filled: true,
-            fillColor: Colors.transparent, // Make background transparent
+            fillColor: Colors.transparent,
             enabledBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.white70),
             ),
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.white),
             ),
-            suffixIcon: suffixIcon != null
-                ? Icon(suffixIcon, color: Colors.white)
-                : null,
+            suffixIcon:
+                suffixIcon != null
+                    ? Icon(suffixIcon, color: Colors.white)
+                    : null,
           ),
         ),
       ],

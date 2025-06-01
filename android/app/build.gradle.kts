@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.cleanslate"
     compileSdk = flutter.compileSdkVersion
-    // ndkVersion removed - let Flutter handle it automatically
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
