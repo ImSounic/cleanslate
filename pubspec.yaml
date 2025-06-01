@@ -21,6 +21,13 @@ version: 1.0.0+1
 environment:
   sdk: ^3.7.2
 
+# App icon configuration
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/cleanslate_logo.png"  # You'll need to convert your SVG to PNG
+  adaptive_icon_background: "#F4F3EE"  # Your app's background color
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,
@@ -57,6 +64,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -77,7 +85,8 @@ flutter:
     - .env
     - assets/images/ 
     - assets/images/profile_pictures/
-    - assets/images/icons/  
+    - assets/images/icons/
+    - assets/icons/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
