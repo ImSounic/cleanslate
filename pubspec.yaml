@@ -25,7 +25,7 @@ environment:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/icons/cleanslate_logo.png"  # You'll need to convert your SVG to PNG
+  image_path: "assets/icons/cleanslate_icon.png"  # You'll need to convert your SVG to PNG
   adaptive_icon_background: "#F4F3EE"  # Your app's background color
 
 # Dependencies specify other packages that your package needs in order to work.

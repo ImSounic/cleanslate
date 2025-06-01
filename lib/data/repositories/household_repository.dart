@@ -6,16 +6,36 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 class HouseholdRepository {
   final SupabaseClient _client = Supabase.instance.client;
 
-  // Get all households for the current user (Model version)
+  // Cache for household members to reduce queries
+  final Map<String, List<HouseholdMemberModel>> _membersCache = {};
+  final Duration _cacheExpiry = const Duration(minutes: 5);
+  DateTime? _lastCacheUpdate;
+
+  // Get all households for the current user with optimized query
   Future<List<HouseholdModel>> getUserHouseholds() async {
     try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      // Get households where user is an active member
       final response = await _client
-          .from('households')
-          .select()
-          .order('created_at', ascending: false);
+          .from('household_members')
+          .select('''
+            household:households!inner(
+              id,
+              name,
+              code,
+              created_at,
+              updated_at,
+              created_by
+            )
+          ''')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('joined_at', ascending: false);
 
       return (response as List)
-          .map((json) => HouseholdModel.fromJson(json))
+          .map((item) => HouseholdModel.fromJson(item['household']))
           .toList();
     } catch (e) {
       throw Exception('Failed to fetch households: $e');
@@ -25,20 +45,47 @@ class HouseholdRepository {
   // Get all households for the current user (Map version for backward compatibility)
   Future<List<Map<String, dynamic>>> getHouseholds() async {
     try {
-      final response = await _client
-          .from('households')
-          .select('*, household_members(*)') // Include household members
-          .order('created_at', ascending: false);
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
 
-      return List<Map<String, dynamic>>.from(response);
+      final response = await _client
+          .from('household_members')
+          .select('''
+            household:households!inner(
+              id,
+              name,
+              code,
+              created_at,
+              updated_at,
+              created_by,
+              household_members!inner(count)
+            )
+          ''')
+          .eq('user_id', userId)
+          .eq('is_active', true)
+          .order('joined_at', ascending: false);
+
+      // Transform the response to match expected format
+      return (response as List).map((item) {
+        final household = item['household'] as Map<String, dynamic>;
+        // Add member count
+        household['member_count'] =
+            household['household_members']?[0]?['count'] ?? 0;
+        return household;
+      }).toList();
     } catch (e) {
       throw Exception('Failed to fetch households: $e');
     }
   }
 
-  // Get a single household by ID (Model version)
+  // Get a single household by ID
   Future<HouseholdModel> getHouseholdModel(String householdId) async {
     try {
+      // Validate input
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
       final response =
           await _client
               .from('households')
@@ -52,15 +99,26 @@ class HouseholdRepository {
     }
   }
 
-  // Get a single household by ID (Map version for backward compatibility)
+  // Get a single household by ID (Map version)
   Future<Map<String, dynamic>?> getHousehold(String householdId) async {
     try {
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
       final response =
           await _client
               .from('households')
-              .select('*, household_members(*)')
+              .select('''
+            *,
+            household_members(count)
+          ''')
               .eq('id', householdId)
               .single();
+
+      // Add member count to response
+      response['member_count'] =
+          response['household_members']?[0]?['count'] ?? 0;
 
       return response;
     } catch (e) {
@@ -68,44 +126,78 @@ class HouseholdRepository {
     }
   }
 
-  // Create a new household
+  // Create a new household with validation
   Future<HouseholdModel> createHousehold(String name) async {
     try {
+      // Validate input
+      final trimmedName = name.trim();
+      if (trimmedName.isEmpty) {
+        throw Exception('Household name cannot be empty');
+      }
+
+      if (trimmedName.length > 100) {
+        throw Exception('Household name is too long (max 100 characters)');
+      }
+
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
+      // Create household in a transaction-like manner
       final response =
           await _client
               .from('households')
               .insert({
-                'name': name,
-                'created_by': _client.auth.currentUser!.id,
+                'name': trimmedName,
+                'created_by': userId,
                 // code will be generated automatically by the database trigger
               })
               .select()
               .single();
 
-      // Also create the first household member record (creator as admin)
+      final household = HouseholdModel.fromJson(response);
+
+      // Create the first household member record (creator as admin)
       await _client.from('household_members').insert({
-        'household_id': response['id'],
-        'user_id': _client.auth.currentUser!.id,
-        'role': 'admin', // Creator is admin
+        'household_id': household.id,
+        'user_id': userId,
+        'role': 'admin',
         'is_active': true,
       });
 
-      return HouseholdModel.fromJson(response);
+      // Clear cache since we have a new household
+      _clearCache();
+
+      return household;
     } catch (e) {
       throw Exception('Failed to create household: $e');
     }
   }
 
-  // Join household using code
+  // Join household using code with improved validation
   Future<HouseholdModel> joinHouseholdWithCode(String code) async {
     try {
+      // Validate input
+      final trimmedCode = code.trim().toUpperCase();
+      if (trimmedCode.length != 8) {
+        throw Exception('Invalid code format. Code must be 8 characters long.');
+      }
+
+      if (!RegExp(r'^[A-Z0-9]+$').hasMatch(trimmedCode)) {
+        throw Exception(
+          'Invalid code format. Code must contain only letters and numbers.',
+        );
+      }
+
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) throw Exception('User not authenticated');
+
       // Use the secure RPC function to find the household by code
       final householdResults = await _client.rpc(
         'find_household_by_code',
-        params: {'search_code': code.trim()},
+        params: {'search_code': trimmedCode},
       );
 
-      if (householdResults.isEmpty) {
+      if (householdResults == null || householdResults.isEmpty) {
         throw Exception(
           'No household found with this code. Please check and try again.',
         );
@@ -114,149 +206,109 @@ class HouseholdRepository {
       // Get the first matching household
       final householdResponse = householdResults[0];
       final householdId = householdResponse['id'] as String;
-      final userId = _client.auth.currentUser!.id;
 
       // Check if user is already a member
-      final existingMemberResults = await _client
-          .from('household_members')
-          .select()
-          .eq('household_id', householdId)
-          .eq('user_id', userId);
-
-      final existingMember =
-          existingMemberResults.isNotEmpty ? existingMemberResults[0] : null;
-
-      if (existingMember != null) {
-        // If user was previously removed, reactivate membership
-        if (existingMember['is_active'] == false) {
+      final existingMemberResults =
           await _client
               .from('household_members')
-              .update({'is_active': true})
-              .eq('id', existingMember['id']);
-        } else {
+              .select()
+              .eq('household_id', householdId)
+              .eq('user_id', userId)
+              .maybeSingle();
+
+      if (existingMemberResults != null) {
+        if (existingMemberResults['is_active'] == true) {
           throw Exception('You are already a member of this household');
+        } else {
+          // Reactivate membership
+          await _client
+              .from('household_members')
+              .update({
+                'is_active': true,
+                'joined_at': DateTime.now().toIso8601String(),
+              })
+              .eq('id', existingMemberResults['id']);
         }
       } else {
-        // Add user as a new member - explicitly set role to 'member'
+        // Add user as a new member
         await _client.from('household_members').insert({
           'household_id': householdId,
           'user_id': userId,
-          'role': 'member', // Explicitly set to member, not admin
+          'role': 'member',
           'is_active': true,
         });
       }
 
+      // Clear cache for this household
+      _membersCache.remove(householdId);
+
       return HouseholdModel.fromJson(householdResponse);
+    } on PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message}');
     } catch (e) {
-      if (e is PostgrestException) {
-        throw Exception(
-          'Database error: ${e.message}. Please contact support if the issue persists.',
-        );
-      }
-      // If it's already an Exception we've created, re-throw it directly
-      if (e is Exception) {
-        rethrow;
-      }
+      if (e is Exception) rethrow;
       throw Exception('Failed to join household: $e');
     }
   }
 
-  // Get household by code
-  Future<HouseholdModel?> getHouseholdByCode(String code) async {
-    try {
-      // Use the secure RPC function to find the household
-      final response =
-          await _client
-              .rpc(
-                'find_household_by_code',
-                params: {'search_code': code.trim()},
-              )
-              .maybeSingle();
-
-      if (response == null) return null;
-      return HouseholdModel.fromJson(response);
-    } catch (e) {
-      throw Exception('Failed to fetch household by code: $e');
-    }
-  }
-
-  // Get household members - CORRECTED method to fix the relationship error
+  // Get household members with optimized single query
   Future<List<HouseholdMemberModel>> getHouseholdMembers(
     String householdId,
   ) async {
     try {
-      // First, get the household members
+      // Validate input
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
+      // Check cache first
+      if (_shouldUseCache(householdId)) {
+        return _membersCache[householdId]!;
+      }
+
+      // Single optimized query with join
       final response = await _client
           .from('household_members')
-          .select('id, household_id, user_id, role, joined_at, is_active')
+          .select('''
+            id,
+            household_id,
+            user_id,
+            role,
+            joined_at,
+            is_active,
+            profiles!inner(
+              full_name,
+              email,
+              profile_image_url
+            )
+          ''')
           .eq('household_id', householdId)
           .eq('is_active', true)
           .order('joined_at', ascending: false);
 
-      // If no members are found, return an empty list
-      if (response.isEmpty) {
-        return [];
-      }
-
       final members = <HouseholdMemberModel>[];
 
-      // For each member, fetch their profile information separately
       for (final memberData in response) {
-        final userId = memberData['user_id'] as String;
-
-        // Try to get profile data for this user
-        String? email;
-        String? fullName;
-        String? profileImageUrl;
-
-        try {
-          // Get profile data
-          final profileData =
-              await _client
-                  .from('profiles')
-                  .select('full_name, email, profile_image_url')
-                  .eq('id', userId)
-                  .maybeSingle();
-
-          if (profileData != null) {
-            email = profileData['email'] as String?;
-            fullName = profileData['full_name'] as String?;
-            profileImageUrl = profileData['profile_image_url'] as String?;
-          }
-        } catch (e) {
-          // Ignore profile errors and use fallback values
-          print('Error fetching profile for $userId: $e');
-        }
-
-        // If this is the current user and profile data is missing, use current user data
-        final currentUser = _client.auth.currentUser;
-        if (currentUser != null && currentUser.id == userId) {
-          email ??= currentUser.email;
-          final metadata = currentUser.userMetadata;
-          if (metadata != null) {
-            fullName ??= metadata['full_name'] as String?;
-            profileImageUrl ??= metadata['profile_image_url'] as String?;
-          }
-        }
-
-        // Fallback values if we still don't have data
-        email ??= 'User ${userId.substring(0, 4)}';
-        fullName ??= 'Member';
+        final profile = memberData['profiles'] as Map<String, dynamic>?;
 
         members.add(
           HouseholdMemberModel(
             id: memberData['id'] as String,
             householdId: memberData['household_id'] as String,
-            userId: userId,
+            userId: memberData['user_id'] as String,
             role: memberData['role'] as String,
             joinedAt: DateTime.parse(memberData['joined_at'] as String),
             isActive: memberData['is_active'] as bool,
-            fullName: fullName,
-            email: email,
-            profileImageUrl: profileImageUrl,
+            fullName: profile?['full_name'] as String?,
+            email: profile?['email'] as String? ?? 'Unknown',
+            profileImageUrl: profile?['profile_image_url'] as String?,
           ),
         );
       }
+
+      // Update cache
+      _membersCache[householdId] = members;
+      _lastCacheUpdate = DateTime.now();
 
       return members;
     } catch (e) {
@@ -264,40 +316,123 @@ class HouseholdRepository {
     }
   }
 
-  // Update member role
+  // Update member role with validation
   Future<void> updateMemberRole(String memberId, String newRole) async {
     try {
+      // Validate inputs
+      if (memberId.isEmpty) {
+        throw Exception('Member ID cannot be empty');
+      }
+
+      final validRoles = ['admin', 'member'];
+      if (!validRoles.contains(newRole)) {
+        throw Exception('Invalid role. Must be either "admin" or "member"');
+      }
+
+      // Ensure at least one admin remains
+      if (newRole == 'member') {
+        final member =
+            await _client
+                .from('household_members')
+                .select('household_id')
+                .eq('id', memberId)
+                .single();
+
+        final adminCount = await _client
+            .from('household_members')
+            .select('id')
+            .eq('household_id', member['household_id'])
+            .eq('role', 'admin')
+            .eq('is_active', true);
+
+        if (adminCount.length <= 1) {
+          throw Exception('Cannot remove the last admin from the household');
+        }
+      }
+
       await _client
           .from('household_members')
           .update({'role': newRole})
           .eq('id', memberId);
+
+      // Clear cache
+      _clearCache();
     } catch (e) {
       throw Exception('Failed to update member role: $e');
     }
   }
 
-  // Remove member from household
+  // Remove member from household (soft delete)
   Future<void> removeMemberFromHousehold(String memberId) async {
     try {
+      if (memberId.isEmpty) {
+        throw Exception('Member ID cannot be empty');
+      }
+
+      // Get member details first
+      final member =
+          await _client
+              .from('household_members')
+              .select('household_id, role')
+              .eq('id', memberId)
+              .single();
+
+      // Ensure at least one admin remains
+      if (member['role'] == 'admin') {
+        final adminCount = await _client
+            .from('household_members')
+            .select('id')
+            .eq('household_id', member['household_id'])
+            .eq('role', 'admin')
+            .eq('is_active', true);
+
+        if (adminCount.length <= 1) {
+          throw Exception('Cannot remove the last admin from the household');
+        }
+      }
+
       await _client
           .from('household_members')
-          .update({'is_active': false})
+          .update({
+            'is_active': false,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
           .eq('id', memberId);
+
+      // Clear cache
+      _clearCache();
     } catch (e) {
-      throw Exception('Failed to remove member from household: $e');
+      throw Exception('Failed to remove member: $e');
     }
   }
 
-  // Update household details
+  // Update household details with validation
   Future<HouseholdModel> updateHousehold(
     String householdId, {
     required String name,
   }) async {
     try {
+      // Validate inputs
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
+      final trimmedName = name.trim();
+      if (trimmedName.isEmpty) {
+        throw Exception('Household name cannot be empty');
+      }
+
+      if (trimmedName.length > 100) {
+        throw Exception('Household name is too long (max 100 characters)');
+      }
+
       final response =
           await _client
               .from('households')
-              .update({'name': name})
+              .update({
+                'name': trimmedName,
+                'updated_at': DateTime.now().toIso8601String(),
+              })
               .eq('id', householdId)
               .select()
               .single();
@@ -308,12 +443,104 @@ class HouseholdRepository {
     }
   }
 
-  // Delete household
+  // Delete household with proper cleanup
   Future<void> deleteHousehold(String householdId) async {
     try {
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
+      // Note: This should be handled by database CASCADE rules
+      // but we'll do soft delete for safety
+
+      // First, deactivate all members
+      await _client
+          .from('household_members')
+          .update({
+            'is_active': false,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('household_id', householdId);
+
+      // Then delete the household
       await _client.from('households').delete().eq('id', householdId);
+
+      // Clear cache
+      _membersCache.remove(householdId);
     } catch (e) {
       throw Exception('Failed to delete household: $e');
+    }
+  }
+
+  // Get household by code (used for validation)
+  Future<HouseholdModel?> getHouseholdByCode(String code) async {
+    try {
+      final trimmedCode = code.trim().toUpperCase();
+      if (trimmedCode.length != 8) return null;
+
+      // Use the secure RPC function to find the household
+      final response =
+          await _client
+              .rpc(
+                'find_household_by_code',
+                params: {'search_code': trimmedCode},
+              )
+              .maybeSingle();
+
+      if (response == null) return null;
+      return HouseholdModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to fetch household by code: $e');
+    }
+  }
+
+  // Cache management helpers
+  bool _shouldUseCache(String householdId) {
+    if (!_membersCache.containsKey(householdId)) return false;
+    if (_lastCacheUpdate == null) return false;
+
+    final cacheAge = DateTime.now().difference(_lastCacheUpdate!);
+    return cacheAge < _cacheExpiry;
+  }
+
+  void _clearCache() {
+    _membersCache.clear();
+    _lastCacheUpdate = null;
+  }
+
+  // Get member count for a household
+  Future<int> getHouseholdMemberCount(String householdId) async {
+    try {
+      final response = await _client
+          .from('household_members')
+          .select('id')
+          .eq('household_id', householdId)
+          .eq('is_active', true);
+
+      return response.length;
+    } catch (e) {
+      throw Exception('Failed to get member count: $e');
+    }
+  }
+
+  // Check if user is admin of a household
+  Future<bool> isUserAdminOfHousehold(String householdId) async {
+    try {
+      final userId = _client.auth.currentUser?.id;
+      if (userId == null) return false;
+
+      final response =
+          await _client
+              .from('household_members')
+              .select('role')
+              .eq('household_id', householdId)
+              .eq('user_id', userId)
+              .eq('is_active', true)
+              .maybeSingle();
+
+      return response?['role'] == 'admin';
+    } catch (e) {
+      return false;
     }
   }
 }

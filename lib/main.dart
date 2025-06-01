@@ -18,9 +18,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Set status bar to be transparent
-  SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-    statusBarColor: Colors.transparent,
-  ));
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+  );
 
   // Load environment variables
   await dotenv.load();
@@ -88,17 +88,21 @@ class _MyAppState extends State<MyApp> {
       builder: (context, themeProvider, child) {
         // Apply system UI overlay based on current theme
         if (themeProvider.isDarkMode) {
-          SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-            statusBarBrightness: Brightness.dark, // iOS
-            statusBarIconBrightness: Brightness.light, // Android
-          ));
+          SystemChrome.setSystemUIOverlayStyle(
+            const SystemUiOverlayStyle(
+              statusBarBrightness: Brightness.dark, // iOS
+              statusBarIconBrightness: Brightness.light, // Android
+            ),
+          );
         } else {
-          SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-            statusBarBrightness: Brightness.light, // iOS
-            statusBarIconBrightness: Brightness.dark, // Android
-          ));
+          SystemChrome.setSystemUIOverlayStyle(
+            const SystemUiOverlayStyle(
+              statusBarBrightness: Brightness.light, // iOS
+              statusBarIconBrightness: Brightness.dark, // Android
+            ),
+          );
         }
-        
+
         return MaterialApp(
           title: 'CleanSlate',
           theme: AppTheme.lightTheme,
