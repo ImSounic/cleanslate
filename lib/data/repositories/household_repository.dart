@@ -251,7 +251,7 @@ class HouseholdRepository {
     }
   }
 
-  // Get household members with optimized single query
+  // Get household members with fixed join syntax
   Future<List<HouseholdMemberModel>> getHouseholdMembers(
     String householdId,
   ) async {
@@ -266,7 +266,7 @@ class HouseholdRepository {
         return _membersCache[householdId]!;
       }
 
-      // Single optimized query with join
+      // Single optimized query with explicit foreign key join
       final response = await _client
           .from('household_members')
           .select('''
@@ -276,7 +276,7 @@ class HouseholdRepository {
             role,
             joined_at,
             is_active,
-            profiles!inner(
+            profiles:user_id(
               full_name,
               email,
               profile_image_url

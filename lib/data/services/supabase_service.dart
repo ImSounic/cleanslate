@@ -1,4 +1,5 @@
 // lib/data/services/supabase_service.dart
+// Updated with Google account linking functionality
 // ignore_for_file: avoid_print
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,16 +12,13 @@ class SupabaseService {
   final SupabaseClient client = Supabase.instance.client;
 
   // Google Sign In instance
-  // TODO: Add your Web Client ID from Google Cloud Console
-  // This should be the Web Application OAuth 2.0 Client ID, not the Android one
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    // For Android, use serverClientId instead of clientId
     serverClientId:
         '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com',
   );
 
-  // Google Sign In
+  // Google Sign In - Updated to handle both login and registration
   Future<AuthResponse> signInWithGoogle() async {
     try {
       // Sign out from any previous Google session to ensure account picker shows
@@ -41,19 +39,7 @@ class SupabaseService {
         throw Exception('No ID token found');
       }
 
-      // First, check if a user with this email already exists
-      final email = googleUser.email;
-      final existingUser = await _checkExistingUser(email);
-
-      if (existingUser != null && existingUser['auth_provider'] != 'google') {
-        // User exists with email/password auth
-        throw Exception(
-          'An account with this email already exists. Please sign in with your email and password, '
-          'then link your Google account in settings.',
-        );
-      }
-
-      // Sign in with Supabase using the Google ID token
+      // Try to sign in with Google
       final response = await client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
@@ -62,74 +48,299 @@ class SupabaseService {
 
       // Update or create profile with Google data
       if (response.user != null) {
-        try {
-          // Check if profile exists
-          final profile =
-              await client
-                  .from('profiles')
-                  .select()
-                  .eq('id', response.user!.id)
-                  .maybeSingle();
-
-          final profileData = {
-            'id': response.user!.id,
-            'full_name':
-                googleUser.displayName ??
-                response.user!.email?.split('@').first,
-            'email': googleUser.email,
-            'profile_image_url': googleUser.photoUrl,
-            'auth_provider': 'google',
-          };
-
-          if (profile == null) {
-            // Create new profile
-            await client.from('profiles').insert(profileData);
-          } else {
-            // Update existing profile with Google data if missing
-            final updates = <String, dynamic>{'auth_provider': 'google'};
-
-            if (profile['full_name'] == null &&
-                googleUser.displayName != null) {
-              updates['full_name'] = googleUser.displayName;
-            }
-
-            if (profile['profile_image_url'] == null &&
-                googleUser.photoUrl != null) {
-              updates['profile_image_url'] = googleUser.photoUrl;
-            }
-
-            if (updates.isNotEmpty) {
-              await client
-                  .from('profiles')
-                  .update(updates)
-                  .eq('id', response.user!.id);
-            }
-          }
-
-          // Also update auth metadata
-          if (googleUser.displayName != null || googleUser.photoUrl != null) {
-            final metadataUpdates = <String, dynamic>{};
-
-            if (googleUser.displayName != null) {
-              metadataUpdates['full_name'] = googleUser.displayName;
-            }
-
-            if (googleUser.photoUrl != null) {
-              metadataUpdates['profile_image_url'] = googleUser.photoUrl;
-            }
-
-            await client.auth.updateUser(UserAttributes(data: metadataUpdates));
-          }
-        } catch (e) {
-          print('Error updating profile with Google data: $e');
-          // Continue anyway since auth was successful
-        }
+        await _updateProfileWithGoogleData(response.user!, googleUser);
       }
 
       return response;
     } catch (e) {
       print('Google sign in error: $e');
       rethrow;
+    }
+  }
+
+  // Link Google account to existing email/password account
+  Future<void> linkGoogleAccount() async {
+    try {
+      if (currentUser == null) throw Exception('No user logged in');
+
+      // Check if user already has Google linked
+      final profile =
+          await client
+              .from('profiles')
+              .select('auth_provider')
+              .eq('id', currentUser!.id)
+              .single();
+
+      if (profile['auth_provider'] == 'google' ||
+          profile['auth_provider'] == 'email_and_google') {
+        throw Exception('Google account is already linked');
+      }
+
+      // Sign out from any previous Google session
+      await _googleSignIn.signOut();
+
+      // Trigger the Google Sign In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+
+      if (googleUser == null) {
+        throw Exception('Google sign in was cancelled');
+      }
+
+      // Get the auth details
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      if (googleAuth.idToken == null) {
+        throw Exception('No ID token found');
+      }
+
+      // Check if this Google account is already linked to another user
+      final existingGoogleUser = await _checkExistingGoogleUser(
+        googleUser.email,
+      );
+
+      if (existingGoogleUser != null &&
+          existingGoogleUser['id'] != currentUser!.id) {
+        throw Exception(
+          'This Google account is already linked to another user. '
+          'Please use a different Google account.',
+        );
+      }
+
+      // Update the user's profile to indicate Google is linked
+      final updates = <String, dynamic>{
+        'auth_provider': 'email_and_google',
+        'google_id': googleUser.id,
+        'google_email': googleUser.email,
+      };
+
+      // Add Google profile photo if user doesn't have one
+      if (profile['profile_image_url'] == null && googleUser.photoUrl != null) {
+        updates['profile_image_url'] = googleUser.photoUrl;
+      }
+
+      await client.from('profiles').update(updates).eq('id', currentUser!.id);
+
+      // Update auth metadata
+      final metadataUpdates = <String, dynamic>{
+        'google_linked': true,
+        'google_id': googleUser.id,
+      };
+
+      if (googleUser.photoUrl != null && profile['profile_image_url'] == null) {
+        metadataUpdates['profile_image_url'] = googleUser.photoUrl;
+      }
+
+      await client.auth.updateUser(UserAttributes(data: metadataUpdates));
+
+      // Store the Google credentials for future use
+      // This allows the user to sign in with either email/password or Google
+      await _storeGoogleCredentials(currentUser!.id, googleUser);
+    } catch (e) {
+      print('Error linking Google account: $e');
+      rethrow;
+    }
+  }
+
+  // Check if a Google account is already linked
+  Future<Map<String, dynamic>?> _checkExistingGoogleUser(String email) async {
+    try {
+      final response =
+          await client
+              .from('profiles')
+              .select('id, email, auth_provider, google_email')
+              .or('email.eq.$email,google_email.eq.$email')
+              .maybeSingle();
+
+      return response;
+    } catch (e) {
+      print('Error checking existing Google user: $e');
+      return null;
+    }
+  }
+
+  // Store Google credentials for linked account
+  Future<void> _storeGoogleCredentials(
+    String userId,
+    GoogleSignInAccount googleUser,
+  ) async {
+    try {
+      // First, check if a record already exists
+      final existing =
+          await client
+              .from('google_auth_links')
+              .select()
+              .eq('user_id', userId)
+              .maybeSingle();
+
+      if (existing != null) {
+        // Update existing record
+        await client
+            .from('google_auth_links')
+            .update({
+              'google_id': googleUser.id,
+              'google_email': googleUser.email,
+              'updated_at': DateTime.now().toIso8601String(),
+            })
+            .eq('user_id', userId);
+      } else {
+        // Insert new record
+        await client.from('google_auth_links').insert({
+          'user_id': userId,
+          'google_id': googleUser.id,
+          'google_email': googleUser.email,
+          'linked_at': DateTime.now().toIso8601String(),
+          'created_at': DateTime.now().toIso8601String(),
+          'updated_at': DateTime.now().toIso8601String(),
+        });
+      }
+    } catch (e) {
+      print('Error storing Google credentials: $e');
+      // Continue anyway as the main linking was successful
+    }
+  }
+
+  // Check if current user has Google linked
+  Future<bool> hasGoogleLinked() async {
+    try {
+      if (currentUser == null) return false;
+
+      final profile =
+          await client
+              .from('profiles')
+              .select('auth_provider')
+              .eq('id', currentUser!.id)
+              .single();
+
+      return profile['auth_provider'] == 'google' ||
+          profile['auth_provider'] == 'email_and_google';
+    } catch (e) {
+      print('Error checking Google link status: $e');
+      return false;
+    }
+  }
+
+  // Unlink Google account
+  Future<void> unlinkGoogleAccount() async {
+    try {
+      if (currentUser == null) throw Exception('No user logged in');
+
+      // Check current auth provider
+      final profile =
+          await client
+              .from('profiles')
+              .select('auth_provider')
+              .eq('id', currentUser!.id)
+              .single();
+
+      if (profile['auth_provider'] == 'google') {
+        throw Exception(
+          'Cannot unlink Google from an account that only uses Google sign-in. '
+          'Please add a password first.',
+        );
+      }
+
+      if (profile['auth_provider'] != 'email_and_google') {
+        throw Exception('No Google account is linked');
+      }
+
+      // Update profile to remove Google link
+      await client
+          .from('profiles')
+          .update({
+            'auth_provider': 'email',
+            'google_id': null,
+            'google_email': null,
+          })
+          .eq('id', currentUser!.id);
+
+      // Remove from google_auth_links table if it exists
+      try {
+        await client
+            .from('google_auth_links')
+            .delete()
+            .eq('user_id', currentUser!.id);
+      } catch (e) {
+        // Table might not exist, continue
+      }
+
+      // Update auth metadata
+      await client.auth.updateUser(
+        UserAttributes(data: {'google_linked': false, 'google_id': null}),
+      );
+    } catch (e) {
+      print('Error unlinking Google account: $e');
+      rethrow;
+    }
+  }
+
+  // Helper method to update profile with Google data
+  Future<void> _updateProfileWithGoogleData(
+    User user,
+    GoogleSignInAccount googleUser,
+  ) async {
+    try {
+      // Check if profile exists
+      final profile =
+          await client
+              .from('profiles')
+              .select()
+              .eq('id', user.id)
+              .maybeSingle();
+
+      final profileData = {
+        'id': user.id,
+        'full_name': googleUser.displayName ?? user.email?.split('@').first,
+        'email': googleUser.email,
+        'profile_image_url': googleUser.photoUrl,
+        'auth_provider': 'google',
+        'google_id': googleUser.id,
+        'google_email': googleUser.email,
+      };
+
+      if (profile == null) {
+        // Create new profile
+        await client.from('profiles').insert(profileData);
+      } else {
+        // Update existing profile with Google data if missing
+        final updates = <String, dynamic>{
+          'auth_provider':
+              profile['auth_provider'] == 'email'
+                  ? 'email_and_google'
+                  : 'google',
+          'google_id': googleUser.id,
+          'google_email': googleUser.email,
+        };
+
+        if (profile['full_name'] == null && googleUser.displayName != null) {
+          updates['full_name'] = googleUser.displayName;
+        }
+
+        if (profile['profile_image_url'] == null &&
+            googleUser.photoUrl != null) {
+          updates['profile_image_url'] = googleUser.photoUrl;
+        }
+
+        await client.from('profiles').update(updates).eq('id', user.id);
+      }
+
+      // Also update auth metadata
+      final metadataUpdates = <String, dynamic>{};
+
+      if (googleUser.displayName != null) {
+        metadataUpdates['full_name'] = googleUser.displayName;
+      }
+
+      if (googleUser.photoUrl != null) {
+        metadataUpdates['profile_image_url'] = googleUser.photoUrl;
+      }
+
+      if (metadataUpdates.isNotEmpty) {
+        await client.auth.updateUser(UserAttributes(data: metadataUpdates));
+      }
+    } catch (e) {
+      print('Error updating profile with Google data: $e');
+      // Continue anyway since auth was successful
     }
   }
 
@@ -147,93 +358,6 @@ class SupabaseService {
     } catch (e) {
       print('Error checking existing user: $e');
       return null;
-    }
-  }
-
-  // Link Google account to existing email/password account
-  Future<void> linkGoogleAccount() async {
-    try {
-      if (currentUser == null) throw Exception('No user logged in');
-
-      // Note: Supabase doesn't currently support linking identities from the client SDK
-      // This would need to be implemented via a server-side function or Edge Function
-      // For now, we'll throw an informative error
-      throw Exception(
-        'Account linking is not currently supported. '
-        'Please contact support if you need to link your Google account.',
-      );
-
-      // When Supabase adds client-side identity linking, the implementation would be:
-      /*
-      // Trigger the Google Sign In flow
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      
-      if (googleUser == null) {
-        throw Exception('Google sign in was cancelled');
-      }
-
-      // Get the auth details
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-      if (googleAuth.idToken == null) {
-        throw Exception('No ID token found');
-      }
-
-      // Link the identities (this would be the proper API when available)
-      // await client.auth.linkIdentity(...);
-
-      // Update profile with Google data if needed
-      final updates = <String, dynamic>{
-        'auth_provider': 'email_and_google', // Indicate both auth methods
-      };
-      
-      if (googleUser.photoUrl != null) {
-        updates['profile_image_url'] = googleUser.photoUrl;
-      }
-      
-      await client
-          .from('profiles')
-          .update(updates)
-          .eq('id', currentUser!.id);
-          
-      // Update auth metadata too
-      if (googleUser.photoUrl != null) {
-        await client.auth.updateUser(
-          UserAttributes(data: {'profile_image_url': googleUser.photoUrl})
-        );
-      }
-      */
-    } catch (e) {
-      print('Error linking Google account: $e');
-      rethrow;
-    }
-  }
-
-  // Unlink Google account
-  Future<void> unlinkGoogleAccount() async {
-    try {
-      if (currentUser == null) throw Exception('No user logged in');
-
-      // Note: Supabase doesn't currently support unlinking identities from the client SDK
-      // This would need to be implemented via a server-side function or Edge Function
-      throw Exception(
-        'Account unlinking is not currently supported. '
-        'Please contact support if you need to unlink your Google account.',
-      );
-
-      // When Supabase adds client-side identity unlinking:
-      /*
-      // await client.auth.unlinkIdentity(...);
-      
-      // Update profile to indicate only email auth
-      await client
-          .from('profiles')
-          .update({'auth_provider': 'email'})
-          .eq('id', currentUser!.id);
-      */
-    } catch (e) {
-      print('Error unlinking Google account: $e');
-      rethrow;
     }
   }
 
@@ -305,16 +429,6 @@ class SupabaseService {
     required String email,
     required String password,
   }) async {
-    // Check if user exists with Google auth
-    final existingUser = await _checkExistingUser(email);
-
-    if (existingUser != null && existingUser['auth_provider'] == 'google') {
-      throw Exception(
-        'This account was created with Google sign-in. '
-        'Please use "Sign in with Google" instead.',
-      );
-    }
-
     return await client.auth.signInWithPassword(
       email: email,
       password: password,

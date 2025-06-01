@@ -30,11 +30,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _reminders = true;
   int _selectedNavIndex = 3; // Settings tab selected
   bool _isLoading = false;
+  bool _hasGoogleLinked = false;
+  String? _authProvider;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _checkGoogleLinkStatus();
   }
 
   Future<void> _loadUserData() async {
@@ -55,10 +58,89 @@ class _SettingsScreenState extends State<SettingsScreen> {
           _userEmail = user.email ?? 'Email@gmail.com';
           _profileImageUrl = userData?['profile_image_url'];
         });
+
+        // Get auth provider info from profiles table
+        final profile =
+            await _supabaseService.client
+                .from('profiles')
+                .select('auth_provider')
+                .eq('id', user.id)
+                .single();
+
+        setState(() {
+          _authProvider = profile['auth_provider'] as String?;
+        });
       }
     } catch (e) {
       // Handle error
       print('Error loading user data: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _checkGoogleLinkStatus() async {
+    try {
+      final hasGoogle = await _supabaseService.hasGoogleLinked();
+      setState(() {
+        _hasGoogleLinked = hasGoogle;
+      });
+    } catch (e) {
+      print('Error checking Google link status: $e');
+    }
+  }
+
+  Future<void> _handleGoogleLink() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      if (_hasGoogleLinked) {
+        // Unlink Google account
+        await _supabaseService.unlinkGoogleAccount();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google account unlinked successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        // Link Google account
+        await _supabaseService.linkGoogleAccount();
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Google account linked successfully'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      }
+
+      // Refresh user data and Google link status
+      await _loadUserData();
+      await _checkGoogleLinkStatus();
+    } catch (e) {
+      if (mounted) {
+        String errorMessage = e.toString();
+        if (errorMessage.contains('Exception: ')) {
+          errorMessage = errorMessage.split('Exception: ').last;
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errorMessage),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -110,6 +192,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     children: [
                       // User Profile Card
                       _buildProfileCard(isDarkMode),
+                      const SizedBox(height: 24),
+
+                      // Account Section
+                      _buildSectionTitle('Account', isDarkMode),
+                      _buildSectionSubtitle(
+                        'Manage your account settings',
+                        isDarkMode,
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Google Account Linking - Only show for email auth users
+                      if (_authProvider == 'email' ||
+                          _authProvider == 'email_and_google')
+                        _buildGoogleLinkItem(isDarkMode),
+
                       const SizedBox(height: 24),
 
                       // Notifications Section
@@ -174,7 +271,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // New - Schedule Item
+                      // Schedule Item
                       _buildNavigationItem(
                         icon: Icons.calendar_today_outlined,
                         title: 'Schedule',
@@ -272,13 +369,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
               // Handle navigation
               if (index == 0) {
-                // Navigate to Home - FIXED: Using pushReplacement instead of popUntil
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const HomeScreen()),
                 );
               } else if (index == 1) {
-                // Navigate to Members
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -286,7 +381,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 );
               } else if (index == 2) {
-                // Navigate to Schedule
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
@@ -387,6 +481,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildGoogleLinkItem(bool isDarkMode) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
+      ),
+      child: ListTile(
+        leading: SvgPicture.asset(
+          'assets/images/google_logo.svg',
+          height: 24,
+          width: 24,
+        ),
+        title: Text(
+          _hasGoogleLinked ? 'Google Account Linked' : 'Link Google Account',
+          style: TextStyle(
+            fontFamily: 'Switzer',
+            color:
+                isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          _hasGoogleLinked
+              ? 'Sign in with Google or email/password'
+              : 'Connect for easier sign-in',
+          style: TextStyle(
+            fontFamily: 'VarelaRound',
+            fontSize: 12,
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+          ),
+        ),
+        trailing:
+            _isLoading
+                ? SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color:
+                        isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  ),
+                )
+                : TextButton(
+                  onPressed: _handleGoogleLink,
+                  child: Text(
+                    _hasGoogleLinked ? 'Unlink' : 'Link',
+                    style: TextStyle(
+                      color:
+                          _hasGoogleLinked
+                              ? AppColors.error
+                              : (isDarkMode
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary),
+                      fontFamily: 'VarelaRound',
+                    ),
+                  ),
+                ),
+      ),
+    );
+  }
+
   Widget _buildProfileCard(bool isDarkMode) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -429,6 +589,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             : AppColors.textSecondary,
                   ),
                 ),
+                if (_authProvider != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _authProvider == 'google'
+                              ? Icons.g_mobiledata
+                              : (_authProvider == 'email_and_google'
+                                  ? Icons.link
+                                  : Icons.email),
+                          size: 14,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _authProvider == 'google'
+                              ? 'Google Account'
+                              : (_authProvider == 'email_and_google'
+                                  ? 'Email & Google'
+                                  : 'Email Account'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'VarelaRound',
+                            color:
+                                isDarkMode
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -440,7 +636,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   builder: (context) => const EditProfileScreen(),
                 ),
               ).then((result) {
-                // Refresh user data when returning from edit screen
                 if (result == true) {
                   _loadUserData();
                 }
