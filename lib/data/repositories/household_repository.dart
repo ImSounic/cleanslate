@@ -266,11 +266,11 @@ class HouseholdRepository {
   }
 
   // Get household members with fixed join syntax
+  // In household_repository.dart, find the getHouseholdMembers method and replace it:
   Future<List<HouseholdMemberModel>> getHouseholdMembers(
     String householdId,
   ) async {
     try {
-      // Validate input
       if (householdId.isEmpty) {
         throw Exception('Household ID cannot be empty');
       }
@@ -280,30 +280,32 @@ class HouseholdRepository {
         return _membersCache[householdId]!;
       }
 
-      // Single optimized query with explicit foreign key join
-      final response = await _client
+      // First, get the household members
+      final membersResponse = await _client
           .from('household_members')
-          .select('''
-            id,
-            household_id,
-            user_id,
-            role,
-            joined_at,
-            is_active,
-            profiles:user_id(
-              full_name,
-              email,
-              profile_image_url
-            )
-          ''')
+          .select('*')
           .eq('household_id', householdId)
           .eq('is_active', true)
           .order('joined_at', ascending: false);
 
       final members = <HouseholdMemberModel>[];
 
-      for (final memberData in response) {
-        final profile = memberData['profiles'] as Map<String, dynamic>?;
+      // Then, for each member, get their profile data
+      for (final memberData in membersResponse) {
+        // Get profile data separately
+        Map<String, dynamic>? profile;
+        try {
+          profile =
+              await _client
+                  .from('profiles')
+                  .select('full_name, email, profile_image_url')
+                  .eq('id', memberData['user_id'])
+                  .maybeSingle();
+        } catch (e) {
+          print(
+            'Warning: Could not fetch profile for user ${memberData['user_id']}: $e',
+          );
+        }
 
         members.add(
           HouseholdMemberModel(
