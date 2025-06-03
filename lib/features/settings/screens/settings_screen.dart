@@ -9,6 +9,7 @@ import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
+import 'package:cleanslate/features/settings/screens/add_password_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:provider/provider.dart';
@@ -202,10 +203,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Google Account Linking - Only show for email auth users
-                      if (_authProvider == 'email' ||
-                          _authProvider == 'email_and_google')
-                        _buildGoogleLinkItem(isDarkMode),
+                      // Show authentication status based on provider
+                      _buildAuthenticationStatus(isDarkMode),
 
                       const SizedBox(height: 24),
 
@@ -477,6 +476,124 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAuthenticationStatus(bool isDarkMode) {
+    // Determine what to show based on auth provider
+    if (_authProvider == 'google') {
+      // User signed in with Google only
+      return Column(
+        children: [
+          _buildGoogleOnlyStatus(isDarkMode),
+          const SizedBox(height: 12),
+          _buildAddPasswordOption(isDarkMode),
+        ],
+      );
+    } else if (_authProvider == 'email') {
+      // User signed in with email, can link Google
+      return _buildGoogleLinkItem(isDarkMode);
+    } else if (_authProvider == 'email_and_google') {
+      // User has both methods available
+      return _buildGoogleLinkItem(isDarkMode);
+    } else {
+      // Unknown state, show current auth method
+      return Container();
+    }
+  }
+
+  Widget _buildGoogleOnlyStatus(bool isDarkMode) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
+      ),
+      child: ListTile(
+        leading: SvgPicture.asset(
+          'assets/images/google_logo.svg',
+          height: 24,
+          width: 24,
+        ),
+        title: Text(
+          'Signed in with Google',
+          style: TextStyle(
+            fontFamily: 'Switzer',
+            color:
+                isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          'You\'re using Google Sign-In for this account',
+          style: TextStyle(
+            fontFamily: 'VarelaRound',
+            fontSize: 12,
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+          ),
+        ),
+        trailing: Icon(Icons.check_circle, color: AppColors.success),
+      ),
+    );
+  }
+
+  Widget _buildAddPasswordOption(bool isDarkMode) {
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+        ),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.lock_outline,
+          color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+        ),
+        title: Text(
+          'Add Password',
+          style: TextStyle(
+            fontFamily: 'Switzer',
+            color:
+                isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+          ),
+        ),
+        subtitle: Text(
+          'Add a password to sign in without Google',
+          style: TextStyle(
+            fontFamily: 'VarelaRound',
+            fontSize: 12,
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
+          ),
+        ),
+        trailing: Icon(
+          Icons.chevron_right,
+          color:
+              isDarkMode
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondary,
+        ),
+        onTap: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddPasswordScreen()),
+          );
+
+          if (result == true) {
+            // Reload user data to reflect the change
+            await _loadUserData();
+            await _checkGoogleLinkStatus();
+          }
+        },
       ),
     );
   }
