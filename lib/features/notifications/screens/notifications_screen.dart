@@ -1,10 +1,17 @@
 // lib/features/notifications/screens/notifications_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kDebugMode
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
+import 'package:cleanslate/core/providers/theme_provider.dart'; // Add this import
 import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/data/models/notification_model.dart';
+import 'package:cleanslate/data/repositories/notification_repository.dart';
+import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/services/push_notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -14,18 +21,532 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  // Add these for testing
+  final _supabaseService = SupabaseService();
+  final _householdService = HouseholdService();
+  final _pushService = PushNotificationService();
+  bool _isTestingNotifications = false;
+
+  // Notification preferences
+  bool _pushNotificationsEnabled = true;
+  bool _soundEnabled = true;
+  bool _vibrationEnabled = true;
+
   @override
   void initState() {
     super.initState();
+    debugPrint('🔔 NotificationsScreen: initState called');
+    _loadNotificationPreferences();
+
     // Reload notifications when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('🔔 NotificationsScreen: Loading notifications after frame');
       context.read<NotificationService>().loadNotifications();
     });
   }
 
   @override
+  void dispose() {
+    debugPrint('🔔 NotificationsScreen: dispose called');
+    super.dispose();
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _pushNotificationsEnabled =
+          prefs.getBool('push_notifications_enabled') ?? true;
+      _soundEnabled = prefs.getBool('notification_sound_enabled') ?? true;
+      _vibrationEnabled =
+          prefs.getBool('notification_vibration_enabled') ?? true;
+    });
+  }
+
+  Future<void> _saveNotificationPreference(String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(key, value);
+  }
+
+  // Show in-app notification preview
+  Future<void> _showInAppNotificationPreview() async {
+    debugPrint('📱 Showing in-app notification preview');
+
+    await _pushService.showNotification(
+      title: 'CleanSlate Test',
+      body: 'This is how notifications look when you\'re using the app!',
+      payload: 'test_preview',
+    );
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Check your notification panel! 👆'),
+          backgroundColor: AppColors.success,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  // Test notification creation
+  Future<void> _createTestNotification(String type) async {
+    debugPrint('🧪 TEST: Creating test notification of type: $type');
+
+    // NOTE: Valid notification types in database:
+    // - chore_created
+    // - chore_assigned
+    // - member_joined
+    // - deadline_approaching
+    // - chore_completed
+
+    setState(() {
+      _isTestingNotifications = true;
+    });
+
+    try {
+      final notificationRepo = NotificationRepository();
+      final notificationService = context.read<NotificationService>();
+      final currentUser = _supabaseService.currentUser;
+      final currentHousehold = _householdService.currentHousehold;
+
+      if (currentUser == null) {
+        debugPrint('❌ TEST: No current user found');
+        throw Exception('No user logged in');
+      }
+
+      debugPrint('🧪 TEST: Current user ID: ${currentUser.id}');
+      debugPrint(
+        '🧪 TEST: Current household ID: ${currentHousehold?.id ?? "No household"}',
+      );
+
+      final testData = _getTestNotificationData(type);
+
+      debugPrint('🧪 TEST: Creating notification with data:');
+      debugPrint('  - Type: ${testData['type']}');
+      debugPrint('  - Title: ${testData['title']}');
+      debugPrint('  - Message: ${testData['message']}');
+
+      await notificationRepo.createNotification(
+        userId: currentUser.id,
+        householdId: currentHousehold?.id,
+        type: testData['type']!,
+        title: testData['title']!,
+        message: testData['message']!,
+        metadata: testData['metadata'] as Map<String, dynamic>? ?? {},
+      );
+
+      debugPrint('✅ TEST: Notification created successfully');
+
+      // Force reload notifications to show the new one immediately
+      await notificationService.loadNotifications();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Test notification created: ${testData['title']}'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ TEST: Error creating notification: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    } finally {
+      setState(() {
+        _isTestingNotifications = false;
+      });
+    }
+  }
+
+  Map<String, dynamic> _getTestNotificationData(String type) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+
+    switch (type) {
+      case 'chore_assigned':
+        return {
+          'type': 'chore_assigned',
+          'title': 'Chore Assigned',
+          'message':
+              'Test User assigned you: Clean the kitchen (Test #$timestamp)',
+          'metadata': {
+            'chore_id': 'test_$timestamp',
+            'chore_name': 'Clean Kitchen',
+            'assigned_by': 'test_user_123',
+            'assigner_name': 'Test User',
+          },
+        };
+      case 'member_joined':
+        return {
+          'type': 'member_joined',
+          'title': 'New Member Joined',
+          'message': 'Test User #$timestamp joined your household',
+          'metadata': {
+            'member_id': 'test_member_$timestamp',
+            'member_name': 'Test User',
+          },
+        };
+      case 'deadline_approaching':
+        return {
+          'type': 'deadline_approaching',
+          'title': 'Deadline Approaching',
+          'message':
+              'Chore "Take out trash" is due in 2 hours (Test #$timestamp)',
+          'metadata': {
+            'chore_id': 'test_deadline_$timestamp',
+            'chore_name': 'Take out trash',
+            'hours_remaining': 2,
+          },
+        };
+      case 'chore_completed':
+        return {
+          'type': 'chore_completed',
+          'title': 'Chore Completed',
+          'message':
+              'Test User completed: Vacuum living room (Test #$timestamp)',
+          'metadata': {
+            'chore_id': 'test_completed_$timestamp',
+            'chore_name': 'Vacuum living room',
+            'completed_by': 'test_user_123',
+          },
+        };
+      default:
+        return {
+          'type': 'chore_created', // Changed from 'test' to valid type
+          'title': 'Test Notification',
+          'message': 'This is a test notification created at ${DateTime.now()}',
+          'metadata': {'test': true, 'timestamp': timestamp},
+        };
+    }
+  }
+
+  void _showTestMenu() {
+    // Fix: Use listen: false to avoid the provider error
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '🧪 Test Notifications',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color:
+                      isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                  fontFamily: 'Switzer',
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // In-app preview option
+              ListTile(
+                leading: Icon(Icons.phone_android, color: AppColors.primary),
+                title: Text(
+                  'Show Phone Notification Preview',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                subtitle: Text(
+                  'See how notifications look on your device',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _showInAppNotificationPreview();
+                },
+              ),
+
+              const Divider(),
+
+              ListTile(
+                leading: Icon(Icons.add_task, color: Colors.blue),
+                title: Text(
+                  'Test Chore Assignment',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _createTestNotification('chore_assigned');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.person_add, color: Colors.green),
+                title: Text(
+                  'Test Member Joined',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _createTestNotification('member_joined');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.access_alarm, color: Colors.orange),
+                title: Text(
+                  'Test Deadline Approaching',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _createTestNotification('deadline_approaching');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.check_circle, color: Colors.green),
+                title: Text(
+                  'Test Chore Completed',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _createTestNotification('chore_completed');
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.notifications, color: Colors.grey),
+                title: Text(
+                  'Test Generic Notification',
+                  style: TextStyle(
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                  ),
+                ),
+                onTap: () {
+                  Navigator.pop(context);
+                  _createTestNotification(
+                    'chore_created',
+                  ); // Changed from 'test'
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showNotificationSettings() {
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '⚙️ Notification Settings',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                      fontFamily: 'Switzer',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  SwitchListTile(
+                    title: Text(
+                      'Push Notifications',
+                      style: TextStyle(
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Receive notifications on your device',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    value: _pushNotificationsEnabled,
+                    onChanged: (value) {
+                      setModalState(() {
+                        _pushNotificationsEnabled = value;
+                      });
+                      setState(() {
+                        _pushNotificationsEnabled = value;
+                      });
+                      _saveNotificationPreference(
+                        'push_notifications_enabled',
+                        value,
+                      );
+                    },
+                    activeColor: AppColors.primary,
+                  ),
+
+                  SwitchListTile(
+                    title: Text(
+                      'Sound',
+                      style: TextStyle(
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Play sound for notifications',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    value: _soundEnabled,
+                    onChanged:
+                        _pushNotificationsEnabled
+                            ? (value) {
+                              setModalState(() {
+                                _soundEnabled = value;
+                              });
+                              setState(() {
+                                _soundEnabled = value;
+                              });
+                              _saveNotificationPreference(
+                                'notification_sound_enabled',
+                                value,
+                              );
+                            }
+                            : null,
+                    activeColor: AppColors.primary,
+                  ),
+
+                  SwitchListTile(
+                    title: Text(
+                      'Vibration',
+                      style: TextStyle(
+                        color:
+                            isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                      ),
+                    ),
+                    subtitle: Text(
+                      'Vibrate for notifications',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color:
+                            isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
+                      ),
+                    ),
+                    value: _vibrationEnabled,
+                    onChanged:
+                        _pushNotificationsEnabled
+                            ? (value) {
+                              setModalState(() {
+                                _vibrationEnabled = value;
+                              });
+                              setState(() {
+                                _vibrationEnabled = value;
+                              });
+                              _saveNotificationPreference(
+                                'notification_vibration_enabled',
+                                value,
+                              );
+                            }
+                            : null,
+                    activeColor: AppColors.primary,
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(
+                      'Done',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontFamily: 'VarelaRound',
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final isDarkMode = ThemeUtils.isDarkMode(context);
+    debugPrint('🔔 NotificationsScreen: build called, isDarkMode: $isDarkMode');
 
     return Scaffold(
       backgroundColor:
@@ -39,7 +560,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             Icons.arrow_back,
             color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
           ),
-          onPressed: () => Navigator.pop(context),
+          onPressed: () {
+            debugPrint('🔔 NotificationsScreen: Back button pressed');
+            Navigator.pop(context);
+          },
         ),
         title: Text(
           'Notifications',
@@ -50,18 +574,41 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
         actions: [
+          // Settings button
+          IconButton(
+            icon: Icon(
+              Icons.settings,
+              color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+            ),
+            onPressed: _showNotificationSettings,
+            tooltip: 'Notification Settings',
+          ),
+          // Test button - only show in debug mode
+          if (kDebugMode)
+            IconButton(
+              icon: Icon(
+                Icons.science,
+                color:
+                    isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
+              ),
+              onPressed: _isTestingNotifications ? null : _showTestMenu,
+              tooltip: 'Test Notifications',
+            ),
           PopupMenuButton<String>(
             icon: Icon(
               Icons.more_vert,
               color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
             ),
             onSelected: (value) async {
+              debugPrint('🔔 NotificationsScreen: Menu selected: $value');
               final service = context.read<NotificationService>();
               switch (value) {
                 case 'mark_all_read':
+                  debugPrint('🔔 Marking all notifications as read');
                   await service.markAllAsRead();
                   break;
                 case 'clear_all':
+                  debugPrint('🔔 Showing clear all confirmation');
                   _showClearAllConfirmation();
                   break;
               }
@@ -116,6 +663,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: Consumer<NotificationService>(
         builder: (context, service, child) {
+          debugPrint('🔔 NotificationsScreen: Consumer rebuild');
+          debugPrint('  - isLoading: ${service.isLoading}');
+          debugPrint(
+            '  - notifications count: ${service.notifications.length}',
+          );
+          debugPrint('  - unread count: ${service.unreadCount}');
+
           if (service.isLoading) {
             return Center(
               child: CircularProgressIndicator(
@@ -129,23 +683,70 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           }
 
           return RefreshIndicator(
-            onRefresh: () => service.loadNotifications(),
+            onRefresh: () {
+              debugPrint('🔔 Pull to refresh triggered');
+              return service.loadNotifications();
+            },
             color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(vertical: 8),
               itemCount: service.notifications.length,
               itemBuilder: (context, index) {
                 final notification = service.notifications[index];
+                debugPrint(
+                  '🔔 Building notification tile $index: ${notification.title}',
+                );
                 return _buildNotificationTile(notification, isDarkMode);
               },
             ),
           );
         },
       ),
+      // Floating test button for quick access in debug mode
+      floatingActionButton:
+          kDebugMode
+              ? Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  // Phone notification preview button
+                  FloatingActionButton(
+                    heroTag: "phone_preview",
+                    mini: true,
+                    backgroundColor: Colors.orange,
+                    onPressed: _showInAppNotificationPreview,
+                    child: const Icon(
+                      Icons.phone_android,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    tooltip: 'Show Phone Notification',
+                  ),
+                  const SizedBox(height: 8),
+                  // Quick test notification button
+                  FloatingActionButton(
+                    heroTag: "quick_test",
+                    mini: true,
+                    backgroundColor: AppColors.primary,
+                    onPressed:
+                        _isTestingNotifications
+                            ? null
+                            : () => _createTestNotification('chore_created'),
+                    child:
+                        _isTestingNotifications
+                            ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                            : const Icon(Icons.add_alert, color: Colors.white),
+                    tooltip: 'Quick Test Notification',
+                  ),
+                ],
+              )
+              : null,
     );
   }
 
   Widget _buildEmptyState(bool isDarkMode) {
+    debugPrint('🔔 Building empty state');
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -183,6 +784,36 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               fontFamily: 'VarelaRound',
             ),
           ),
+          if (kDebugMode) ...[
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  onPressed:
+                      _isTestingNotifications
+                          ? null
+                          : () => _createTestNotification('chore_created'),
+                  icon: const Icon(Icons.science),
+                  label: const Text('Test Notification'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: _showInAppNotificationPreview,
+                  icon: const Icon(Icons.phone_android),
+                  label: const Text('Phone Preview'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -193,6 +824,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     bool isDarkMode,
   ) {
     final service = context.read<NotificationService>();
+    debugPrint(
+      '🔔 Building tile for: ${notification.title} (read: ${notification.isRead})',
+    );
 
     return Dismissible(
       key: Key(notification.id),
@@ -204,6 +838,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
+        debugPrint('🔔 Dismissing notification: ${notification.id}');
         service.deleteNotification(notification.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -211,7 +846,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             action: SnackBarAction(
               label: 'Undo',
               onPressed: () {
-                // Implement undo if needed
+                debugPrint('🔔 Undo delete requested (not implemented)');
               },
             ),
           ),
@@ -234,7 +869,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         child: ListTile(
           onTap: () async {
+            debugPrint('🔔 Notification tapped: ${notification.id}');
             if (!notification.isRead) {
+              debugPrint('🔔 Marking as read: ${notification.id}');
               await service.markAsRead(notification.id);
             }
             _handleNotificationTap(notification);
@@ -320,25 +957,31 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _handleNotificationTap(NotificationModel notification) {
+    debugPrint('🔔 Handling notification tap for type: ${notification.type}');
+
     // Handle navigation based on notification type
     switch (notification.type) {
       case 'chore_created':
       case 'chore_assigned':
       case 'deadline_approaching':
-        // Navigate to chore details or home screen
+        debugPrint('🔔 Navigating to chore details');
         Navigator.pop(context);
         break;
       case 'member_joined':
-        // Navigate to members screen
+        debugPrint('🔔 Navigating to members screen');
         Navigator.pop(context);
         break;
       default:
+        debugPrint('🔔 Unknown notification type, no navigation');
         break;
     }
   }
 
   void _showClearAllConfirmation() {
-    final isDarkMode = ThemeUtils.isDarkMode(context);
+    debugPrint('🔔 Showing clear all confirmation dialog');
+    // Fix: Use listen: false to avoid the provider error
+    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+    final isDarkMode = themeProvider.isDarkMode;
 
     showDialog(
       context: context,
@@ -367,7 +1010,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () {
+                debugPrint('🔔 Clear all cancelled');
+                Navigator.pop(context);
+              },
               child: Text(
                 'Cancel',
                 style: TextStyle(
@@ -380,10 +1026,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             TextButton(
               onPressed: () async {
+                debugPrint('🔔 Clearing all notifications');
                 Navigator.pop(context);
                 await context
                     .read<NotificationService>()
                     .clearAllNotifications();
+                debugPrint('✅ All notifications cleared');
               },
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('Clear All'),

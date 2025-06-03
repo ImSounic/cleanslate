@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/notification_repository.dart';
 import 'package:cleanslate/data/models/notification_model.dart';
+import 'package:cleanslate/data/services/push_notification_service.dart';
 
 class NotificationService extends ChangeNotifier {
   static final NotificationService _instance = NotificationService._internal();
@@ -10,6 +11,7 @@ class NotificationService extends ChangeNotifier {
   NotificationService._internal();
 
   final NotificationRepository _repository = NotificationRepository();
+  final PushNotificationService _pushService = PushNotificationService();
 
   List<NotificationModel> _notifications = [];
   int _unreadCount = 0;
@@ -25,6 +27,8 @@ class NotificationService extends ChangeNotifier {
 
   // Initialize service
   Future<void> initialize() async {
+    print('🔔 NotificationService: Initializing...');
+    await _pushService.initialize();
     await loadNotifications();
     _subscribeToRealtimeNotifications();
     _startDeadlineChecker();
@@ -40,42 +44,60 @@ class NotificationService extends ChangeNotifier {
 
   // Load notifications
   Future<void> loadNotifications({bool unreadOnly = false}) async {
+    print('🔔 NotificationService: Loading notifications...');
     _isLoading = true;
-    // Use Future.microtask to avoid setState during build
-    Future.microtask(() => notifyListeners());
+    notifyListeners();
 
     try {
       _notifications = await _repository.getNotifications(
         unreadOnly: unreadOnly,
       );
       _unreadCount = await _repository.getUnreadCount();
+      print(
+        '🔔 NotificationService: Loaded ${_notifications.length} notifications, ${_unreadCount} unread',
+      );
     } catch (e) {
-      print('Error loading notifications: $e');
+      print('❌ NotificationService: Error loading notifications: $e');
     } finally {
       _isLoading = false;
-      // Use Future.microtask to avoid setState during build
-      Future.microtask(() => notifyListeners());
+      notifyListeners();
     }
   }
 
   // Subscribe to real-time notifications
   void _subscribeToRealtimeNotifications() {
     try {
+      print(
+        '🔔 NotificationService: Subscribing to real-time notifications...',
+      );
       _realtimeSubscription = _repository.subscribeToNotifications().listen(
         (notification) {
+          print(
+            '🔔 NotificationService: New real-time notification received: ${notification.title}',
+          );
           _notifications.insert(0, notification);
           if (!notification.isRead) {
             _unreadCount++;
           }
-          // Use Future.microtask to avoid setState during build
-          Future.microtask(() => notifyListeners());
+
+          // Show push notification
+          _pushService.showNotification(
+            title: notification.title,
+            body: notification.message,
+            payload: notification.id,
+          );
+
+          notifyListeners();
         },
         onError: (error) {
-          print('Error in notification subscription: $error');
+          print(
+            '❌ NotificationService: Error in notification subscription: $error',
+          );
         },
       );
+      print('✅ NotificationService: Real-time subscription active');
     } catch (e) {
-      print('Failed to subscribe to notifications: $e');
+      print('❌ NotificationService: Failed to subscribe to notifications: $e');
     }
   }
 
@@ -111,11 +133,10 @@ class NotificationService extends ChangeNotifier {
           updatedAt: DateTime.now(),
         );
         _unreadCount = (_unreadCount > 0) ? _unreadCount - 1 : 0;
-        // Use Future.microtask to avoid setState during build
-        Future.microtask(() => notifyListeners());
+        notifyListeners();
       }
     } catch (e) {
-      print('Failed to mark notification as read: $e');
+      print('❌ NotificationService: Failed to mark notification as read: $e');
     }
   }
 
@@ -143,10 +164,9 @@ class NotificationService extends ChangeNotifier {
               .toList();
 
       _unreadCount = 0;
-      // Use Future.microtask to avoid setState during build
-      Future.microtask(() => notifyListeners());
+      notifyListeners();
     } catch (e) {
-      print('Failed to mark all as read: $e');
+      print('❌ NotificationService: Failed to mark all as read: $e');
     }
   }
 
@@ -163,10 +183,9 @@ class NotificationService extends ChangeNotifier {
       }
 
       _notifications.removeWhere((n) => n.id == notificationId);
-      // Use Future.microtask to avoid setState during build
-      Future.microtask(() => notifyListeners());
+      notifyListeners();
     } catch (e) {
-      print('Failed to delete notification: $e');
+      print('❌ NotificationService: Failed to delete notification: $e');
     }
   }
 
@@ -176,10 +195,9 @@ class NotificationService extends ChangeNotifier {
       await _repository.deleteAllNotifications();
       _notifications.clear();
       _unreadCount = 0;
-      // Use Future.microtask to avoid setState during build
-      Future.microtask(() => notifyListeners());
+      notifyListeners();
     } catch (e) {
-      print('Failed to clear notifications: $e');
+      print('❌ NotificationService: Failed to clear notifications: $e');
     }
   }
 
@@ -198,5 +216,25 @@ class NotificationService extends ChangeNotifier {
       choreName: choreName,
       householdId: householdId,
     );
+  }
+
+  // Add manual notification to list (for testing)
+  void addNotificationManually(NotificationModel notification) {
+    print(
+      '🔔 NotificationService: Manually adding notification: ${notification.title}',
+    );
+    _notifications.insert(0, notification);
+    if (!notification.isRead) {
+      _unreadCount++;
+    }
+
+    // Show push notification
+    _pushService.showNotification(
+      title: notification.title,
+      body: notification.message,
+      payload: notification.id,
+    );
+
+    notifyListeners();
   }
 }
