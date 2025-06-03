@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/auth/screens/signup_screen.dart';
@@ -68,8 +69,15 @@ Future<void> main() async {
   await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
 
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        // Add NotificationService as a provider at the app level
+        ChangeNotifierProvider(
+          create: (context) => NotificationService(),
+          lazy: false, // Create immediately
+        ),
+      ],
       child: const MyApp(),
     ),
   );
@@ -82,7 +90,7 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final SupabaseService _supabaseService = SupabaseService();
   final HouseholdService _householdService = HouseholdService();
   bool _isLoading = true;
@@ -91,7 +99,27 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeApp();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Handle app lifecycle changes if needed
+    if (state == AppLifecycleState.resumed) {
+      // App came to foreground
+      if (_isLoggedIn) {
+        // Refresh notifications when app resumes
+        final notificationService = context.read<NotificationService>();
+        notificationService.loadNotifications();
+      }
+    }
   }
 
   Future<void> _initializeApp() async {
@@ -105,10 +133,16 @@ class _MyAppState extends State<MyApp> {
       // Initialize household data if user is logged in
       try {
         await _householdService.initializeHousehold();
+
+        // Initialize notification service for logged in user
+        if (mounted) {
+          final notificationService = context.read<NotificationService>();
+          await notificationService.initialize();
+        }
       } catch (e) {
-        print('Error initializing household: $e');
-        // Continue even if household initialization fails
-        // The user will see appropriate UI options in the members screen
+        print('Error initializing app: $e');
+        // Continue even if initialization fails
+        // The user will see appropriate UI options in the screens
       }
     }
 

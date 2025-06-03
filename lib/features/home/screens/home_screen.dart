@@ -30,7 +30,6 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
-  final _notificationService = NotificationService();
   String _userName = '';
   String? _profileImageUrl; // Added property for profile image URL
   List<Map<String, dynamic>> _myChores = [];
@@ -56,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _loadUserData();
     _loadChores();
-    _initializeNotifications();
 
     // Initialize animation controller
     _toggleController = AnimationController(
@@ -77,10 +75,6 @@ class _HomeScreenState extends State<HomeScreen>
         _toggleController.value = 0.0;
       }
     });
-  }
-
-  Future<void> _initializeNotifications() async {
-    await _notificationService.initialize();
   }
 
   @override
@@ -692,72 +686,68 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Notifications with ChangeNotifierProvider
-                  ChangeNotifierProvider.value(
-                    value: _notificationService,
-                    child: Consumer<NotificationService>(
-                      builder: (context, service, child) {
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder:
-                                    (context) => const NotificationsScreen(),
-                              ),
-                            );
-                          },
-                          child: Stack(
-                            children: [
-                              SvgPicture.asset(
-                                service.hasNotifications
-                                    ? 'assets/images/icons/red_bell.svg'
-                                    : 'assets/images/icons/bell.svg',
-                                height: 24,
-                                width: 24,
-                                colorFilter:
-                                    service.hasNotifications
-                                        ? null
-                                        : ColorFilter.mode(
-                                          isDarkMode
-                                              ? AppColors.iconPrimaryDark
-                                              : AppColors.iconPrimary,
-                                          BlendMode.srcIn,
-                                        ),
-                              ),
-                              if (service.unreadCount > 0)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.error,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 12,
-                                      minHeight: 12,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        service.unreadCount > 9
-                                            ? '9+'
-                                            : service.unreadCount.toString(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 8,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                  // Notifications with Consumer
+                  Consumer<NotificationService>(
+                    builder: (context, service, child) {
+                      return GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationsScreen(),
+                            ),
+                          );
+                        },
+                        child: Stack(
+                          children: [
+                            SvgPicture.asset(
+                              service.hasNotifications
+                                  ? 'assets/images/icons/red_bell.svg'
+                                  : 'assets/images/icons/bell.svg',
+                              height: 24,
+                              width: 24,
+                              colorFilter:
+                                  service.hasNotifications
+                                      ? null
+                                      : ColorFilter.mode(
+                                        isDarkMode
+                                            ? AppColors.iconPrimaryDark
+                                            : AppColors.iconPrimary,
+                                        BlendMode.srcIn,
+                                      ),
+                            ),
+                            if (service.unreadCount > 0)
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: Container(
+                                  padding: const EdgeInsets.all(2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(
+                                    minWidth: 12,
+                                    minHeight: 12,
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      service.unreadCount > 9
+                                          ? '9+'
+                                          : service.unreadCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                 ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                              ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(width: 12),
                   // Profile - Updated to show user profile picture

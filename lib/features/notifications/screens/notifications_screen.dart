@@ -14,13 +14,13 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  final NotificationService _notificationService = NotificationService();
-
   @override
   void initState() {
     super.initState();
     // Reload notifications when screen opens
-    _notificationService.loadNotifications();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationService>().loadNotifications();
+    });
   }
 
   @override
@@ -56,9 +56,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
             ),
             onSelected: (value) async {
+              final service = context.read<NotificationService>();
               switch (value) {
                 case 'mark_all_read':
-                  await _notificationService.markAllAsRead();
+                  await service.markAllAsRead();
                   break;
                 case 'clear_all':
                   _showClearAllConfirmation();
@@ -113,36 +114,33 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ],
       ),
-      body: ChangeNotifierProvider.value(
-        value: _notificationService,
-        child: Consumer<NotificationService>(
-          builder: (context, service, child) {
-            if (service.isLoading) {
-              return Center(
-                child: CircularProgressIndicator(
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                ),
-              );
-            }
-
-            if (service.notifications.isEmpty) {
-              return _buildEmptyState(isDarkMode);
-            }
-
-            return RefreshIndicator(
-              onRefresh: () => service.loadNotifications(),
-              color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: service.notifications.length,
-                itemBuilder: (context, index) {
-                  final notification = service.notifications[index];
-                  return _buildNotificationTile(notification, isDarkMode);
-                },
+      body: Consumer<NotificationService>(
+        builder: (context, service, child) {
+          if (service.isLoading) {
+            return Center(
+              child: CircularProgressIndicator(
+                color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
               ),
             );
-          },
-        ),
+          }
+
+          if (service.notifications.isEmpty) {
+            return _buildEmptyState(isDarkMode);
+          }
+
+          return RefreshIndicator(
+            onRefresh: () => service.loadNotifications(),
+            color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: service.notifications.length,
+              itemBuilder: (context, index) {
+                final notification = service.notifications[index];
+                return _buildNotificationTile(notification, isDarkMode);
+              },
+            ),
+          );
+        },
       ),
     );
   }
@@ -194,6 +192,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     NotificationModel notification,
     bool isDarkMode,
   ) {
+    final service = context.read<NotificationService>();
+
     return Dismissible(
       key: Key(notification.id),
       direction: DismissDirection.endToStart,
@@ -204,7 +204,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        _notificationService.deleteNotification(notification.id);
+        service.deleteNotification(notification.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Notification deleted'),
@@ -235,7 +235,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: ListTile(
           onTap: () async {
             if (!notification.isRead) {
-              await _notificationService.markAsRead(notification.id);
+              await service.markAsRead(notification.id);
             }
             _handleNotificationTap(notification);
           },
@@ -381,7 +381,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-                await _notificationService.clearAllNotifications();
+                await context
+                    .read<NotificationService>()
+                    .clearAllNotifications();
               },
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('Clear All'),

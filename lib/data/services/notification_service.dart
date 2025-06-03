@@ -41,7 +41,8 @@ class NotificationService extends ChangeNotifier {
   // Load notifications
   Future<void> loadNotifications({bool unreadOnly = false}) async {
     _isLoading = true;
-    notifyListeners();
+    // Use Future.microtask to avoid setState during build
+    Future.microtask(() => notifyListeners());
 
     try {
       _notifications = await _repository.getNotifications(
@@ -52,7 +53,8 @@ class NotificationService extends ChangeNotifier {
       print('Error loading notifications: $e');
     } finally {
       _isLoading = false;
-      notifyListeners();
+      // Use Future.microtask to avoid setState during build
+      Future.microtask(() => notifyListeners());
     }
   }
 
@@ -65,7 +67,8 @@ class NotificationService extends ChangeNotifier {
           if (!notification.isRead) {
             _unreadCount++;
           }
-          notifyListeners();
+          // Use Future.microtask to avoid setState during build
+          Future.microtask(() => notifyListeners());
         },
         onError: (error) {
           print('Error in notification subscription: $error');
@@ -108,7 +111,8 @@ class NotificationService extends ChangeNotifier {
           updatedAt: DateTime.now(),
         );
         _unreadCount = (_unreadCount > 0) ? _unreadCount - 1 : 0;
-        notifyListeners();
+        // Use Future.microtask to avoid setState during build
+        Future.microtask(() => notifyListeners());
       }
     } catch (e) {
       print('Failed to mark notification as read: $e');
@@ -139,7 +143,8 @@ class NotificationService extends ChangeNotifier {
               .toList();
 
       _unreadCount = 0;
-      notifyListeners();
+      // Use Future.microtask to avoid setState during build
+      Future.microtask(() => notifyListeners());
     } catch (e) {
       print('Failed to mark all as read: $e');
     }
@@ -158,7 +163,8 @@ class NotificationService extends ChangeNotifier {
       }
 
       _notifications.removeWhere((n) => n.id == notificationId);
-      notifyListeners();
+      // Use Future.microtask to avoid setState during build
+      Future.microtask(() => notifyListeners());
     } catch (e) {
       print('Failed to delete notification: $e');
     }
@@ -170,7 +176,8 @@ class NotificationService extends ChangeNotifier {
       await _repository.deleteAllNotifications();
       _notifications.clear();
       _unreadCount = 0;
-      notifyListeners();
+      // Use Future.microtask to avoid setState during build
+      Future.microtask(() => notifyListeners());
     } catch (e) {
       print('Failed to clear notifications: $e');
     }
