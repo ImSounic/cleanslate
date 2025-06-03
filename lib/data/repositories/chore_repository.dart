@@ -1,8 +1,10 @@
 // lib/data/repositories/chore_repository.dart
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cleanslate/data/services/notification_service.dart';
 
 class ChoreRepository {
   final SupabaseClient _client = Supabase.instance.client;
+  final NotificationService _notificationService = NotificationService();
 
   // Create a new chore
   Future<Map<String, dynamic>> createChore({
@@ -71,6 +73,25 @@ class ChoreRepository {
       'priority': priority ?? 'medium',
       'assigned_by': _client.auth.currentUser!.id,
     });
+
+    // Get chore details for notification
+    final chore =
+        await _client
+            .from('chores')
+            .select('name, household_id')
+            .eq('id', choreId)
+            .single();
+
+    // Create notification for the assigned user
+    if (_client.auth.currentUser!.id != assignedTo) {
+      await _notificationService.notifyChoreAssignment(
+        assignedToUserId: assignedTo,
+        assignedByUserId: _client.auth.currentUser!.id,
+        choreId: choreId,
+        choreName: chore['name'],
+        householdId: chore['household_id'],
+      );
+    }
   }
 
   // Mark a chore as complete

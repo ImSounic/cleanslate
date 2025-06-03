@@ -16,6 +16,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/widgets/theme_toggle_button.dart';
+import 'package:cleanslate/data/services/notification_service.dart';
+import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,14 +30,15 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
+  final _notificationService = NotificationService();
   String _userName = '';
   String? _profileImageUrl; // Added property for profile image URL
   List<Map<String, dynamic>> _myChores = [];
-  List<Map<String, dynamic>> _completedChores = []; // Added completed chores list
+  List<Map<String, dynamic>> _completedChores =
+      []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
   int _selectedNavIndex = 0;
-  final bool _hasNotifications = false;
 
   late AnimationController _toggleController;
   late Animation<double> _toggleAnimation;
@@ -53,6 +56,7 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _loadUserData();
     _loadChores();
+    _initializeNotifications();
 
     // Initialize animation controller
     _toggleController = AnimationController(
@@ -73,6 +77,10 @@ class _HomeScreenState extends State<HomeScreen>
         _toggleController.value = 0.0;
       }
     });
+  }
+
+  Future<void> _initializeNotifications() async {
+    await _notificationService.initialize();
   }
 
   @override
@@ -159,10 +167,14 @@ class _HomeScreenState extends State<HomeScreen>
                 CircleAvatar(
                   radius: 30,
                   backgroundColor: AppColors.primary,
-                  backgroundImage: _profileImageUrl != null ? NetworkImage(_profileImageUrl!) : null,
-                  child: _profileImageUrl == null
-                      ? Icon(Icons.person, color: Colors.white, size: 36)
-                      : null,
+                  backgroundImage:
+                      _profileImageUrl != null
+                          ? NetworkImage(_profileImageUrl!)
+                          : null,
+                  child:
+                      _profileImageUrl == null
+                          ? Icon(Icons.person, color: Colors.white, size: 36)
+                          : null,
                 ),
                 const SizedBox(height: 8),
                 Text(
@@ -546,23 +558,26 @@ class _HomeScreenState extends State<HomeScreen>
                   alignment: Alignment.bottomRight,
                   child: Container(
                     margin: const EdgeInsets.only(top: 16),
-                    child: _profileImageUrl != null
-                        ? CircleAvatar(
-                            radius: 16,
-                            backgroundImage: NetworkImage(_profileImageUrl!),
-                          )
-                        : CircleAvatar(
-                            radius: 16,
-                            backgroundColor: AppColors.avatarAmber,
-                            child: Text(
-                              _userName.isNotEmpty ? _userName[0].toUpperCase() : 'U',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: AppColors.textLight,
-                                fontFamily: 'VarelaRound',
+                    child:
+                        _profileImageUrl != null
+                            ? CircleAvatar(
+                              radius: 16,
+                              backgroundImage: NetworkImage(_profileImageUrl!),
+                            )
+                            : CircleAvatar(
+                              radius: 16,
+                              backgroundColor: AppColors.avatarAmber,
+                              child: Text(
+                                _userName.isNotEmpty
+                                    ? _userName[0].toUpperCase()
+                                    : 'U',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: AppColors.textLight,
+                                  fontFamily: 'VarelaRound',
+                                ),
                               ),
                             ),
-                          ),
                   ),
                 ),
               ],
@@ -677,26 +692,71 @@ class _HomeScreenState extends State<HomeScreen>
                     ),
                   ),
                   const SizedBox(width: 12),
-                  // Notifications
-                  GestureDetector(
-                    onTap: () {
-                      // Show notifications
-                    },
-                    child: SvgPicture.asset(
-                      _hasNotifications
-                          ? 'assets/images/icons/red_bell.svg'
-                          : 'assets/images/icons/bell.svg',
-                      height: 24,
-                      width: 24,
-                      colorFilter:
-                          _hasNotifications
-                              ? null
-                              : ColorFilter.mode(
-                                isDarkMode
-                                    ? AppColors.iconPrimaryDark
-                                    : AppColors.iconPrimary,
-                                BlendMode.srcIn,
+                  // Notifications with ChangeNotifierProvider
+                  ChangeNotifierProvider.value(
+                    value: _notificationService,
+                    child: Consumer<NotificationService>(
+                      builder: (context, service, child) {
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => const NotificationsScreen(),
                               ),
+                            );
+                          },
+                          child: Stack(
+                            children: [
+                              SvgPicture.asset(
+                                service.hasNotifications
+                                    ? 'assets/images/icons/red_bell.svg'
+                                    : 'assets/images/icons/bell.svg',
+                                height: 24,
+                                width: 24,
+                                colorFilter:
+                                    service.hasNotifications
+                                        ? null
+                                        : ColorFilter.mode(
+                                          isDarkMode
+                                              ? AppColors.iconPrimaryDark
+                                              : AppColors.iconPrimary,
+                                          BlendMode.srcIn,
+                                        ),
+                              ),
+                              if (service.unreadCount > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.error,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 12,
+                                      minHeight: 12,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        service.unreadCount > 9
+                                            ? '9+'
+                                            : service.unreadCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 8,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -709,44 +769,60 @@ class _HomeScreenState extends State<HomeScreen>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                          color:
+                              isDarkMode
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary,
                           width: 1,
                         ),
                       ),
-                      child: _profileImageUrl != null
-                          ? ClipOval(
-                              child: Image.network(
-                                _profileImageUrl!,
-                                fit: BoxFit.cover,
-                                width: 32,
-                                height: 32,
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Center(
-                                    child: CircularProgressIndicator(
-                                      value: loadingProgress.expectedTotalBytes != null
-                                          ? loadingProgress.cumulativeBytesLoaded /
-                                              loadingProgress.expectedTotalBytes!
-                                          : null,
-                                      color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                                      strokeWidth: 2,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Icon(
-                                    Icons.person,
-                                    color: AppColors.primary,
-                                    size: 18,
-                                  );
-                                },
+                      child:
+                          _profileImageUrl != null
+                              ? ClipOval(
+                                child: Image.network(
+                                  _profileImageUrl!,
+                                  fit: BoxFit.cover,
+                                  width: 32,
+                                  height: 32,
+                                  loadingBuilder: (
+                                    context,
+                                    child,
+                                    loadingProgress,
+                                  ) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: CircularProgressIndicator(
+                                        value:
+                                            loadingProgress
+                                                        .expectedTotalBytes !=
+                                                    null
+                                                ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                                : null,
+                                        color:
+                                            isDarkMode
+                                                ? AppColors.primaryDark
+                                                : AppColors.primary,
+                                        strokeWidth: 2,
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Icon(
+                                      Icons.person,
+                                      color: AppColors.primary,
+                                      size: 18,
+                                    );
+                                  },
+                                ),
+                              )
+                              : Icon(
+                                Icons.person,
+                                color: AppColors.primary,
+                                size: 18,
                               ),
-                            )
-                          : Icon(
-                              Icons.person,
-                              color: AppColors.primary,
-                              size: 18,
-                            ),
                     ),
                   ),
                 ],
@@ -1311,22 +1387,22 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     ),
                     _profileImageUrl != null
-                    ? CircleAvatar(
-                        radius: 10,
-                        backgroundImage: NetworkImage(_profileImageUrl!),
-                      )
-                    : CircleAvatar(
-                        radius: 10,
-                        backgroundColor: AppColors.avatarAmber,
-                        child: Text(
-                          assigneeInitial,
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: AppColors.textLight,
-                            fontFamily: 'VarelaRound',
+                        ? CircleAvatar(
+                          radius: 10,
+                          backgroundImage: NetworkImage(_profileImageUrl!),
+                        )
+                        : CircleAvatar(
+                          radius: 10,
+                          backgroundColor: AppColors.avatarAmber,
+                          child: Text(
+                            assigneeInitial,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: AppColors.textLight,
+                              fontFamily: 'VarelaRound',
+                            ),
                           ),
                         ),
-                      ),
                     const SizedBox(width: 4),
                     // Only show first name
                     Text(

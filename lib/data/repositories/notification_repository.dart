@@ -19,15 +19,17 @@ class NotificationRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw Exception('User not authenticated');
 
-      var query = _client
+      // Build the query with dynamic type
+      dynamic query = _client
           .from('notifications')
           .select()
-          .eq('user_id', userId)
-          .order('created_at', ascending: false);
+          .eq('user_id', userId);
 
       if (unreadOnly) {
         query = query.eq('is_read', false);
       }
+
+      query = query.order('created_at', ascending: false);
 
       if (offset > 0) {
         query = query.range(offset, offset + limit - 1);
