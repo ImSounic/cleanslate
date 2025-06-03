@@ -51,8 +51,8 @@ dependencies:
   google_sign_in: ^6.2.1
   flutter_local_notifications: ^19.2.1
   permission_handler: ^12.0.0+1
-  qr_flutter: ^4.1.0  # For generating QR codes
-  qr_code_scanner: ^1.0.1  # For scanning QR codes
+  mobile_scanner: ^5.1.1  # For QR scanning
+  qr_flutter: ^4.1.0      # Keep this for QR generation
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
