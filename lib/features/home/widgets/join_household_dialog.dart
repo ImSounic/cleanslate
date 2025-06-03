@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/features/members/screens/qr_scanner_screen.dart';
 
 class JoinHouseholdDialog extends StatefulWidget {
   const JoinHouseholdDialog({super.key});
@@ -110,6 +111,31 @@ class _JoinHouseholdDialogState extends State<JoinHouseholdDialog> {
                   }
                   return null;
                 },
+              ),
+              const SizedBox(height: 16),
+              Center(
+                child: TextButton.icon(
+                  onPressed: () async {
+                    final scannedCode = await Navigator.push<String>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const QRScannerScreen(),
+                      ),
+                    );
+
+                    if (scannedCode != null && mounted) {
+                      _codeController.text = scannedCode;
+                    }
+                  },
+                  icon: Icon(Icons.qr_code_scanner, color: AppColors.primary),
+                  label: Text(
+                    'Scan QR Code Instead',
+                    style: TextStyle(
+                      color: AppColors.primary,
+                      fontFamily: 'VarelaRound',
+                    ),
+                  ),
+                ),
               ),
               const SizedBox(height: 24),
               ElevatedButton(

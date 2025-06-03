@@ -67,37 +67,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await prefs.setBool(key, value);
   }
 
-  // Show in-app notification preview
-  Future<void> _showInAppNotificationPreview() async {
-    debugPrint('📱 Showing in-app notification preview');
-
-    await _pushService.showNotification(
-      title: 'CleanSlate Test',
-      body: 'This is how notifications look when you\'re using the app!',
-      payload: 'test_preview',
-    );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Check your notification panel! 👆'),
-          backgroundColor: AppColors.success,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  // Test notification creation
+  // Test notification creation with phone preview
   Future<void> _createTestNotification(String type) async {
     debugPrint('🧪 TEST: Creating test notification of type: $type');
-
-    // NOTE: Valid notification types in database:
-    // - chore_created
-    // - chore_assigned
-    // - member_joined
-    // - deadline_approaching
-    // - chore_completed
 
     setState(() {
       _isTestingNotifications = true;
@@ -126,6 +98,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       debugPrint('  - Title: ${testData['title']}');
       debugPrint('  - Message: ${testData['message']}');
 
+      // Create the notification in the database
       await notificationRepo.createNotification(
         userId: currentUser.id,
         householdId: currentHousehold?.id,
@@ -137,14 +110,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
       debugPrint('✅ TEST: Notification created successfully');
 
+      // Show phone notification preview immediately
+      debugPrint('📱 Showing phone notification preview');
+      await _pushService.showNotification(
+        title: testData['title']!,
+        body: testData['message']!,
+        payload:
+            'test_${testData['type']}_${DateTime.now().millisecondsSinceEpoch}',
+      );
+
       // Force reload notifications to show the new one immediately
       await notificationService.loadNotifications();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Test notification created: ${testData['title']}'),
+            content: Text(
+              'Test notification created! Check your notification panel 👆',
+            ),
             backgroundColor: AppColors.success,
+            duration: const Duration(seconds: 3),
           ),
         );
       }
@@ -255,37 +240,19 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   fontFamily: 'Switzer',
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // In-app preview option
-              ListTile(
-                leading: Icon(Icons.phone_android, color: AppColors.primary),
-                title: Text(
-                  'Show Phone Notification Preview',
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                'Creates a test notification and shows phone preview',
+                style: TextStyle(
+                  fontSize: 14,
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                  fontFamily: 'VarelaRound',
                 ),
-                subtitle: Text(
-                  'See how notifications look on your device',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color:
-                        isDarkMode
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showInAppNotificationPreview();
-                },
               ),
-
-              const Divider(),
+              const SizedBox(height: 16),
 
               ListTile(
                 leading: Icon(Icons.add_task, color: Colors.blue),
@@ -705,41 +672,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       // Floating test button for quick access in debug mode
       floatingActionButton:
           kDebugMode
-              ? Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Phone notification preview button
-                  FloatingActionButton(
-                    heroTag: "phone_preview",
-                    mini: true,
-                    backgroundColor: Colors.orange,
-                    onPressed: _showInAppNotificationPreview,
-                    child: const Icon(
-                      Icons.phone_android,
-                      color: Colors.white,
-                      size: 20,
-                    ),
-                    tooltip: 'Show Phone Notification',
-                  ),
-                  const SizedBox(height: 8),
-                  // Quick test notification button
-                  FloatingActionButton(
-                    heroTag: "quick_test",
-                    mini: true,
-                    backgroundColor: AppColors.primary,
-                    onPressed:
-                        _isTestingNotifications
-                            ? null
-                            : () => _createTestNotification('chore_created'),
-                    child:
-                        _isTestingNotifications
-                            ? const CircularProgressIndicator(
-                              color: Colors.white,
-                            )
-                            : const Icon(Icons.add_alert, color: Colors.white),
-                    tooltip: 'Quick Test Notification',
-                  ),
-                ],
+              ? FloatingActionButton(
+                mini: true,
+                backgroundColor: AppColors.primary,
+                onPressed:
+                    _isTestingNotifications
+                        ? null
+                        : () => _createTestNotification('chore_created'),
+                child:
+                    _isTestingNotifications
+                        ? const CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        )
+                        : const Icon(Icons.add_alert, color: Colors.white),
+                tooltip: 'Quick Test Notification (with phone preview)',
               )
               : null,
     );
@@ -786,32 +733,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           if (kDebugMode) ...[
             const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton.icon(
-                  onPressed:
-                      _isTestingNotifications
-                          ? null
-                          : () => _createTestNotification('chore_created'),
-                  icon: const Icon(Icons.science),
-                  label: const Text('Test Notification'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                ElevatedButton.icon(
-                  onPressed: _showInAppNotificationPreview,
-                  icon: const Icon(Icons.phone_android),
-                  label: const Text('Phone Preview'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    foregroundColor: Colors.white,
-                  ),
-                ),
-              ],
+            ElevatedButton.icon(
+              onPressed:
+                  _isTestingNotifications
+                      ? null
+                      : () => _createTestNotification('chore_created'),
+              icon: const Icon(Icons.science),
+              label: const Text('Test Notification'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Creates notification & shows phone preview',
+              style: TextStyle(
+                fontSize: 12,
+                color:
+                    isDarkMode
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondary,
+                fontFamily: 'VarelaRound',
+              ),
             ),
           ],
         ],

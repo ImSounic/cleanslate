@@ -2,6 +2,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
+import 'dart:math';
 
 class HouseholdRepository {
   final SupabaseClient _client = Supabase.instance.client;
@@ -10,6 +11,16 @@ class HouseholdRepository {
   final Map<String, List<HouseholdMemberModel>> _membersCache = {};
   final Duration _cacheExpiry = const Duration(minutes: 5);
   DateTime? _lastCacheUpdate;
+
+  // Helper method to generate household codes
+  String _generateHouseholdCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    final random = Random();
+    return List.generate(
+      8,
+      (index) => chars[random.nextInt(chars.length)],
+    ).join();
+  }
 
   // Get all households for the current user with optimized query
   Future<List<HouseholdModel>> getUserHouseholds() async {
@@ -142,14 +153,17 @@ class HouseholdRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw Exception('User not authenticated');
 
-      // Create household in a transaction-like manner
+      // Generate a unique code
+      String code = _generateHouseholdCode();
+
+      // Create household with the generated code
       final response =
           await _client
               .from('households')
               .insert({
                 'name': trimmedName,
                 'created_by': userId,
-                // code will be generated automatically by the database trigger
+                'code': code, // Explicitly set the code
               })
               .select()
               .single();
