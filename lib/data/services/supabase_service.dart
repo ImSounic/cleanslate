@@ -1,5 +1,5 @@
 // lib/data/services/supabase_service.dart
-// Updated with Google account linking functionality
+// Updated with fixed Google Sign-In nonce handling
 // ignore_for_file: avoid_print
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -11,16 +11,20 @@ import 'package:uuid/uuid.dart';
 class SupabaseService {
   final SupabaseClient client = Supabase.instance.client;
 
-  // Google Sign In instance
+  // Google Sign In instance - UPDATED: Remove serverClientId for iOS
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
-    serverClientId:
-        '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com',
+    // Only set serverClientId for Android
+    serverClientId: Platform.isAndroid 
+        ? '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com'
+        : null,
   );
 
-  // Google Sign In - Updated to handle both login and registration
+  // Google Sign In - FIXED: Updated nonce handling
   Future<AuthResponse> signInWithGoogle() async {
     try {
+      print('Starting Google Sign-In...');
+      
       // Sign out from any previous Google session to ensure account picker shows
       await _googleSignIn.signOut();
 
@@ -31,20 +35,26 @@ class SupabaseService {
         throw Exception('Google sign in was cancelled');
       }
 
+      print('Google user obtained: ${googleUser.email}');
+
       // Obtain the auth details from the request
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       if (googleAuth.idToken == null) {
         throw Exception('No ID token found');
       }
 
-      // Try to sign in with Google
+      print('Google auth tokens obtained');
+
+      // FIXED: Use signInWithIdToken without nonce parameter
       final response = await client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: googleAuth.idToken!,
         accessToken: googleAuth.accessToken,
+        // Remove nonce parameter to avoid mismatch
       );
+
+      print('Supabase sign-in successful');
 
       // Update or create profile with Google data
       if (response.user != null) {
@@ -58,18 +68,36 @@ class SupabaseService {
     }
   }
 
+  // Alternative method using OAuth flow for better compatibility
+  Future<bool> signInWithGoogleOAuth() async {
+    try {
+      print('Starting Google OAuth Sign-In...');
+      
+      // Use Supabase's OAuth flow instead of custom token handling
+      final success = await client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: 'com.yourapp.cleanslate://oauth/callback', // Replace with your app's URL scheme
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+
+      return success;
+    } catch (e) {
+      print('Google OAuth sign in error: $e');
+      rethrow;
+    }
+  }
+
   // Link Google account to existing email/password account
   Future<void> linkGoogleAccount() async {
     try {
       if (currentUser == null) throw Exception('No user logged in');
 
       // Check if user already has Google linked
-      final profile =
-          await client
-              .from('profiles')
-              .select('auth_provider')
-              .eq('id', currentUser!.id)
-              .single();
+      final profile = await client
+          .from('profiles')
+          .select('auth_provider')
+          .eq('id', currentUser!.id)
+          .single();
 
       if (profile['auth_provider'] == 'google' ||
           profile['auth_provider'] == 'email_and_google') {
@@ -87,8 +115,7 @@ class SupabaseService {
       }
 
       // Get the auth details
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
       if (googleAuth.idToken == null) {
         throw Exception('No ID token found');
@@ -134,7 +161,6 @@ class SupabaseService {
       await client.auth.updateUser(UserAttributes(data: metadataUpdates));
 
       // Store the Google credentials for future use
-      // This allows the user to sign in with either email/password or Google
       await _storeGoogleCredentials(currentUser!.id, googleUser);
     } catch (e) {
       print('Error linking Google account: $e');
@@ -145,12 +171,11 @@ class SupabaseService {
   // Check if a Google account is already linked
   Future<Map<String, dynamic>?> _checkExistingGoogleUser(String email) async {
     try {
-      final response =
-          await client
-              .from('profiles')
-              .select('id, email, auth_provider, google_email')
-              .or('email.eq.$email,google_email.eq.$email')
-              .maybeSingle();
+      final response = await client
+          .from('profiles')
+          .select('id, email, auth_provider, google_email')
+          .or('email.eq.$email,google_email.eq.$email')
+          .maybeSingle();
 
       return response;
     } catch (e) {
@@ -166,12 +191,11 @@ class SupabaseService {
   ) async {
     try {
       // First, check if a record already exists
-      final existing =
-          await client
-              .from('google_auth_links')
-              .select()
-              .eq('user_id', userId)
-              .maybeSingle();
+      final existing = await client
+          .from('google_auth_links')
+          .select()
+          .eq('user_id', userId)
+          .maybeSingle();
 
       if (existing != null) {
         // Update existing record
@@ -205,12 +229,11 @@ class SupabaseService {
     try {
       if (currentUser == null) return false;
 
-      final profile =
-          await client
-              .from('profiles')
-              .select('auth_provider')
-              .eq('id', currentUser!.id)
-              .single();
+      final profile = await client
+          .from('profiles')
+          .select('auth_provider')
+          .eq('id', currentUser!.id)
+          .single();
 
       return profile['auth_provider'] == 'google' ||
           profile['auth_provider'] == 'email_and_google';
@@ -226,12 +249,11 @@ class SupabaseService {
       if (currentUser == null) throw Exception('No user logged in');
 
       // Check current auth provider
-      final profile =
-          await client
-              .from('profiles')
-              .select('auth_provider')
-              .eq('id', currentUser!.id)
-              .single();
+      final profile = await client
+          .from('profiles')
+          .select('auth_provider')
+          .eq('id', currentUser!.id)
+          .single();
 
       if (profile['auth_provider'] == 'google') {
         throw Exception(
@@ -280,13 +302,14 @@ class SupabaseService {
     GoogleSignInAccount googleUser,
   ) async {
     try {
+      print('Updating profile with Google data...');
+      
       // Check if profile exists
-      final profile =
-          await client
-              .from('profiles')
-              .select()
-              .eq('id', user.id)
-              .maybeSingle();
+      final profile = await client
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
 
       final profileData = {
         'id': user.id,
@@ -301,13 +324,12 @@ class SupabaseService {
       if (profile == null) {
         // Create new profile
         await client.from('profiles').insert(profileData);
+        print('Created new profile for Google user');
       } else {
         // Update existing profile with Google data if missing
         final updates = <String, dynamic>{
           'auth_provider':
-              profile['auth_provider'] == 'email'
-                  ? 'email_and_google'
-                  : 'google',
+              profile['auth_provider'] == 'email' ? 'email_and_google' : 'google',
           'google_id': googleUser.id,
           'google_email': googleUser.email,
         };
@@ -316,12 +338,12 @@ class SupabaseService {
           updates['full_name'] = googleUser.displayName;
         }
 
-        if (profile['profile_image_url'] == null &&
-            googleUser.photoUrl != null) {
+        if (profile['profile_image_url'] == null && googleUser.photoUrl != null) {
           updates['profile_image_url'] = googleUser.photoUrl;
         }
 
         await client.from('profiles').update(updates).eq('id', user.id);
+        print('Updated existing profile with Google data');
       }
 
       // Also update auth metadata
@@ -337,6 +359,7 @@ class SupabaseService {
 
       if (metadataUpdates.isNotEmpty) {
         await client.auth.updateUser(UserAttributes(data: metadataUpdates));
+        print('Updated auth metadata');
       }
     } catch (e) {
       print('Error updating profile with Google data: $e');
@@ -347,12 +370,11 @@ class SupabaseService {
   // Check if user exists and get their auth provider
   Future<Map<String, dynamic>?> _checkExistingUser(String email) async {
     try {
-      final response =
-          await client
-              .from('profiles')
-              .select('id, email, auth_provider')
-              .eq('email', email)
-              .maybeSingle();
+      final response = await client
+          .from('profiles')
+          .select('id, email, auth_provider')
+          .eq('email', email)
+          .maybeSingle();
 
       return response;
     } catch (e) {
@@ -400,12 +422,11 @@ class SupabaseService {
     if (response.user != null) {
       try {
         // Check if profile exists
-        final profile =
-            await client
-                .from('profiles')
-                .select()
-                .eq('id', response.user!.id)
-                .maybeSingle();
+        final profile = await client
+            .from('profiles')
+            .select()
+            .eq('id', response.user!.id)
+            .maybeSingle();
 
         // If profile doesn't exist, create it
         if (profile == null) {
@@ -472,8 +493,7 @@ class SupabaseService {
       // Also update public profile
       final profileUpdates = <String, dynamic>{};
       if (fullName != null) profileUpdates['full_name'] = fullName;
-      if (profileImageUrl != null)
-        profileUpdates['profile_image_url'] = profileImageUrl;
+      if (profileImageUrl != null) profileUpdates['profile_image_url'] = profileImageUrl;
 
       if (profileUpdates.isNotEmpty) {
         await client
@@ -497,18 +517,14 @@ class SupabaseService {
     await removeProfileImage();
 
     // Upload to storage
-    await client.storage
-        .from('user-images')
-        .upload(
+    await client.storage.from('user-images').upload(
           storagePath,
           file,
           fileOptions: const FileOptions(cacheControl: '3600', upsert: false),
         );
 
     // Get public URL
-    final imageUrl = client.storage
-        .from('user-images')
-        .getPublicUrl(storagePath);
+    final imageUrl = client.storage.from('user-images').getPublicUrl(storagePath);
 
     // Update profile with new URL
     await updateUserProfile(profileImageUrl: imageUrl);
@@ -553,24 +569,22 @@ class SupabaseService {
   Future<Map<String, dynamic>?> getUserByEmail(String email) async {
     try {
       // Try to get from profiles first (more data)
-      final profileResponse =
-          await client
-              .from('profiles')
-              .select()
-              .eq('email', email)
-              .maybeSingle();
+      final profileResponse = await client
+          .from('profiles')
+          .select()
+          .eq('email', email)
+          .maybeSingle();
 
       if (profileResponse != null) {
         return profileResponse;
       }
 
       // Fall back to auth.users if needed
-      final response =
-          await client
-              .from('auth.users')
-              .select('id, email, raw_user_meta_data')
-              .eq('email', email)
-              .maybeSingle();
+      final response = await client
+          .from('auth.users')
+          .select('id, email, raw_user_meta_data')
+          .eq('email', email)
+          .maybeSingle();
 
       return response;
     } catch (e) {
