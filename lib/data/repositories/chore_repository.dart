@@ -1,10 +1,14 @@
 // lib/data/repositories/chore_repository.dart
+// COMPLETE REPLACEMENT - Copy this entire file
+
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/services/notification_service.dart';
+import 'package:cleanslate/data/services/calendar_service.dart';
 
 class ChoreRepository {
   final SupabaseClient _client = Supabase.instance.client;
   final NotificationService _notificationService = NotificationService();
+  final CalendarService _calendarService = CalendarService();
 
   // Create a new chore
   Future<Map<String, dynamic>> createChore({
@@ -52,45 +56,139 @@ class ChoreRepository {
         .from('chore_assignments')
         .select('*, chores(*)')
         .eq('assigned_to', userId)
-        // Removed the .eq('status', 'pending') filter to get all chores
         .order('due_date', ascending: true);
 
     return response;
   }
 
-  // Assign a chore to a user
+  // UPDATED: Assign a chore to a user WITH calendar sync
   Future<void> assignChore({
     required String choreId,
     required String assignedTo,
     required DateTime dueDate,
     String? priority,
   }) async {
-    await _client.from('chore_assignments').insert({
-      'chore_id': choreId,
-      'assigned_to': assignedTo,
-      'due_date': dueDate.toIso8601String(),
-      'status': 'pending',
-      'priority': priority ?? 'medium',
-      'assigned_by': _client.auth.currentUser!.id,
-    });
+    try {
+      print('📝 Starting chore assignment for choreId: $choreId');
 
-    // Get chore details for notification
-    final chore =
-        await _client
-            .from('chores')
-            .select('name, household_id')
-            .eq('id', choreId)
-            .single();
+      // Create the assignment in database
+      final assignmentResponse =
+          await _client
+              .from('chore_assignments')
+              .insert({
+                'chore_id': choreId,
+                'assigned_to': assignedTo,
+                'due_date': dueDate.toIso8601String(),
+                'status': 'pending',
+                'priority': priority ?? 'medium',
+                'assigned_by': _client.auth.currentUser!.id,
+              })
+              .select()
+              .single();
 
-    // Create notification for the assigned user
-    if (_client.auth.currentUser!.id != assignedTo) {
-      await _notificationService.notifyChoreAssignment(
-        assignedToUserId: assignedTo,
-        assignedByUserId: _client.auth.currentUser!.id,
-        choreId: choreId,
+      print('✅ Chore assignment created with ID: ${assignmentResponse['id']}');
+
+      // Get chore details for notification and calendar
+      final chore =
+          await _client
+              .from('chores')
+              .select('name, household_id, description, estimated_duration')
+              .eq('id', choreId)
+              .single();
+
+      // Create notification for the assigned user
+      if (_client.auth.currentUser!.id != assignedTo) {
+        await _notificationService.notifyChoreAssignment(
+          assignedToUserId: assignedTo,
+          assignedByUserId: _client.auth.currentUser!.id,
+          choreId: choreId,
+          choreName: chore['name'],
+          householdId: chore['household_id'],
+        );
+      }
+
+      // Add to calendar if user has calendar connected and auto-sync enabled
+      print('🔄 Attempting to sync to calendar...');
+      await _syncChoreToCalendar(
+        assignmentId: assignmentResponse['id'],
+        userId: assignedTo,
         choreName: chore['name'],
-        householdId: chore['household_id'],
+        choreDescription: chore['description'],
+        dueDate: dueDate,
+        estimatedDuration: chore['estimated_duration'] ?? 30,
       );
+    } catch (e) {
+      print('❌ Error in assignChore: $e');
+      // Don't throw - assignment was successful even if calendar sync failed
+      if (e.toString().contains('chore_assignments')) {
+        throw e; // Re-throw database errors
+      }
+    }
+  }
+
+  // Private method to sync chore to calendar
+  Future<void> _syncChoreToCalendar({
+    required String assignmentId,
+    required String userId,
+    required String choreName,
+    String? choreDescription,
+    required DateTime dueDate,
+    required int estimatedDuration,
+  }) async {
+    try {
+      print('📅 Checking calendar integration for user: $userId');
+
+      // Check if user has calendar integration enabled
+      final integrations = await _client
+          .from('calendar_integrations')
+          .select()
+          .eq('user_id', userId)
+          .eq('sync_enabled', true)
+          .eq('auto_add_chores', true);
+
+      if ((integrations as List).isEmpty) {
+        print('⚠️ User has no calendar integration or sync disabled');
+        return;
+      }
+
+      print('✅ Found ${integrations.length} calendar integration(s)');
+
+      // Get the first active integration (usually Google)
+      final integration = integrations.first;
+
+      if (integration['provider'] == 'google') {
+        print('🔄 Syncing to Google Calendar...');
+
+        // Add to Google Calendar
+        await _calendarService.addChoreToGoogleCalendar(
+          choreName: choreName,
+          scheduledTime: dueDate,
+          durationMinutes: estimatedDuration,
+          description:
+              choreDescription ?? 'Household chore assigned via CleanSlate',
+        );
+
+        // Store the calendar sync info
+        await _client.from('scheduled_assignments').insert({
+          'assignment_id': assignmentId,
+          'user_id': userId,
+          'scheduled_date': dueDate.toIso8601String().split('T')[0],
+          'scheduled_time':
+              "${dueDate.hour.toString().padLeft(2, '0')}:${dueDate.minute.toString().padLeft(2, '0')}",
+          'duration_minutes': estimatedDuration,
+          'synced_to_calendar': true,
+          'calendar_provider': 'google',
+        });
+
+        print('✅ Chore successfully added to Google Calendar!');
+      } else {
+        print(
+          '⚠️ Calendar provider ${integration['provider']} not yet supported',
+        );
+      }
+    } catch (e) {
+      print('❌ Failed to sync chore to calendar: $e');
+      // Don't throw - this shouldn't break the assignment
     }
   }
 
@@ -134,14 +232,12 @@ class ChoreRepository {
   // Delete a chore and all its assignments
   Future<void> deleteChore(String choreId) async {
     try {
-      // Start a transaction to ensure both operations complete
       // First delete all assignments related to this chore
       await _client.from('chore_assignments').delete().eq('chore_id', choreId);
 
       // Then delete the chore itself
       await _client.from('chores').delete().eq('id', choreId);
     } catch (e) {
-      // If operation fails, throw a more descriptive exception
       throw Exception('Failed to delete chore: $e');
     }
   }
@@ -160,47 +256,30 @@ class ChoreRepository {
     if (priority != null) updates['priority'] = priority;
     if (status != null) updates['status'] = status;
 
-    if (updates.isEmpty) return; // No updates to make
-
     await _client
         .from('chore_assignments')
         .update(updates)
         .eq('id', assignmentId);
   }
 
-  // Get a chore by ID
-  Future<Map<String, dynamic>?> getChoreById(String choreId) async {
+  // Test method to directly test calendar sync
+  Future<void> testCalendarSync() async {
     try {
-      final response =
-          await _client
-              .from('chores')
-              .select('*')
-              .eq('id', choreId)
-              .maybeSingle();
+      print('🧪 Testing calendar sync...');
+      final userId = _client.auth.currentUser!.id;
 
-      return response;
+      // Create a test chore
+      await _calendarService.addChoreToGoogleCalendar(
+        choreName: 'Test Chore - Delete Me',
+        scheduledTime: DateTime.now().add(Duration(hours: 1)),
+        durationMinutes: 30,
+        description: 'This is a test chore to verify calendar sync is working',
+      );
+
+      print('✅ Test chore added to calendar successfully!');
     } catch (e) {
-      throw Exception('Failed to fetch chore: $e');
+      print('❌ Test failed: $e');
+      throw e;
     }
-  }
-
-  // Update chore details
-  Future<void> updateChore({
-    required String choreId,
-    String? name,
-    String? description,
-    int? estimatedDuration,
-    String? frequency,
-  }) async {
-    final updates = <String, dynamic>{};
-    if (name != null) updates['name'] = name;
-    if (description != null) updates['description'] = description;
-    if (estimatedDuration != null)
-      updates['estimated_duration'] = estimatedDuration;
-    if (frequency != null) updates['frequency'] = frequency;
-
-    if (updates.isEmpty) return; // No updates to make
-
-    await _client.from('chores').update(updates).eq('id', choreId);
   }
 }
