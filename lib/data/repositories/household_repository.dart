@@ -288,7 +288,7 @@ class HouseholdRepository {
       // using Supabase's foreign key join (replaces N+1 per-member queries)
       final membersResponse = await _client
           .from('household_members')
-          .select('*, profiles!inner(full_name, email, profile_image_url)')
+          .select('*, profiles(full_name, email, profile_image_url)')
           .eq('household_id', householdId)
           .eq('is_active', true)
           .order('joined_at', ascending: false);
