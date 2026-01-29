@@ -5,6 +5,10 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'dart:math';
 
 class HouseholdRepository {
+  static final HouseholdRepository _instance = HouseholdRepository._internal();
+  factory HouseholdRepository() => _instance;
+  HouseholdRepository._internal();
+
   final SupabaseClient _client = Supabase.instance.client;
 
   // Cache for household members to reduce queries
