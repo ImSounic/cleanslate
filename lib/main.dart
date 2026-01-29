@@ -16,6 +16,7 @@ import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/core/theme/app_theme.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 
@@ -194,6 +195,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             '/signup': (context) => const SignupScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
             '/home': (context) => const HomeScreen(),
+            '/calendar-connection': (context) => const CalendarConnectionScreen(),
           },
         );
       },
