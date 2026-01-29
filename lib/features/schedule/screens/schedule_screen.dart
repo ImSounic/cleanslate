@@ -27,6 +27,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   int _viewMode = 0;
   bool _isLoading = true;
   bool _showRecurringChores = false;
+  bool _hasLoadedInitialData = false;
   String _userName = '';
   // List to store regular and recurring chores
   List<Map<String, dynamic>> _chores = [];
@@ -68,8 +69,12 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // This ensures chores are reloaded when returning to this screen
-    _loadChores();
+    // Only load on first call to avoid repeated network requests
+    // on every inherited widget change (theme, locale, etc.)
+    if (!_hasLoadedInitialData) {
+      _hasLoadedInitialData = true;
+      _loadChores();
+    }
   }
 
   @override
