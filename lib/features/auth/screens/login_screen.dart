@@ -15,6 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _supabaseService = SupabaseService();
@@ -30,6 +31,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _handleLogin() async {
+    if (!_formKey.currentState!.validate()) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -150,7 +153,9 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               child: Padding(
                 padding: const EdgeInsets.all(24.0),
-                child: Column(
+                child: Form(
+                  key: _formKey,
+                  child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Back button at top left
@@ -182,6 +187,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       suffixIcon: Icons.email_outlined,
                       isDarkMode: isDarkMode,
                       keyboardType: TextInputType.emailAddress,
+                      validator: (value) {
+                        if (value == null || value.trim().isEmpty) {
+                          return 'Please enter your email address';
+                        }
+                        final emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+                        if (!emailRegex.hasMatch(value.trim())) {
+                          return 'Please enter a valid email address';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
                     _buildTextField(
@@ -190,6 +205,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       isPassword: true,
                       suffixIcon: Icons.lock_outline,
                       isDarkMode: isDarkMode,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        if (value.length < 6) {
+                          return 'Password must be at least 6 characters';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 16),
                     Align(
@@ -318,6 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+                ),
               ),
             ),
           ),
@@ -333,6 +358,7 @@ class _LoginScreenState extends State<LoginScreen> {
     bool isPassword = false,
     required bool isDarkMode,
     TextInputType? keyboardType,
+    String? Function(String?)? validator,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,6 +371,7 @@ class _LoginScreenState extends State<LoginScreen> {
           keyboardType: keyboardType,
           textAlign: TextAlign.center,
           textAlignVertical: TextAlignVertical.center,
+          validator: validator,
           style: const TextStyle(
             color: Colors.white,
             fontFamily: 'VarelaRound',
@@ -359,6 +386,13 @@ class _LoginScreenState extends State<LoginScreen> {
             focusedBorder: const UnderlineInputBorder(
               borderSide: BorderSide(color: Colors.white),
             ),
+            errorBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.redAccent),
+            ),
+            focusedErrorBorder: const UnderlineInputBorder(
+              borderSide: BorderSide(color: Colors.redAccent),
+            ),
+            errorStyle: const TextStyle(color: Colors.redAccent),
             suffixIcon:
                 suffixIcon != null
                     ? Icon(suffixIcon, color: Colors.white)
