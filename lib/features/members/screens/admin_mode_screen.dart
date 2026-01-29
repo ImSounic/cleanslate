@@ -40,6 +40,12 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     _loadAdminData();
   }
 
+  @override
+  void dispose() {
+    _deleteConfirmController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadAdminData() async {
     setState(() {
       _isLoading = true;
