@@ -8,8 +8,14 @@ import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class ChoreRepository {
   final SupabaseClient _client = Supabase.instance.client;
-  final NotificationService _notificationService = NotificationService();
-  final CalendarService _calendarService = CalendarService();
+  final NotificationService _notificationService;
+  final CalendarService _calendarService;
+
+  ChoreRepository({
+    NotificationService? notificationService,
+    CalendarService? calendarService,
+  })  : _notificationService = notificationService ?? NotificationService(),
+        _calendarService = calendarService ?? CalendarService();
 
   // Create a new chore
   Future<Map<String, dynamic>> createChore({
