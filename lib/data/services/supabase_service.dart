@@ -76,7 +76,7 @@ class SupabaseService {
       // Use Supabase's OAuth flow instead of custom token handling
       final success = await client.auth.signInWithOAuth(
         OAuthProvider.google,
-        redirectTo: 'com.yourapp.cleanslate://oauth/callback', // Replace with your app's URL scheme
+        redirectTo: 'com.imsounic.cleanslate://oauth/callback',
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
 
