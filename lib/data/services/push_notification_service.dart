@@ -2,6 +2,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'dart:io' show Platform;
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class PushNotificationService {
   static final PushNotificationService _instance =
@@ -17,7 +18,7 @@ class PushNotificationService {
   Future<void> initialize() async {
     if (_isInitialized) return;
 
-    print('📱 PushNotificationService: Initializing...');
+    debugLog('📱 PushNotificationService: Initializing...');
 
     // Request notification permissions
     await _requestPermissions();
@@ -47,7 +48,7 @@ class PushNotificationService {
     );
 
     _isInitialized = true;
-    print('✅ PushNotificationService: Initialized successfully');
+    debugLog('✅ PushNotificationService: Initialized successfully');
   }
 
   // Request permissions
@@ -62,7 +63,7 @@ class PushNotificationService {
 
   // Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
-    print('📱 Notification tapped: ${response.payload}');
+    debugLog('📱 Notification tapped: ${response.payload}');
     // You can navigate to specific screens based on the payload
     // For now, we'll just log it
   }
@@ -74,11 +75,11 @@ class PushNotificationService {
     String? payload,
   }) async {
     if (!_isInitialized) {
-      print('⚠️ PushNotificationService: Not initialized, initializing now...');
+      debugLog('⚠️ PushNotificationService: Not initialized, initializing now...');
       await initialize();
     }
 
-    print('📱 Showing notification: $title');
+    debugLog('📱 Showing notification: $title');
 
     const androidDetails = AndroidNotificationDetails(
       'cleanslate_channel', // Channel ID

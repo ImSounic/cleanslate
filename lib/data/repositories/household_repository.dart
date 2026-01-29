@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'dart:math';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class HouseholdRepository {
   final SupabaseClient _client = Supabase.instance.client;
@@ -302,8 +303,8 @@ class HouseholdRepository {
                   .eq('id', memberData['user_id'])
                   .maybeSingle();
         } catch (e) {
-          print(
-            'Warning: Could not fetch profile for user ${memberData['user_id']}: $e',
+          debugLog(
+            'Warning: Could not fetch profile for household member: $e',
           );
         }
 

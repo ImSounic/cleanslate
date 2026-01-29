@@ -1,5 +1,5 @@
 // lib/features/members/screens/members_screen.dart
-// ignore_for_file: use_super_parameters, use_build_context_synchronously, deprecated_member_use, avoid_print
+// ignore_for_file: use_super_parameters, use_build_context_synchronously, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
@@ -171,7 +172,7 @@ class _MembersScreenState extends State<MembersScreen> {
     });
 
     try {
-      print("Starting join household process with code: $code");
+      debugLog("Starting join household process...");
       await _householdRepository.joinHouseholdWithCode(code);
 
       // Initialize household service to set the current household
@@ -197,7 +198,7 @@ class _MembersScreenState extends State<MembersScreen> {
       // Check if widget is still mounted before updating UI
       if (!mounted) return;
 
-      print("Error joining household: $e");
+      debugLog("Error joining household: $e");
 
       setState(() {
         _isLoading = false;
@@ -1668,11 +1669,11 @@ class _MembersScreenState extends State<MembersScreen> {
       if (url.startsWith('http')) {
         return NetworkImage(url);
       } else {
-        print('Invalid image URL format: $url');
+        debugLog('Invalid image URL format');
         return null;
       }
     } catch (e) {
-      print('Error loading profile image: $e');
+      debugLog('Error loading profile image: $e');
       return null;
     }
   }

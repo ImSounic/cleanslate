@@ -17,6 +17,7 @@ import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.
 import 'package:cleanslate/features/settings/widgets/calendar_sync_settings.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -78,7 +79,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         });
       }
     } catch (e) {
-      print('Error loading user data: $e');
+      debugLog('Error loading user data: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -107,7 +108,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }
       }
     } catch (e) {
-      print('Error checking Google link status: $e');
+      debugLog('Error checking Google link status: $e');
     }
   }
 

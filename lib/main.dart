@@ -1,5 +1,4 @@
 // lib/main.dart
-// ignore_for_file: avoid_print
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,6 +17,7 @@ import 'package:cleanslate/core/theme/app_theme.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:flutter/foundation.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -42,11 +42,9 @@ Future<void> main() async {
           dotenv.env['SUPABASE_ANON_KEY'] ??
           const String.fromEnvironment('SUPABASE_ANON_KEY');
 
-      print(
-        'Debug mode: Loaded Supabase URL: ${supabaseUrl.substring(0, 20)}...',
-      );
+      debugLog('Debug mode: Supabase configuration loaded');
     } catch (e) {
-      print('Warning: Could not load .env file, using dart-define values');
+      debugLog('Warning: Could not load .env file, using dart-define values');
       // Fallback to dart-define values
       supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
       supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -140,7 +138,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           await notificationService.initialize();
         }
       } catch (e) {
-        print('Error initializing app: $e');
+        debugLog('Error initializing app: $e');
         // Continue even if initialization fails
         // The user will see appropriate UI options in the screens
       }

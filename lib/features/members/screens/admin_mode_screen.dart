@@ -1,5 +1,5 @@
 // lib/features/members/screens/admin_mode_screen.dart
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously, avoid_print
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -12,6 +12,7 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class AdminModeScreen extends StatefulWidget {
   const AdminModeScreen({super.key});
@@ -136,7 +137,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         (a, b) => b['choresCompleted'].compareTo(a['choresCompleted']),
       );
     } catch (e) {
-      print('Error calculating member stats: $e');
+      debugLog('Error calculating member stats: $e');
       // Still maintain the basic member list even if chore stats fail
       for (var member in members) {
         _memberStats.add({

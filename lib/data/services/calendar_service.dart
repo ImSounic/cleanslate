@@ -8,6 +8,7 @@ import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sig
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/calendar_integration_model.dart';
 import 'package:http/http.dart' as http;
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class CalendarService {
   final SupabaseClient _client = Supabase.instance.client;
@@ -42,7 +43,7 @@ class CalendarService {
   // Connect Google Calendar
   Future<void> connectGoogleCalendar() async {
     try {
-      print('🔄 Starting Google Calendar connection...');
+      debugLog('🔄 Starting Google Calendar connection...');
 
       // Sign in with Google
       final account = await _googleSignIn.signIn();
@@ -50,7 +51,7 @@ class CalendarService {
         throw Exception('Google sign-in cancelled');
       }
 
-      print('✅ Signed in as: ${account.email}');
+      debugLog('✅ Google Calendar sign-in successful');
 
       // Get authentication tokens
       final auth = await account.authentication;
@@ -68,9 +69,9 @@ class CalendarService {
             DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
       });
 
-      print('✅ Calendar integration saved to database');
+      debugLog('✅ Calendar integration saved to database');
     } catch (e) {
-      print('❌ Failed to connect Google Calendar: $e');
+      debugLog('❌ Failed to connect Google Calendar: $e');
       throw Exception('Failed to connect Google Calendar: $e');
     }
   }
@@ -83,18 +84,18 @@ class CalendarService {
     String? description,
   }) async {
     try {
-      print('📅 Starting Google Calendar sync for: $choreName');
-      print('📅 Scheduled time: $scheduledTime');
+      debugLog('📅 Starting Google Calendar sync for: $choreName');
+      debugLog('📅 Scheduled time: $scheduledTime');
 
       // Get current user or re-authenticate
       var currentUser = _googleSignIn.currentUser;
 
       if (currentUser == null) {
-        print('🔄 No current user, attempting silent sign-in...');
+        debugLog('🔄 No current user, attempting silent sign-in...');
         currentUser = await _googleSignIn.signInSilently();
 
         if (currentUser == null) {
-          print('🔄 Silent sign-in failed, requesting interactive sign-in...');
+          debugLog('🔄 Silent sign-in failed, requesting interactive sign-in...');
           currentUser = await _googleSignIn.signIn();
 
           if (currentUser == null) {
@@ -103,12 +104,12 @@ class CalendarService {
         }
       }
 
-      print('✅ Authenticated as: ${currentUser.email}');
+      debugLog('✅ Google Calendar authenticated successfully');
 
       // Get authenticated HTTP client
       final httpClient = await _googleSignIn.authenticatedClient();
       if (httpClient == null) {
-        print('❌ Failed to get authenticated client');
+        debugLog('❌ Failed to get authenticated client');
         // Try to re-authenticate
         await _googleSignIn.signOut();
         final account = await _googleSignIn.signIn();
@@ -142,8 +143,8 @@ class CalendarService {
         );
       }
     } catch (e, stackTrace) {
-      print('❌ Failed to add chore to Google Calendar: $e');
-      print('Stack trace: $stackTrace');
+      debugLog('❌ Failed to add chore to Google Calendar: $e');
+      debugLog('Stack trace: $stackTrace');
 
       // Try to provide more specific error messages
       if (e.toString().contains('403')) {
@@ -156,7 +157,7 @@ class CalendarService {
         );
       } else if (e.toString().contains('400')) {
         // For 400 errors, try to get more details
-        print('400 Error details: $e');
+        debugLog('400 Error details: $e');
         throw Exception(
           'Calendar sync failed. Please try reconnecting your calendar.',
         );
@@ -208,18 +209,18 @@ class CalendarService {
           gcal.EventReminders()
             ..useDefault = true; // Just use default reminders
 
-      print('📅 Creating calendar event...');
-      print('Event summary: ${event.summary}');
-      print('Start time (UTC): ${event.start?.dateTime}');
-      print('End time (UTC): ${event.end?.dateTime}');
+      debugLog('📅 Creating calendar event...');
+      debugLog('Event summary: ${event.summary}');
+      debugLog('Start time (UTC): ${event.start?.dateTime}');
+      debugLog('End time (UTC): ${event.end?.dateTime}');
 
       // Insert the event - use await and handle the response
       final createdEvent = await calendarApi.events.insert(event, 'primary');
 
-      print('✅ Event created successfully!');
-      print('📅 Event ID: ${createdEvent.id}');
+      debugLog('✅ Event created successfully!');
+      debugLog('📅 Calendar event created successfully');
       if (createdEvent.htmlLink != null) {
-        print('📅 Event link: ${createdEvent.htmlLink}');
+        debugLog('📅 Event has HTML link');
       }
 
       // Store the event ID if needed
@@ -235,15 +236,15 @@ class CalendarService {
                 '${scheduledTime.hour.toString().padLeft(2, '0')}:${scheduledTime.minute.toString().padLeft(2, '0')}',
             'duration_minutes': durationMinutes,
           });
-          print('✅ Event ID stored in database');
+          debugLog('✅ Event ID stored in database');
         } catch (dbError) {
-          print(
+          debugLog(
             '⚠️ Failed to store event ID in database (non-critical): $dbError',
           );
         }
       }
     } catch (e) {
-      print('❌ Error in _createCalendarEvent: $e');
+      debugLog('❌ Error in _createCalendarEvent: $e');
       throw e;
     }
   }
@@ -304,7 +305,7 @@ class CalendarService {
   // Test calendar sync with a simple event
   Future<void> testCalendarSync() async {
     try {
-      print('🧪 Running calendar sync test...');
+      debugLog('🧪 Running calendar sync test...');
 
       // Create a test event 1 hour from now
       final testTime = DateTime.now().add(Duration(hours: 1));
@@ -317,9 +318,9 @@ class CalendarService {
             'This is a test event from CleanSlate to verify calendar sync is working.',
       );
 
-      print('✅ Test completed successfully! Check your Google Calendar.');
+      debugLog('✅ Test completed successfully! Check your Google Calendar.');
     } catch (e) {
-      print('❌ Test failed: $e');
+      debugLog('❌ Test failed: $e');
       throw e;
     }
   }

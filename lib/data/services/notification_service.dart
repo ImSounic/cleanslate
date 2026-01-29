@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/notification_repository.dart';
 import 'package:cleanslate/data/models/notification_model.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/data/services/push_notification_service.dart';
 
 class NotificationService extends ChangeNotifier {
@@ -27,7 +28,7 @@ class NotificationService extends ChangeNotifier {
 
   // Initialize service
   Future<void> initialize() async {
-    print('🔔 NotificationService: Initializing...');
+    debugLog('🔔 NotificationService: Initializing...');
     await _pushService.initialize();
     await loadNotifications();
     _subscribeToRealtimeNotifications();
@@ -44,7 +45,7 @@ class NotificationService extends ChangeNotifier {
 
   // Load notifications
   Future<void> loadNotifications({bool unreadOnly = false}) async {
-    print('🔔 NotificationService: Loading notifications...');
+    debugLog('🔔 NotificationService: Loading notifications...');
     _isLoading = true;
     notifyListeners();
 
@@ -53,11 +54,11 @@ class NotificationService extends ChangeNotifier {
         unreadOnly: unreadOnly,
       );
       _unreadCount = await _repository.getUnreadCount();
-      print(
+      debugLog(
         '🔔 NotificationService: Loaded ${_notifications.length} notifications, ${_unreadCount} unread',
       );
     } catch (e) {
-      print('❌ NotificationService: Error loading notifications: $e');
+      debugLog('❌ NotificationService: Error loading notifications: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -67,12 +68,12 @@ class NotificationService extends ChangeNotifier {
   // Subscribe to real-time notifications
   void _subscribeToRealtimeNotifications() {
     try {
-      print(
+      debugLog(
         '🔔 NotificationService: Subscribing to real-time notifications...',
       );
       _realtimeSubscription = _repository.subscribeToNotifications().listen(
         (notification) {
-          print(
+          debugLog(
             '🔔 NotificationService: New real-time notification received: ${notification.title}',
           );
           _notifications.insert(0, notification);
@@ -90,14 +91,14 @@ class NotificationService extends ChangeNotifier {
           notifyListeners();
         },
         onError: (error) {
-          print(
+          debugLog(
             '❌ NotificationService: Error in notification subscription: $error',
           );
         },
       );
-      print('✅ NotificationService: Real-time subscription active');
+      debugLog('✅ NotificationService: Real-time subscription active');
     } catch (e) {
-      print('❌ NotificationService: Failed to subscribe to notifications: $e');
+      debugLog('❌ NotificationService: Failed to subscribe to notifications: $e');
     }
   }
 
@@ -136,7 +137,7 @@ class NotificationService extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      print('❌ NotificationService: Failed to mark notification as read: $e');
+      debugLog('❌ NotificationService: Failed to mark notification as read: $e');
     }
   }
 
@@ -166,7 +167,7 @@ class NotificationService extends ChangeNotifier {
       _unreadCount = 0;
       notifyListeners();
     } catch (e) {
-      print('❌ NotificationService: Failed to mark all as read: $e');
+      debugLog('❌ NotificationService: Failed to mark all as read: $e');
     }
   }
 
@@ -185,7 +186,7 @@ class NotificationService extends ChangeNotifier {
       _notifications.removeWhere((n) => n.id == notificationId);
       notifyListeners();
     } catch (e) {
-      print('❌ NotificationService: Failed to delete notification: $e');
+      debugLog('❌ NotificationService: Failed to delete notification: $e');
     }
   }
 
@@ -197,7 +198,7 @@ class NotificationService extends ChangeNotifier {
       _unreadCount = 0;
       notifyListeners();
     } catch (e) {
-      print('❌ NotificationService: Failed to clear notifications: $e');
+      debugLog('❌ NotificationService: Failed to clear notifications: $e');
     }
   }
 
@@ -220,7 +221,7 @@ class NotificationService extends ChangeNotifier {
 
   // Add manual notification to list (for testing)
   void addNotificationManually(NotificationModel notification) {
-    print(
+    debugLog(
       '🔔 NotificationService: Manually adding notification: ${notification.title}',
     );
     _notifications.insert(0, notification);

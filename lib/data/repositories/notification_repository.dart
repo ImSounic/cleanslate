@@ -2,6 +2,7 @@
 import 'dart:async';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/notification_model.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class NotificationRepository {
   final SupabaseClient _client = Supabase.instance.client;
@@ -151,7 +152,7 @@ class NotificationRepository {
                     );
                     streamController.add(notification);
                   } catch (e) {
-                    print('Error parsing notification: $e');
+                    debugLog('Error parsing notification: $e');
                   }
                 }
               },
@@ -225,7 +226,7 @@ class NotificationRepository {
       );
     } catch (e) {
       // Log error but don't throw to avoid disrupting chore assignment
-      print('Failed to create assignment notification: $e');
+      debugLog('Failed to create assignment notification: $e');
     }
   }
 
@@ -234,7 +235,7 @@ class NotificationRepository {
     try {
       await _client.rpc('check_deadline_notifications');
     } catch (e) {
-      print('Failed to check deadline notifications: $e');
+      debugLog('Failed to check deadline notifications: $e');
     }
   }
 }

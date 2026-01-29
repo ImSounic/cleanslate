@@ -4,6 +4,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/data/services/calendar_service.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class ChoreRepository {
   final SupabaseClient _client = Supabase.instance.client;
@@ -69,7 +70,7 @@ class ChoreRepository {
     String? priority,
   }) async {
     try {
-      print('📝 Starting chore assignment for choreId: $choreId');
+      debugLog('📝 Starting chore assignment...');
 
       // Create the assignment in database
       final assignmentResponse =
@@ -86,7 +87,7 @@ class ChoreRepository {
               .select()
               .single();
 
-      print('✅ Chore assignment created with ID: ${assignmentResponse['id']}');
+      debugLog('✅ Chore assignment created successfully');
 
       // Get chore details for notification and calendar
       final chore =
@@ -108,7 +109,7 @@ class ChoreRepository {
       }
 
       // Add to calendar if user has calendar connected and auto-sync enabled
-      print('🔄 Attempting to sync to calendar...');
+      debugLog('🔄 Attempting to sync to calendar...');
       await _syncChoreToCalendar(
         assignmentId: assignmentResponse['id'],
         userId: assignedTo,
@@ -118,7 +119,7 @@ class ChoreRepository {
         estimatedDuration: chore['estimated_duration'] ?? 30,
       );
     } catch (e) {
-      print('❌ Error in assignChore: $e');
+      debugLog('❌ Error in assignChore: $e');
       // Don't throw - assignment was successful even if calendar sync failed
       if (e.toString().contains('chore_assignments')) {
         throw e; // Re-throw database errors
@@ -136,7 +137,7 @@ class ChoreRepository {
     required int estimatedDuration,
   }) async {
     try {
-      print('📅 Checking calendar integration for user: $userId');
+      debugLog('📅 Checking calendar integration for user...');
 
       // Check if user has calendar integration enabled
       final integrations = await _client
@@ -147,17 +148,17 @@ class ChoreRepository {
           .eq('auto_add_chores', true);
 
       if ((integrations as List).isEmpty) {
-        print('⚠️ User has no calendar integration or sync disabled');
+        debugLog('⚠️ User has no calendar integration or sync disabled');
         return;
       }
 
-      print('✅ Found ${integrations.length} calendar integration(s)');
+      debugLog('✅ Found ${integrations.length} calendar integration(s)');
 
       // Get the first active integration (usually Google)
       final integration = integrations.first;
 
       if (integration['provider'] == 'google') {
-        print('🔄 Syncing to Google Calendar...');
+        debugLog('🔄 Syncing to Google Calendar...');
 
         // Add to Google Calendar
         await _calendarService.addChoreToGoogleCalendar(
@@ -180,14 +181,14 @@ class ChoreRepository {
           'calendar_provider': 'google',
         });
 
-        print('✅ Chore successfully added to Google Calendar!');
+        debugLog('✅ Chore successfully added to Google Calendar!');
       } else {
-        print(
+        debugLog(
           '⚠️ Calendar provider ${integration['provider']} not yet supported',
         );
       }
     } catch (e) {
-      print('❌ Failed to sync chore to calendar: $e');
+      debugLog('❌ Failed to sync chore to calendar: $e');
       // Don't throw - this shouldn't break the assignment
     }
   }
@@ -265,7 +266,7 @@ class ChoreRepository {
   // Test method to directly test calendar sync
   Future<void> testCalendarSync() async {
     try {
-      print('🧪 Testing calendar sync...');
+      debugLog('🧪 Testing calendar sync...');
       final userId = _client.auth.currentUser!.id;
 
       // Create a test chore
@@ -276,9 +277,9 @@ class ChoreRepository {
         description: 'This is a test chore to verify calendar sync is working',
       );
 
-      print('✅ Test chore added to calendar successfully!');
+      debugLog('✅ Test chore added to calendar successfully!');
     } catch (e) {
-      print('❌ Test failed: $e');
+      debugLog('❌ Test failed: $e');
       throw e;
     }
   }

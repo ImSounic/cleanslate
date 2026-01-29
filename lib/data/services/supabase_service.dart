@@ -1,11 +1,11 @@
 // lib/data/services/supabase_service.dart
 // Updated with fixed Google Sign-In nonce handling
-// ignore_for_file: avoid_print
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:io';
 import 'package:path/path.dart' as path;
+import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:uuid/uuid.dart';
 
 class SupabaseService {
@@ -23,7 +23,7 @@ class SupabaseService {
   // Google Sign In - FIXED: Updated nonce handling
   Future<AuthResponse> signInWithGoogle() async {
     try {
-      print('Starting Google Sign-In...');
+      debugLog('Starting Google Sign-In...');
       
       // Sign out from any previous Google session to ensure account picker shows
       await _googleSignIn.signOut();
@@ -35,7 +35,7 @@ class SupabaseService {
         throw Exception('Google sign in was cancelled');
       }
 
-      print('Google user obtained: ${googleUser.email}');
+      debugLog('Google user obtained successfully');
 
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
@@ -44,7 +44,7 @@ class SupabaseService {
         throw Exception('No ID token found');
       }
 
-      print('Google auth tokens obtained');
+      debugLog('Google auth tokens obtained');
 
       // FIXED: Use signInWithIdToken without nonce parameter
       final response = await client.auth.signInWithIdToken(
@@ -54,7 +54,7 @@ class SupabaseService {
         // Remove nonce parameter to avoid mismatch
       );
 
-      print('Supabase sign-in successful');
+      debugLog('Supabase sign-in successful');
 
       // Update or create profile with Google data
       if (response.user != null) {
@@ -63,7 +63,7 @@ class SupabaseService {
 
       return response;
     } catch (e) {
-      print('Google sign in error: $e');
+      debugLog('Google sign in error: $e');
       rethrow;
     }
   }
@@ -71,7 +71,7 @@ class SupabaseService {
   // Alternative method using OAuth flow for better compatibility
   Future<bool> signInWithGoogleOAuth() async {
     try {
-      print('Starting Google OAuth Sign-In...');
+      debugLog('Starting Google OAuth Sign-In...');
       
       // Use Supabase's OAuth flow instead of custom token handling
       final success = await client.auth.signInWithOAuth(
@@ -82,7 +82,7 @@ class SupabaseService {
 
       return success;
     } catch (e) {
-      print('Google OAuth sign in error: $e');
+      debugLog('Google OAuth sign in error: $e');
       rethrow;
     }
   }
@@ -163,7 +163,7 @@ class SupabaseService {
       // Store the Google credentials for future use
       await _storeGoogleCredentials(currentUser!.id, googleUser);
     } catch (e) {
-      print('Error linking Google account: $e');
+      debugLog('Error linking Google account: $e');
       rethrow;
     }
   }
@@ -179,7 +179,7 @@ class SupabaseService {
 
       return response;
     } catch (e) {
-      print('Error checking existing Google user: $e');
+      debugLog('Error checking existing Google user: $e');
       return null;
     }
   }
@@ -219,7 +219,7 @@ class SupabaseService {
         });
       }
     } catch (e) {
-      print('Error storing Google credentials: $e');
+      debugLog('Error storing Google credentials: $e');
       // Continue anyway as the main linking was successful
     }
   }
@@ -238,7 +238,7 @@ class SupabaseService {
       return profile['auth_provider'] == 'google' ||
           profile['auth_provider'] == 'email_and_google';
     } catch (e) {
-      print('Error checking Google link status: $e');
+      debugLog('Error checking Google link status: $e');
       return false;
     }
   }
@@ -291,7 +291,7 @@ class SupabaseService {
         UserAttributes(data: {'google_linked': false, 'google_id': null}),
       );
     } catch (e) {
-      print('Error unlinking Google account: $e');
+      debugLog('Error unlinking Google account: $e');
       rethrow;
     }
   }
@@ -302,7 +302,7 @@ class SupabaseService {
     GoogleSignInAccount googleUser,
   ) async {
     try {
-      print('Updating profile with Google data...');
+      debugLog('Updating profile with Google data...');
       
       // Check if profile exists
       final profile = await client
@@ -324,7 +324,7 @@ class SupabaseService {
       if (profile == null) {
         // Create new profile
         await client.from('profiles').insert(profileData);
-        print('Created new profile for Google user');
+        debugLog('Created new profile for Google user');
       } else {
         // Update existing profile with Google data if missing
         final updates = <String, dynamic>{
@@ -343,7 +343,7 @@ class SupabaseService {
         }
 
         await client.from('profiles').update(updates).eq('id', user.id);
-        print('Updated existing profile with Google data');
+        debugLog('Updated existing profile with Google data');
       }
 
       // Also update auth metadata
@@ -359,10 +359,10 @@ class SupabaseService {
 
       if (metadataUpdates.isNotEmpty) {
         await client.auth.updateUser(UserAttributes(data: metadataUpdates));
-        print('Updated auth metadata');
+        debugLog('Updated auth metadata');
       }
     } catch (e) {
-      print('Error updating profile with Google data: $e');
+      debugLog('Error updating profile with Google data: $e');
       // Continue anyway since auth was successful
     }
   }
@@ -378,7 +378,7 @@ class SupabaseService {
 
       return response;
     } catch (e) {
-      print('Error checking existing user: $e');
+      debugLog('Error checking existing user: $e');
       return null;
     }
   }
@@ -389,7 +389,7 @@ class SupabaseService {
     try {
       await _googleSignIn.signOut();
     } catch (e) {
-      print('Google sign out error: $e');
+      debugLog('Google sign out error: $e');
     }
 
     // Sign out from Supabase
@@ -438,7 +438,7 @@ class SupabaseService {
           });
         }
       } catch (e) {
-        print('Error creating profile: $e');
+        debugLog('Error creating profile: $e');
         // Continue anyway since the trigger should handle this
       }
     }
@@ -560,7 +560,7 @@ class SupabaseService {
         // Clear profile image URL in both auth metadata and profiles table
         await updateUserProfile(profileImageUrl: null);
       } catch (e) {
-        print('Error removing image: $e');
+        debugLog('Error removing image: $e');
       }
     }
   }
