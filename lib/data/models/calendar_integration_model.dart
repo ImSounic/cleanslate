@@ -1,5 +1,7 @@
 // lib/data/models/calendar_integration_model.dart
 
+import 'package:flutter/material.dart';
+
 class CalendarIntegration {
   final String id;
   final String userId;
@@ -119,16 +121,18 @@ enum CalendarProvider {
     }
   }
 
-  String get icon {
+  /// Returns a Material icon suitable for this calendar provider.
+  /// Previously referenced non-existent PNG assets; now uses built-in icons.
+  IconData get iconData {
     switch (this) {
       case CalendarProvider.google:
-        return 'assets/icons/google_calendar.png';
+        return Icons.event;
       case CalendarProvider.outlook:
-        return 'assets/icons/outlook.png';
+        return Icons.calendar_month;
       case CalendarProvider.apple:
-        return 'assets/icons/apple.png';
+        return Icons.apple;
       case CalendarProvider.icalUrl:
-        return 'assets/icons/calendar.png';
+        return Icons.link;
     }
   }
 }
