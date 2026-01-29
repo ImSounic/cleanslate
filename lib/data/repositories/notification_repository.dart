@@ -9,6 +9,7 @@ class NotificationRepository {
 
   // Stream to listen for new notifications
   RealtimeChannel? _notificationChannel;
+  StreamController<NotificationModel>? _streamController;
 
   // Get notifications for current user
   Future<List<NotificationModel>> getNotifications({
@@ -126,11 +127,12 @@ class NotificationRepository {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('User not authenticated');
 
-    // Clean up existing subscription
+    // Clean up existing subscription and stream controller to prevent leaks
     _notificationChannel?.unsubscribe();
+    _streamController?.close();
 
     // Create a stream controller to manage the notification stream
-    final streamController = StreamController<NotificationModel>();
+    _streamController = StreamController<NotificationModel>();
 
     _notificationChannel =
         _client
@@ -149,7 +151,7 @@ class NotificationRepository {
                   final notification = NotificationModel.fromJson(
                     payload.newRecord,
                   );
-                  streamController.add(notification);
+                  _streamController?.add(notification);
                 } catch (e) {
                   debugLog('Error parsing notification: $e');
                 }
@@ -157,13 +159,15 @@ class NotificationRepository {
             )
             .subscribe();
 
-    return streamController.stream;
+    return _streamController!.stream;
   }
 
-  // Unsubscribe from notifications
+  // Unsubscribe from notifications and clean up stream
   void unsubscribeFromNotifications() {
     _notificationChannel?.unsubscribe();
     _notificationChannel = null;
+    _streamController?.close();
+    _streamController = null;
   }
 
   // Create a notification (mainly for testing or manual notifications)
