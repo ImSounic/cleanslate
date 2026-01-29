@@ -1,4 +1,4 @@
-package com.example.cleanslate
+package com.imsounic.cleanslate
 
 import io.flutter.embedding.android.FlutterActivity
 
