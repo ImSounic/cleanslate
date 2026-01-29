@@ -8,6 +8,7 @@ import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:cleanslate/core/utils/input_sanitizer.dart';
 
 class AddChoreScreen extends StatefulWidget {
   const AddChoreScreen({super.key});
@@ -97,7 +98,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
 
   // Add a todo item to the list
   void _addTodoItem() {
-    final todoText = _todoTextController.text.trim();
+    final todoText = sanitizeSingleLine(_todoTextController.text, maxLength: 500);
     if (todoText.isNotEmpty) {
       setState(() {
         _todoItems.add(todoText);
@@ -154,11 +155,15 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       // Get formatted description with todo items
       final formattedDescription = _getFormattedDescription();
 
+      // Sanitize inputs before DB write
+      final sanitizedName = sanitizeChoreName(_titleController.text);
+      final sanitizedDescription = sanitizeDescription(formattedDescription);
+
       // Create chore
       final chore = await _choreRepository.createChore(
         householdId: currentHousehold.id,
-        name: _titleController.text.trim(),
-        description: formattedDescription,
+        name: sanitizedName,
+        description: sanitizedDescription,
         frequency: _repeatPattern,
       );
 

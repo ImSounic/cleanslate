@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'dart:io';
+import 'package:cleanslate/core/utils/input_sanitizer.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -96,11 +97,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         newProfileImageUrl = _profileImageUrl;
       }
 
+      // Sanitize inputs before DB write
+      final sanitizedName = sanitizeProfileName(_nameController.text);
+      final sanitizedPhone = sanitizePhoneNumber(_phoneController.text);
+      final sanitizedBio = sanitizeBio(_bioController.text);
+
       // Then update user profile data
       await _supabaseService.updateUserProfile(
-        fullName: _nameController.text.trim(),
-        phoneNumber: _phoneController.text.trim(),
-        bio: _bioController.text.trim(),
+        fullName: sanitizedName,
+        phoneNumber: sanitizedPhone,
+        bio: sanitizedBio,
         profileImageUrl: newProfileImageUrl,
       );
 

@@ -4,6 +4,7 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/members/screens/qr_scanner_screen.dart';
+import 'package:cleanslate/core/utils/input_sanitizer.dart';
 
 class JoinHouseholdDialog extends StatefulWidget {
   const JoinHouseholdDialog({super.key});
@@ -34,7 +35,7 @@ class _JoinHouseholdDialogState extends State<JoinHouseholdDialog> {
 
     try {
       final household = await _householdRepository.joinHouseholdWithCode(
-        _codeController.text.trim(),
+        sanitizeSingleLine(_codeController.text, maxLength: 8),
       );
 
       // Set the newly joined household as current

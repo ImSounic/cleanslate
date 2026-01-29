@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/core/utils/input_sanitizer.dart';
 
 class CreateHouseholdDialog extends StatefulWidget {
   const CreateHouseholdDialog({super.key});
@@ -31,7 +32,7 @@ class _CreateHouseholdDialogState extends State<CreateHouseholdDialog> {
 
     try {
       await _householdService.createAndSetHousehold(
-        _nameController.text.trim(),
+        sanitizeHouseholdName(_nameController.text),
       );
       if (mounted) {
         Navigator.of(context).pop(true); // Return true to indicate success
@@ -84,8 +85,11 @@ class _CreateHouseholdDialogState extends State<CreateHouseholdDialog> {
                   fillColor: AppColors.surface,
                 ),
                 validator: (value) {
-                  if (value == null || value.isEmpty) {
+                  if (value == null || value.trim().isEmpty) {
                     return 'Please enter a household name';
+                  }
+                  if (value.trim().length > 100) {
+                    return 'Household name must be 100 characters or less';
                   }
                   return null;
                 },
