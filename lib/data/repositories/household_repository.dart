@@ -3,7 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'dart:math';
-import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class HouseholdRepository {
   final SupabaseClient _client = Supabase.instance.client;
@@ -281,32 +280,19 @@ class HouseholdRepository {
         return _membersCache[householdId]!;
       }
 
-      // First, get the household members
+      // Fetch household members with profile data in a single query
+      // using Supabase's foreign key join (replaces N+1 per-member queries)
       final membersResponse = await _client
           .from('household_members')
-          .select('*')
+          .select('*, profiles!inner(full_name, email, profile_image_url)')
           .eq('household_id', householdId)
           .eq('is_active', true)
           .order('joined_at', ascending: false);
 
       final members = <HouseholdMemberModel>[];
 
-      // Then, for each member, get their profile data
       for (final memberData in membersResponse) {
-        // Get profile data separately
-        Map<String, dynamic>? profile;
-        try {
-          profile =
-              await _client
-                  .from('profiles')
-                  .select('full_name, email, profile_image_url')
-                  .eq('id', memberData['user_id'])
-                  .maybeSingle();
-        } catch (e) {
-          debugLog(
-            'Warning: Could not fetch profile for household member: $e',
-          );
-        }
+        final profile = memberData['profiles'] as Map<String, dynamic>?;
 
         members.add(
           HouseholdMemberModel(
