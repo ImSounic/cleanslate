@@ -872,7 +872,7 @@ class _MembersScreenState extends State<MembersScreen> {
                                 isDarkMode
                                     ? AppColors.surfaceDark
                                     : AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color:
                                   isDarkMode
@@ -940,7 +940,7 @@ class _MembersScreenState extends State<MembersScreen> {
                           backgroundColor: AppColors.primary,
                           foregroundColor: AppColors.textLight,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16,
@@ -1040,11 +1040,11 @@ class _MembersScreenState extends State<MembersScreen> {
                       backgroundColor: AppColors.primary,
                       foregroundColor: AppColors.textLight,
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
+                        horizontal: 16,
                         vertical: 12,
                       ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       elevation: 3,
                     ),
@@ -1101,7 +1101,7 @@ class _MembersScreenState extends State<MembersScreen> {
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
@@ -1166,7 +1166,7 @@ class _MembersScreenState extends State<MembersScreen> {
                     vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
@@ -1183,7 +1183,7 @@ class _MembersScreenState extends State<MembersScreen> {
                     vertical: 12,
                   ),
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),

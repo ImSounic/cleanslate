@@ -602,7 +602,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                           backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -617,7 +617,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                           foregroundColor: Colors.grey,
                           side: const BorderSide(color: Colors.grey),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
@@ -770,7 +770,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                   vertical: 12,
                 ),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
             ),
@@ -979,7 +979,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                 backgroundColor: Colors.white,
                 foregroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.symmetric(
                   horizontal: 24,

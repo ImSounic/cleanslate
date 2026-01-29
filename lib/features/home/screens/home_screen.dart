@@ -927,7 +927,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ? AppColors.tabInactiveDark
                   : AppColors.tabInactive,
         ),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         backgroundColor: Colors.transparent,
         foregroundColor:
             isSelected
@@ -993,9 +993,9 @@ class _HomeScreenState extends State<HomeScreen>
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
           ),

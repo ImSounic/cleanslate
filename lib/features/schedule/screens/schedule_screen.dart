@@ -337,7 +337,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
                 // Week/Month toggle
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Container(
                     decoration: BoxDecoration(
                       color:
@@ -448,7 +448,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
                 // Chores section title
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 20, 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -475,7 +475,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               isDarkMode
                                   ? AppColors.primaryDark
                                   : AppColors.primary,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
                           '0${_chores.length} tasks',
@@ -695,7 +695,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
     return Container(
       padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 20),
+      margin: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -917,7 +917,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       }
 
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
@@ -1089,7 +1089,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
             // Recurring Chores header with sync icon and Add button
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 16),
+              padding: const EdgeInsets.fromLTRB(16, 10, 20, 16),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -1138,7 +1138,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                               ? AppColors.primaryDark
                               : AppColors.primary,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       padding: const EdgeInsets.symmetric(
                         horizontal: 12,
@@ -1203,7 +1203,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
                       return Padding(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
+                          horizontal: 16,
                           vertical: 4,
                         ),
                         child: Container(
