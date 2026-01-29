@@ -1,6 +1,5 @@
 // lib/features/settings/screens/edit_profile_screen.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
@@ -658,95 +657,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   ],
                 ),
               ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? AppColors.borderDark : AppColors.border,
-              width: 1,
-            ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: 3, // Settings tab
-          onTap: (index) {
-            if (index != 3) {
-              // Handle navigation
-              Navigator.pop(context);
-            }
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor:
-              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
-          unselectedItemColor:
-              isDarkMode
-                  ? AppColors.navUnselectedDark
-                  : AppColors.navUnselected,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor:
-              isDarkMode ? AppColors.backgroundDark : AppColors.background,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/home.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  isDarkMode
-                      ? AppColors.navUnselectedDark
-                      : AppColors.navUnselected,
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/members.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  isDarkMode
-                      ? AppColors.navUnselectedDark
-                      : AppColors.navUnselected,
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Members',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/schedule.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  isDarkMode
-                      ? AppColors.navUnselectedDark
-                      : AppColors.navUnselected,
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/settings.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  isDarkMode
-                      ? AppColors.navSelectedDark
-                      : AppColors.navSelected,
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Settings',
-            ),
-          ],
-        ),
-      ),
+      // Bottom navigation removed — handled by MainScaffold via AppShell.
     );
   }
 

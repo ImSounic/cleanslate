@@ -2,15 +2,11 @@
 // Complete updated settings screen with chore preferences and calendar sync integration
 
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
-import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/settings/screens/add_password_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
-import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/features/profile/screens/chore_preferences_screen.dart';
 import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.dart';
 import 'package:cleanslate/features/settings/widgets/calendar_sync_settings.dart';
@@ -32,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _profileImageUrl;
   bool _pushNotifications = true;
   bool _reminders = true;
-  final int _selectedNavIndex = 3; // Settings tab selected
   bool _isLoading = false;
   bool _hasGoogleLinked = false;
   String? _authProvider;
@@ -129,97 +124,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  void _navigateToScreen(int index) {
-    if (index == _selectedNavIndex) return;
-
-    Widget destination;
-    switch (index) {
-      case 0:
-        destination = const HomeScreen();
-        break;
-      case 1:
-        destination = const MembersScreen();
-        break;
-      case 2:
-        destination = const ScheduleScreen();
-        break;
-      case 3:
-        return; // Already on settings
-      default:
-        return;
-    }
-
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (context) => destination));
-  }
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
-    return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.backgroundDark : AppColors.background,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Header
-            _buildHeader(isDarkMode),
+    return SafeArea(
+      child: Column(
+        children: [
+          // Header
+          _buildHeader(isDarkMode),
 
-            // Settings Content
-            Expanded(
-              child:
-                  _isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Profile Section
-                            _buildSectionTitle('Profile', isDarkMode),
-                            _buildEditProfileOption(isDarkMode),
-                            _buildChorePreferencesOption(isDarkMode),
-                            _buildCalendarConnectionOption(isDarkMode),
+          // Settings Content
+          Expanded(
+            child:
+                _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Profile Section
+                          _buildSectionTitle('Profile', isDarkMode),
+                          _buildEditProfileOption(isDarkMode),
+                          _buildChorePreferencesOption(isDarkMode),
+                          _buildCalendarConnectionOption(isDarkMode),
 
-                            const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                            // Calendar Sync Settings (NEW)
-                            const CalendarSyncSettings(),
+                          // Calendar Sync Settings (NEW)
+                          const CalendarSyncSettings(),
 
-                            const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                            // Notifications Section
-                            _buildSectionTitle('Notifications', isDarkMode),
-                            _buildNotificationOptions(isDarkMode),
+                          // Notifications Section
+                          _buildSectionTitle('Notifications', isDarkMode),
+                          _buildNotificationOptions(isDarkMode),
 
-                            const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                            // Appearance Section
-                            _buildSectionTitle('Appearance', isDarkMode),
-                            _buildThemeOption(isDarkMode),
+                          // Appearance Section
+                          _buildSectionTitle('Appearance', isDarkMode),
+                          _buildThemeOption(isDarkMode),
 
-                            const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                            // Account Section
-                            _buildSectionTitle('Account', isDarkMode),
-                            _buildAccountOptions(isDarkMode),
+                          // Account Section
+                          _buildSectionTitle('Account', isDarkMode),
+                          _buildAccountOptions(isDarkMode),
 
-                            const SizedBox(height: 24),
+                          const SizedBox(height: 24),
 
-                            // Logout Button
-                            _buildLogoutButton(isDarkMode),
-                          ],
-                        ),
+                          // Logout Button
+                          _buildLogoutButton(isDarkMode),
+                        ],
                       ),
-            ),
-
-            // Bottom Navigation
-            _buildBottomNavigation(isDarkMode),
-          ],
-        ),
+                    ),
+          ),
+        ],
       ),
     );
   }
@@ -228,10 +191,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.surfaceDark : Colors.white,
+        color: isDarkMode ? AppColors.backgroundDark : AppColors.background,
         border: Border(
           bottom: BorderSide(
-            color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
+            color: isDarkMode ? AppColors.borderDark : AppColors.border,
           ),
         ),
       ),
@@ -747,77 +710,5 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildBottomNavigation(bool isDarkMode) {
-    return Container(
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.surfaceDark : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
-          ),
-        ),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _selectedNavIndex,
-        onTap: _navigateToScreen,
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-        selectedLabelStyle: const TextStyle(fontFamily: 'VarelaRound'),
-        unselectedLabelStyle: const TextStyle(fontFamily: 'VarelaRound'),
-        items: [
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/home.svg',
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
-                      ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400]! : Colors.grey[600]!),
-                  BlendMode.srcIn),
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/members.svg',
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
-                      ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400]! : Colors.grey[600]!),
-                  BlendMode.srcIn),
-            ),
-            label: 'Members',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/icons/schedule.svg',
-              width: 24,
-              height: 24,
-              colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
-                      ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400]! : Colors.grey[600]!),
-                  BlendMode.srcIn),
-            ),
-            label: 'Schedule',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(
-              Icons.settings,
-              color:
-                  _selectedNavIndex == 3
-                      ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
-            ),
-            label: 'Settings',
-          ),
-        ],
-      ),
-    );
-  }
+  // Bottom navigation is now handled by MainScaffold via AppShell.
 }

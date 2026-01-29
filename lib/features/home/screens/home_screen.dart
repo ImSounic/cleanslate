@@ -6,11 +6,9 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
-import 'package:cleanslate/features/members/screens/members_screen.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
@@ -36,7 +34,6 @@ class _HomeScreenState extends State<HomeScreen>
       []; // Added completed chores list
   bool _isLoading = true;
   int _selectedTabIndex = 0;
-  int _selectedNavIndex = 0;
 
   late AnimationController _toggleController;
   late Animation<double> _toggleAnimation;
@@ -597,17 +594,14 @@ class _HomeScreenState extends State<HomeScreen>
       _toggleController.value = 0.0;
     }
 
-    return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.backgroundDark : AppColors.background,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Top bar with icons
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-              child: Row(
+    return SafeArea(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Top bar with icons
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   // Theme toggle
@@ -817,9 +811,9 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
             ),
-            // Greeting below the top bar
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          // Greeting below the top bar
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -883,161 +877,24 @@ class _HomeScreenState extends State<HomeScreen>
             ),
           ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.primary,
-        shape: const CircleBorder(),
-        child: Icon(Icons.add, color: AppColors.textLight),
-        onPressed: () async {
-          // Navigate to the add chore screen
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddChoreScreen()),
-          );
+      );
+  }
 
-          // If a chore was added successfully, refresh the list
-          if (result == true) {
-            _loadChores();
-          }
-        },
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? AppColors.borderDark : AppColors.border,
-              width: 1,
-            ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedNavIndex,
-          onTap: (index) async {
-            // Handle navigation based on selected index
-            if (index == 1) {
-              // Members tab
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const MembersScreen()),
-              );
-              // Reset the selected index to home after returning from members screen
-              setState(() {
-                _selectedNavIndex = 0;
-              });
-            } else if (index == 2) {
-              // Schedule tab - Add this section
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const ScheduleScreen()),
-              );
-              // Reset the selected index to home after returning from schedule screen
-              setState(() {
-                _selectedNavIndex = 0;
-              });
-            } else if (index == 3) {
-              // Settings tab
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-              // Reset the selected index to home after returning from settings screen
-              setState(() {
-                _selectedNavIndex = 0;
-              });
-            } else {
-              setState(() {
-                _selectedNavIndex = index;
-              });
-            }
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor:
-              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
-          unselectedItemColor:
-              isDarkMode
-                  ? AppColors.navUnselectedDark
-                  : AppColors.navUnselected,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor:
-              isDarkMode ? AppColors.backgroundDark : AppColors.background,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/home.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/members.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Members',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/schedule.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/settings.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 3
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Settings',
-            ),
-          ],
-        ),
-      ),
+  /// Builds the FAB for adding chores — used by AppShell.
+  Widget buildFloatingActionButton() {
+    return FloatingActionButton(
+      backgroundColor: AppColors.primary,
+      shape: const CircleBorder(),
+      child: Icon(Icons.add, color: AppColors.textLight),
+      onPressed: () async {
+        final result = await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const AddChoreScreen()),
+        );
+        if (result == true) {
+          _loadChores();
+        }
+      },
     );
   }
 

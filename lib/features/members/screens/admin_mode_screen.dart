@@ -3,15 +3,12 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
-import 'package:cleanslate/features/home/screens/home_screen.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
+import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class AdminModeScreen extends StatefulWidget {
@@ -28,7 +25,6 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
   final TextEditingController _deleteConfirmController =
       TextEditingController();
 
-  int _selectedNavIndex = 1; // Members tab selected
   bool _isLoading = true;
   String _errorMessage = '';
 
@@ -658,7 +654,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
 
       // Navigate back to members screen
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const AppShell()),
         (route) => false,
       );
     } catch (e) {
@@ -701,40 +697,6 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     }
   }
 
-  void _handleNavigation(int index) {
-    if (index != _selectedNavIndex) {
-      setState(() {
-        _selectedNavIndex = index;
-      });
-
-      // Navigate to the appropriate screen
-      switch (index) {
-        case 0: // Home
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-            (route) => false,
-          );
-          break;
-        case 1: // Members - already on this screen, just close admin mode
-          Navigator.pop(context);
-          break;
-        case 2: // Calendar
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const ScheduleScreen()),
-          );
-          break;
-        case 3: // Settings
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const SettingsScreen()),
-          );
-          break;
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -763,74 +725,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                 ? _buildErrorState()
                 : _buildContent(),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedNavIndex,
-        onTap: _handleNavigation, // Use the navigation handler
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: AppColors.primary,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white.withValues(alpha: 0.6),
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        items: [
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/images/icons/home.svg',
-              height: 24,
-              width: 24,
-              colorFilter: ColorFilter.mode(
-                _selectedNavIndex == 0
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.6),
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/images/icons/members.svg',
-              height: 24,
-              width: 24,
-              colorFilter: ColorFilter.mode(
-                _selectedNavIndex == 1
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.6),
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Members',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/images/icons/schedule.svg',
-              height: 24,
-              width: 24,
-              colorFilter: ColorFilter.mode(
-                _selectedNavIndex == 2
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.6),
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Calendar',
-          ),
-          BottomNavigationBarItem(
-            icon: SvgPicture.asset(
-              'assets/images/icons/settings.svg',
-              height: 24,
-              width: 24,
-              colorFilter: ColorFilter.mode(
-                _selectedNavIndex == 3
-                    ? Colors.white
-                    : Colors.white.withValues(alpha: 0.6),
-                BlendMode.srcIn,
-              ),
-            ),
-            label: 'Settings',
-          ),
-        ],
-      ),
+      // Bottom navigation removed — handled by MainScaffold via AppShell.
     );
   }
 

@@ -13,9 +13,7 @@ import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
-import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({Key? key}) : super(key: key);
@@ -33,8 +31,6 @@ class _MembersScreenState extends State<MembersScreen> {
       TextEditingController();
   final TextEditingController _householdCodeController =
       TextEditingController();
-
-  int _selectedNavIndex = 1; // Members tab selected
 
   List<HouseholdMemberModel> _members = [];
   bool _isLoading = true;
@@ -855,35 +851,18 @@ class _MembersScreenState extends State<MembersScreen> {
     // Check dark mode
     final isDarkMode = ThemeUtils.isDarkMode(context);
 
-    return Scaffold(
-      backgroundColor:
-          isDarkMode ? AppColors.backgroundDark : AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Back button, search bar and code button section
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
-                    children: [
-                      // Back button
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color:
-                              isDarkMode
-                                  ? AppColors.textPrimaryDark
-                                  : AppColors.primary,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                      ),
-                      const SizedBox(width: 8),
-                      // Search bar
+    return SafeArea(
+      child: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Search bar and code button section
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Row(
+                  children: [
+                    // Search bar
                       Expanded(
                         child: Container(
                           height: 40,
@@ -1078,136 +1057,7 @@ class _MembersScreenState extends State<MembersScreen> {
               ),
           ],
         ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            top: BorderSide(
-              color: isDarkMode ? AppColors.borderDark : AppColors.border,
-              width: 1,
-            ),
-          ),
-        ),
-        child: BottomNavigationBar(
-          currentIndex: _selectedNavIndex,
-          onTap: (index) {
-            if (index != _selectedNavIndex) {
-              setState(() {
-                _selectedNavIndex = index;
-              });
-
-              // Handle navigation
-              if (index == 0) {
-                // Navigate back to home
-                Navigator.pop(context);
-              } else if (index == 2) {
-                // Navigate to Schedule screen
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ScheduleScreen(),
-                  ),
-                );
-              } else if (index == 3) {
-                // Settings tab
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              }
-            }
-          },
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor:
-              isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
-          unselectedItemColor:
-              isDarkMode
-                  ? AppColors.navUnselectedDark
-                  : AppColors.navUnselected,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor:
-              isDarkMode ? AppColors.backgroundDark : AppColors.background,
-          elevation: 0,
-          items: [
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/home.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 0
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Home',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/members.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 1
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Members',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/schedule.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 2
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Calendar',
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset(
-                'assets/images/icons/settings.svg',
-                height: 24,
-                width: 24,
-                colorFilter: ColorFilter.mode(
-                  _selectedNavIndex == 3
-                      ? (isDarkMode
-                          ? AppColors.navSelectedDark
-                          : AppColors.navSelected)
-                      : (isDarkMode
-                          ? AppColors.navUnselectedDark
-                          : AppColors.navUnselected),
-                  BlendMode.srcIn,
-                ),
-              ),
-              label: 'Settings',
-            ),
-          ],
-        ),
-      ),
-    );
+      );
   }
 
   Widget _buildErrorView(bool isDarkMode) {

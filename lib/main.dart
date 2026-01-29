@@ -12,7 +12,7 @@ import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/auth/screens/signup_screen.dart';
 import 'package:cleanslate/features/auth/screens/forgot_password_screen.dart';
-import 'package:cleanslate/features/home/screens/home_screen.dart';
+import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/core/theme/app_theme.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
@@ -188,13 +188,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                     ),
                   )
                   : _isLoggedIn
-                  ? const HomeScreen()
+                  ? const AppShell()
                   : const LandingScreen(),
           routes: {
             '/login': (context) => const LoginScreen(),
             '/signup': (context) => const SignupScreen(),
             '/forgot-password': (context) => const ForgotPasswordScreen(),
-            '/home': (context) => const HomeScreen(),
+            '/home': (context) => const AppShell(),
             '/calendar-connection': (context) => const CalendarConnectionScreen(),
           },
         );
