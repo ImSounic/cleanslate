@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/constants/app_text_styles.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
@@ -325,14 +326,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                 child: Text(
                   'Schedule',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+                  style: AppTextStyles.heading1.copyWith(
                     color:
                         isDarkMode
                             ? AppColors.textPrimaryDark
                             : AppColors.primary,
-                    fontFamily: 'Switzer',
                   ),
                 ),
               ),

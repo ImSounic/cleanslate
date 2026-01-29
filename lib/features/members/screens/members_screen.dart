@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/constants/app_text_styles.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
@@ -966,10 +967,7 @@ class _MembersScreenState extends State<MembersScreen> {
                     children: [
                       Text(
                         'Members',
-                        style: TextStyle(
-                          fontSize: 38,
-                          fontFamily: 'Switzer',
-                          fontWeight: FontWeight.w600,
+                        style: AppTextStyles.screenTitle.copyWith(
                           color:
                               isDarkMode
                                   ? AppColors.textPrimaryDark
@@ -978,9 +976,7 @@ class _MembersScreenState extends State<MembersScreen> {
                       ),
                       Text(
                         _householdName,
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontFamily: 'VarelaRound',
+                        style: AppTextStyles.subtitleLarge.copyWith(
                           color:
                               isDarkMode
                                   ? AppColors.textPrimaryDark

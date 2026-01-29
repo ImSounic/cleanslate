@@ -6,6 +6,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/constants/app_text_styles.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
@@ -169,22 +170,17 @@ class _HomeScreenState extends State<HomeScreen>
                 const SizedBox(height: 8),
                 Text(
                   _userName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                  style: AppTextStyles.cardTitle.copyWith(
                     color: AppColors.primary,
-                    fontFamily: 'Switzer',
                   ),
                 ),
                 Text(
                   _supabaseService.currentUser?.email ?? 'email@example.com',
-                  style: TextStyle(
-                    fontSize: 14,
+                  style: AppTextStyles.bodyMedium.copyWith(
                     color:
                         isDarkMode
                             ? AppColors.textSecondaryDark
                             : AppColors.textSecondary,
-                    fontFamily: 'VarelaRound',
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -460,11 +456,8 @@ class _HomeScreenState extends State<HomeScreen>
                     const SizedBox(width: 8),
                     Text(
                       'Task Details',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                      style: AppTextStyles.dialogTitle.copyWith(
                         color: AppColors.primary,
-                        fontFamily: 'Switzer',
                       ),
                     ),
                   ],
@@ -819,11 +812,7 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   Text(
                     'Hello $firstName!',
-                    style: TextStyle(
-                      fontSize: 48,
-                      fontFamily: 'Switzer',
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -3,
+                    style: AppTextStyles.greeting.copyWith(
                       color:
                           isDarkMode
                               ? AppColors.textPrimaryDark
@@ -832,9 +821,7 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   Text(
                     'Have a nice day.',
-                    style: TextStyle(
-                      fontSize: 23,
-                      fontFamily: 'VarelaRound',
+                    style: AppTextStyles.subtitle.copyWith(
                       color:
                           isDarkMode
                               ? AppColors.textSecondaryDark
@@ -952,7 +939,7 @@ class _HomeScreenState extends State<HomeScreen>
       ),
       child: Text(
         _tabTitles[index],
-        style: const TextStyle(fontSize: 14, fontFamily: 'VarelaRound'),
+        style: AppTextStyles.bodyMedium,
       ),
     );
   }
@@ -973,26 +960,21 @@ class _HomeScreenState extends State<HomeScreen>
           const SizedBox(height: 16),
           Text(
             'No chores assigned to you',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            style: AppTextStyles.dialogTitle.copyWith(
               color:
                   isDarkMode
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
-              fontFamily: 'Switzer',
             ),
           ),
           const SizedBox(height: 8),
           Text(
             'Add chores to get started',
-            style: TextStyle(
-              fontSize: 16,
+            style: AppTextStyles.bodyLarge.copyWith(
               color:
                   isDarkMode
                       ? AppColors.textSecondaryDark
                       : AppColors.textSecondary,
-              fontFamily: 'VarelaRound',
             ),
           ),
           const SizedBox(height: 24),
@@ -1202,10 +1184,7 @@ class _HomeScreenState extends State<HomeScreen>
                 // TOP ROW - Title only (description icon moved down)
                 Text(
                   chore['name'] ?? 'Unnamed Chore',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    fontFamily: 'Switzer',
+                  style: AppTextStyles.cardTitle.copyWith(
                     color:
                         isDarkMode
                             ? AppColors.textPrimaryDark

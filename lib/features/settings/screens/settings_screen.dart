@@ -3,6 +3,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/constants/app_text_styles.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
@@ -226,10 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 Text(
                   _userName,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Switzer',
+                  style: AppTextStyles.heading3.copyWith(
                     color:
                         isDarkMode
                             ? AppColors.textPrimaryDark
@@ -238,10 +236,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 Text(
                   _userEmail,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-                    fontFamily: 'VarelaRound',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -266,12 +265,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Text(
         title,
-        style: TextStyle(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-          color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
-          fontFamily: 'Switzer',
-          letterSpacing: 0.5,
+        style: AppTextStyles.sectionLabel.copyWith(
+          color:
+              isDarkMode
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondary,
         ),
       ),
     );
@@ -583,17 +581,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
           minimumSize: const Size(double.infinity, 50),
         ),
-        child: const Row(
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.logout, color: Colors.white),
-            SizedBox(width: 8),
+            const Icon(Icons.logout, color: Colors.white),
+            const SizedBox(width: 8),
             Text(
               'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                fontFamily: 'Switzer',
+              style: AppTextStyles.buttonSwitzer.copyWith(
                 color: Colors.white,
               ),
             ),
@@ -632,19 +627,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: Text(
           title,
-          style: TextStyle(
-            fontFamily: 'Switzer',
-            fontWeight: FontWeight.w600,
+          style: AppTextStyles.cardTitle.copyWith(
             color:
                 isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
-            fontFamily: 'VarelaRound',
-            fontSize: 12,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+          style: AppTextStyles.bodySmall.copyWith(
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
           ),
         ),
         trailing:
@@ -652,7 +646,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             Icon(
               Icons.arrow_forward_ios,
               size: 16,
-              color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+              color:
+                  isDarkMode
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondary,
             ),
         onTap: onTap,
       ),
@@ -688,19 +685,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         title: Text(
           title,
-          style: TextStyle(
-            fontFamily: 'Switzer',
-            fontWeight: FontWeight.w600,
+          style: AppTextStyles.cardTitle.copyWith(
             color:
                 isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
           ),
         ),
         subtitle: Text(
           subtitle,
-          style: TextStyle(
-            fontFamily: 'VarelaRound',
-            fontSize: 12,
-            color: isDarkMode ? Colors.grey[400] : Colors.grey[600],
+          style: AppTextStyles.bodySmall.copyWith(
+            color:
+                isDarkMode
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondary,
           ),
         ),
         value: value,
