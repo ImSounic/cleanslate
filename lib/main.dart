@@ -1,5 +1,6 @@
 // lib/main.dart
 
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -92,20 +93,56 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final SupabaseService _supabaseService = SupabaseService();
   final HouseholdService _householdService = HouseholdService();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool _isLoading = true;
   bool _isLoggedIn = false;
+  StreamSubscription<AuthState>? _authSubscription;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _listenToAuthStateChanges();
     _initializeApp();
   }
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Listen for auth state changes (sign-out, token refresh failures)
+  /// and redirect to login when the session becomes invalid.
+  void _listenToAuthStateChanges() {
+    _authSubscription = Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) {
+        final event = data.event;
+        debugLog('🔐 Auth state changed: $event');
+
+        if (event == AuthChangeEvent.signedOut ||
+            event == AuthChangeEvent.tokenRefreshed && data.session == null) {
+          // Session expired or user signed out — redirect to login
+          if (mounted) {
+            setState(() {
+              _isLoggedIn = false;
+            });
+            _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+              '/login',
+              (_) => false,
+            );
+          }
+        } else if (event == AuthChangeEvent.signedIn && !_isLoggedIn) {
+          // User signed in from another flow
+          if (mounted) {
+            setState(() {
+              _isLoggedIn = true;
+            });
+          }
+        }
+      },
+    );
   }
 
   @override
@@ -173,6 +210,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         }
 
         return MaterialApp(
+          navigatorKey: _navigatorKey,
           title: 'CleanSlate',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
