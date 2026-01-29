@@ -9,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 
 class CalendarConnectionScreen extends StatefulWidget {
-  const CalendarConnectionScreen({Key? key}) : super(key: key);
+  const CalendarConnectionScreen({super.key});
 
   @override
   State<CalendarConnectionScreen> createState() =>
@@ -354,10 +354,10 @@ class _CalendarConnectionScreenState extends State<CalendarConnectionScreen> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
+                          color: Colors.blue.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: Colors.blue.withOpacity(0.3),
+                            color: Colors.blue.withValues(alpha: 0.3),
                           ),
                         ),
                         child: Row(
@@ -393,9 +393,9 @@ class _CalendarConnectionScreenState extends State<CalendarConnectionScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.primary.withOpacity(0.1),
+        color: AppColors.primary.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -439,14 +439,14 @@ class _CalendarConnectionScreenState extends State<CalendarConnectionScreen> {
       decoration: BoxDecoration(
         color: isDarkMode ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.5)),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.5)),
       ),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: const Icon(
@@ -498,7 +498,7 @@ class _CalendarConnectionScreenState extends State<CalendarConnectionScreen> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -550,7 +550,7 @@ class _CalendarConnectionScreenState extends State<CalendarConnectionScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: iconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(icon, color: iconColor, size: 24),

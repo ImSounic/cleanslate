@@ -309,13 +309,13 @@ class _SignupScreenState extends State<SignupScreen> {
                           });
                         },
                         checkColor: Colors.white,
-                        fillColor: MaterialStateProperty.resolveWith<Color>((
-                          Set<MaterialState> states,
+                        fillColor: WidgetStateProperty.resolveWith<Color>((
+                          Set<WidgetState> states,
                         ) {
-                          if (states.contains(MaterialState.selected)) {
+                          if (states.contains(WidgetState.selected)) {
                             return AppColors.primary;
                           }
-                          return Colors.white.withOpacity(0.3);
+                          return Colors.white.withValues(alpha: 0.3);
                         }),
                       ),
                       GestureDetector(

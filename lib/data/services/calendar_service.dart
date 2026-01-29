@@ -1,13 +1,11 @@
 // lib/data/services/calendar_service.dart
 // FIXED VERSION - Properly formats Google Calendar API requests
 
-import 'dart:convert';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:googleapis/calendar/v3.dart' as gcal;
 import 'package:extension_google_sign_in_as_googleapis_auth/extension_google_sign_in_as_googleapis_auth.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/calendar_integration_model.dart';
-import 'package:http/http.dart' as http;
 import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class CalendarService {
@@ -245,7 +243,7 @@ class CalendarService {
       }
     } catch (e) {
       debugLog('❌ Error in _createCalendarEvent: $e');
-      throw e;
+      rethrow;
     }
   }
 
@@ -321,7 +319,7 @@ class CalendarService {
       debugLog('✅ Test completed successfully! Check your Google Calendar.');
     } catch (e) {
       debugLog('❌ Test failed: $e');
-      throw e;
+      rethrow;
     }
   }
 }

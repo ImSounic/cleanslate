@@ -8,7 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 
 class ChorePreferencesScreen extends StatefulWidget {
-  const ChorePreferencesScreen({Key? key}) : super(key: key);
+  const ChorePreferencesScreen({super.key});
 
   @override
   State<ChorePreferencesScreen> createState() => _ChorePreferencesScreenState();
@@ -26,7 +26,7 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
   late Map<String, int> _choreRatings;
   bool _goHomeWeekends = false;
   int _maxChoresPerWeek = 3;
-  bool _hasConnectedCalendar = false;
+  final bool _hasConnectedCalendar = false;
 
   // Chore types available
   final List<String> _choreTypes = [
@@ -486,7 +486,7 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
             }
           });
         },
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
       ),
     );
   }

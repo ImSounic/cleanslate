@@ -122,7 +122,7 @@ class ChoreRepository {
       debugLog('❌ Error in assignChore: $e');
       // Don't throw - assignment was successful even if calendar sync failed
       if (e.toString().contains('chore_assignments')) {
-        throw e; // Re-throw database errors
+        rethrow; // Re-throw database errors
       }
     }
   }
@@ -280,7 +280,7 @@ class ChoreRepository {
       debugLog('✅ Test chore added to calendar successfully!');
     } catch (e) {
       debugLog('❌ Test failed: $e');
-      throw e;
+      rethrow;
     }
   }
 }

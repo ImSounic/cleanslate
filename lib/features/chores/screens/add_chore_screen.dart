@@ -237,8 +237,8 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
             ),
-            dialogBackgroundColor:
-                isDarkMode ? AppColors.backgroundDark : Colors.white,
+            dialogTheme: DialogThemeData(backgroundColor:
+                isDarkMode ? AppColors.backgroundDark : Colors.white),
           ),
           child: child!,
         );
@@ -276,8 +276,8 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                       ? AppColors.textPrimaryDark
                       : AppColors.textPrimary,
             ),
-            dialogBackgroundColor:
-                isDarkMode ? AppColors.backgroundDark : Colors.white,
+            dialogTheme: DialogThemeData(backgroundColor:
+                isDarkMode ? AppColors.backgroundDark : Colors.white),
           ),
           child: child!,
         );
@@ -867,8 +867,8 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                     ),
                     disabledBackgroundColor:
                         isDarkMode
-                            ? AppColors.primaryDark.withOpacity(0.5)
-                            : AppColors.primary.withOpacity(0.5),
+                            ? AppColors.primaryDark.withValues(alpha: 0.5)
+                            : AppColors.primary.withValues(alpha: 0.5),
                   ),
                   child:
                       _isLoading

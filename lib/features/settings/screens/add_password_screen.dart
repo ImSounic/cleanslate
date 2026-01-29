@@ -116,7 +116,7 @@ class _AddPasswordScreenState extends State<AddPasswordScreen> {
                   color: (isDarkMode
                           ? AppColors.primaryDark
                           : AppColors.primary)
-                      .withOpacity(0.1),
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color:

@@ -289,8 +289,7 @@ class ErrorBoundary extends StatelessWidget {
   final Widget child;
   final Widget Function(FlutterErrorDetails)? errorBuilder;
 
-  const ErrorBoundary({Key? key, required this.child, this.errorBuilder})
-    : super(key: key);
+  const ErrorBoundary({super.key, required this.child, this.errorBuilder});
 
   @override
   Widget build(BuildContext context) {

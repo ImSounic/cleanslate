@@ -15,7 +15,6 @@ import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
-import 'package:cleanslate/widgets/theme_toggle_button.dart';
 import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
 
@@ -302,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                   Navigator.pop(context);
                 },
-                activeColor: AppColors.primary,
+                activeThumbColor: AppColors.primary,
               )
               : null,
       dense: true,

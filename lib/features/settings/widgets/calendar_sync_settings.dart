@@ -5,7 +5,7 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CalendarSyncSettings extends StatefulWidget {
-  const CalendarSyncSettings({Key? key}) : super(key: key);
+  const CalendarSyncSettings({super.key});
 
   @override
   State<CalendarSyncSettings> createState() => _CalendarSyncSettingsState();
@@ -68,17 +68,20 @@ class _CalendarSyncSettingsState extends State<CalendarSyncSettings> {
         _autoAddChores = value;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            value
-                ? 'Chores will be automatically added to your calendar'
-                : 'Automatic calendar sync disabled',
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              value
+                  ? 'Chores will be automatically added to your calendar'
+                  : 'Automatic calendar sync disabled',
+            ),
+            backgroundColor: value ? Colors.green : Colors.orange,
           ),
-          backgroundColor: value ? Colors.green : Colors.orange,
-        ),
-      );
+        );
+      }
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to update settings: $e'),
@@ -101,9 +104,9 @@ class _CalendarSyncSettingsState extends State<CalendarSyncSettings> {
         padding: const EdgeInsets.all(16),
         margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: Colors.orange.withOpacity(0.1),
+          color: Colors.orange.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [
@@ -186,11 +189,11 @@ class _CalendarSyncSettingsState extends State<CalendarSyncSettings> {
             ),
             value: _autoAddChores,
             onChanged: _updateAutoAddChores,
-            activeColor: AppColors.primary,
+            activeThumbColor: AppColors.primary,
             secondary: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: AppColors.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Icon(Icons.sync, color: AppColors.primary, size: 24),
@@ -202,9 +205,9 @@ class _CalendarSyncSettingsState extends State<CalendarSyncSettings> {
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
+              color: Colors.green.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.green.withOpacity(0.3)),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
             ),
             child: Row(
               children: [

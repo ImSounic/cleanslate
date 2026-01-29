@@ -8,8 +8,7 @@ class ThemeToggleButton extends StatefulWidget {
   final double width;
   final double height;
 
-  const ThemeToggleButton({Key? key, this.width = 64, this.height = 32})
-    : super(key: key);
+  const ThemeToggleButton({super.key, this.width = 64, this.height = 32});
 
   @override
   State<ThemeToggleButton> createState() => _ThemeToggleButtonState();

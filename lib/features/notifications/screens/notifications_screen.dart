@@ -408,7 +408,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         value,
                       );
                     },
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                   ),
 
                   SwitchListTile(
@@ -447,7 +447,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               );
                             }
                             : null,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                   ),
 
                   SwitchListTile(
@@ -486,7 +486,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                               );
                             }
                             : null,
-                    activeColor: AppColors.primary,
+                    activeThumbColor: AppColors.primary,
                   ),
 
                   const SizedBox(height: 16),
@@ -679,6 +679,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     _isTestingNotifications
                         ? null
                         : () => _createTestNotification('chore_created'),
+                tooltip: 'Quick Test Notification (with phone preview)',
                 child:
                     _isTestingNotifications
                         ? const CircularProgressIndicator(
@@ -686,7 +687,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           strokeWidth: 2,
                         )
                         : const Icon(Icons.add_alert, color: Colors.white),
-                tooltip: 'Quick Test Notification (with phone preview)',
               )
               : null,
     );
@@ -703,8 +703,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             size: 80,
             color:
                 isDarkMode
-                    ? AppColors.textSecondaryDark.withOpacity(0.5)
-                    : AppColors.textSecondary.withOpacity(0.5),
+                    ? AppColors.textSecondaryDark.withValues(alpha: 0.5)
+                    : AppColors.textSecondary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(
@@ -802,8 +802,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color:
               notification.isRead
                   ? (isDarkMode
-                      ? AppColors.surfaceDark.withOpacity(0.5)
-                      : AppColors.surface.withOpacity(0.5))
+                      ? AppColors.surfaceDark.withValues(alpha: 0.5)
+                      : AppColors.surface.withValues(alpha: 0.5))
                   : (isDarkMode ? AppColors.surfaceDark : AppColors.surface),
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
@@ -828,7 +828,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: notification.getColor().withOpacity(0.1),
+              color: notification.getColor().withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -874,8 +874,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   fontSize: 12,
                   color:
                       isDarkMode
-                          ? AppColors.textSecondaryDark.withOpacity(0.7)
-                          : AppColors.textSecondary.withOpacity(0.7),
+                          ? AppColors.textSecondaryDark.withValues(alpha: 0.7)
+                          : AppColors.textSecondary.withValues(alpha: 0.7),
                   fontFamily: 'VarelaRound',
                 ),
               ),

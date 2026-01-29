@@ -109,10 +109,10 @@ class AppColors {
 
   // Helper methods for opacity variations
   static Color withOpacity(Color color, double opacity) {
-    return color.withOpacity(opacity);
+    return color.withValues(alpha: opacity);
   }
 
   // Common opacity values
-  static Color get primaryLight50 => primary.withOpacity(0.5);
-  static Color get primaryLight30 => primary.withOpacity(0.3);
+  static Color get primaryLight50 => primary.withValues(alpha: 0.5);
+  static Color get primaryLight30 => primary.withValues(alpha: 0.3);
 }

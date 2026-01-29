@@ -1275,8 +1275,8 @@ class _MembersScreenState extends State<MembersScreen> {
             size: 80,
             color:
                 isDarkMode
-                    ? AppColors.textSecondaryDark.withOpacity(0.5)
-                    : AppColors.textSecondary.withOpacity(0.5),
+                    ? AppColors.textSecondaryDark.withValues(alpha: 0.5)
+                    : AppColors.textSecondary.withValues(alpha: 0.5),
           ),
           const SizedBox(height: 16),
           Text(

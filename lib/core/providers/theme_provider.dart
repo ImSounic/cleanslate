@@ -2,8 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/services.dart';
-import 'package:cleanslate/core/constants/app_colors.dart';
-
 class ThemeProvider extends ChangeNotifier {
   // Key for storing theme preference
   static const String _themePreferenceKey = 'theme_preference';

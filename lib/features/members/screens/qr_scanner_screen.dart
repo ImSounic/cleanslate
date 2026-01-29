@@ -110,7 +110,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             painter: ScannerOverlayPainter(
               borderColor: AppColors.primary,
               borderWidth: 4.0,
-              overlayColor: Colors.black.withOpacity(0.5),
+              overlayColor: Colors.black.withValues(alpha: 0.5),
               borderRadius: 12,
               borderLength: 40,
               cutOutSize: 300,
@@ -128,7 +128,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
                   vertical: 12,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(24),
                 ),
                 child: const Text(

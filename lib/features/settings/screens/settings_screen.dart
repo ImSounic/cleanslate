@@ -4,7 +4,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
-import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
@@ -33,7 +32,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _profileImageUrl;
   bool _pushNotifications = true;
   bool _reminders = true;
-  int _selectedNavIndex = 3; // Settings tab selected
+  final int _selectedNavIndex = 3; // Settings tab selected
   bool _isLoading = false;
   bool _hasGoogleLinked = false;
   String? _authProvider;
@@ -349,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ),
         );
 
-        if (result == true) {
+        if (result == true && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Preferences updated successfully'),
@@ -378,8 +377,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             decoration: BoxDecoration(
               color:
                   isConnected
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.red.withOpacity(0.1),
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.red.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
@@ -474,7 +473,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onChanged: (value) {
           Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
         },
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
       ),
       onTap: () {
         Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
@@ -663,7 +662,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 24),
@@ -719,7 +718,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         secondary: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconColor.withOpacity(0.1),
+            color: iconColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, color: iconColor, size: 24),
@@ -743,7 +742,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         value: value,
         onChanged: onChanged,
-        activeColor: AppColors.primary,
+        activeThumbColor: AppColors.primary,
       ),
     );
   }
@@ -773,10 +772,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'assets/icons/home.svg',
               width: 24,
               height: 24,
-              color:
+              colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 0
                       ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                      : (isDarkMode ? Colors.grey[400]! : Colors.grey[600]!),
+                  BlendMode.srcIn),
             ),
             label: 'Home',
           ),
@@ -785,10 +785,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'assets/icons/members.svg',
               width: 24,
               height: 24,
-              color:
+              colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 1
                       ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                      : (isDarkMode ? Colors.grey[400]! : Colors.grey[600]!),
+                  BlendMode.srcIn),
             ),
             label: 'Members',
           ),
@@ -797,10 +798,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               'assets/icons/schedule.svg',
               width: 24,
               height: 24,
-              color:
+              colorFilter: ColorFilter.mode(
                   _selectedNavIndex == 2
                       ? AppColors.primary
-                      : (isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                      : (isDarkMode ? Colors.grey[400]! : Colors.grey[600]!),
+                  BlendMode.srcIn),
             ),
             label: 'Schedule',
           ),

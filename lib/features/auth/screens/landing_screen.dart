@@ -2,9 +2,7 @@
 // ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
-import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:cleanslate/features/auth/screens/signup_screen.dart';
@@ -51,7 +49,7 @@ class LandingScreen extends StatelessWidget {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -98,7 +96,7 @@ class LandingScreen extends StatelessWidget {
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
+                          color: Colors.black.withValues(alpha: 0.3),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
@@ -178,7 +176,7 @@ class LandingScreen extends StatelessWidget {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.9),
+                          backgroundColor: Colors.white.withValues(alpha: 0.9),
                           foregroundColor: const Color(0xFF2185D0),
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: const RoundedRectangleBorder(

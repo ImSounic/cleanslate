@@ -36,6 +36,7 @@ class NotificationService extends ChangeNotifier {
   }
 
   // Clean up
+  @override
   void dispose() {
     _realtimeSubscription?.cancel();
     _deadlineCheckTimer?.cancel();
@@ -55,7 +56,7 @@ class NotificationService extends ChangeNotifier {
       );
       _unreadCount = await _repository.getUnreadCount();
       debugLog(
-        '🔔 NotificationService: Loaded ${_notifications.length} notifications, ${_unreadCount} unread',
+        '🔔 NotificationService: Loaded ${_notifications.length} notifications, $_unreadCount unread',
       );
     } catch (e) {
       debugLog('❌ NotificationService: Error loading notifications: $e');

@@ -368,7 +368,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     decoration: BoxDecoration(
                       color:
                           isDarkMode
-                              ? AppColors.surfaceDark.withOpacity(0.6)
+                              ? AppColors.surfaceDark.withValues(alpha: 0.6)
                               : Colors.grey[200],
                       borderRadius: BorderRadius.circular(30),
                     ),

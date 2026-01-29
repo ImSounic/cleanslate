@@ -145,15 +145,13 @@ class NotificationRepository {
                 value: userId,
               ),
               callback: (payload) {
-                if (payload.newRecord != null) {
-                  try {
-                    final notification = NotificationModel.fromJson(
-                      payload.newRecord!,
-                    );
-                    streamController.add(notification);
-                  } catch (e) {
-                    debugLog('Error parsing notification: $e');
-                  }
+                try {
+                  final notification = NotificationModel.fromJson(
+                    payload.newRecord,
+                  );
+                  streamController.add(notification);
+                } catch (e) {
+                  debugLog('Error parsing notification: $e');
                 }
               },
             )

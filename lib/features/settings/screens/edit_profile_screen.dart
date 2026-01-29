@@ -497,7 +497,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                         filled: true,
                         fillColor:
                             isDarkMode
-                                ? AppColors.surfaceDark.withOpacity(0.5)
+                                ? AppColors.surfaceDark.withValues(alpha: 0.5)
                                 : Colors.grey[100],
                       ),
                     ),

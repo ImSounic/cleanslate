@@ -769,7 +769,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         type: BottomNavigationBarType.fixed,
         backgroundColor: AppColors.primary,
         selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.white.withOpacity(0.6),
+        unselectedItemColor: Colors.white.withValues(alpha: 0.6),
         showSelectedLabels: false,
         showUnselectedLabels: false,
         items: [
@@ -781,7 +781,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               colorFilter: ColorFilter.mode(
                 _selectedNavIndex == 0
                     ? Colors.white
-                    : Colors.white.withOpacity(0.6),
+                    : Colors.white.withValues(alpha: 0.6),
                 BlendMode.srcIn,
               ),
             ),
@@ -795,7 +795,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               colorFilter: ColorFilter.mode(
                 _selectedNavIndex == 1
                     ? Colors.white
-                    : Colors.white.withOpacity(0.6),
+                    : Colors.white.withValues(alpha: 0.6),
                 BlendMode.srcIn,
               ),
             ),
@@ -809,7 +809,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               colorFilter: ColorFilter.mode(
                 _selectedNavIndex == 2
                     ? Colors.white
-                    : Colors.white.withOpacity(0.6),
+                    : Colors.white.withValues(alpha: 0.6),
                 BlendMode.srcIn,
               ),
             ),
@@ -823,7 +823,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               colorFilter: ColorFilter.mode(
                 _selectedNavIndex == 3
                     ? Colors.white
-                    : Colors.white.withOpacity(0.6),
+                    : Colors.white.withValues(alpha: 0.6),
                 BlendMode.srcIn,
               ),
             ),
@@ -857,7 +857,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
               _errorMessage,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
                 fontSize: 16,
                 fontFamily: 'VarelaRound',
               ),
@@ -933,7 +933,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                       children: [
                         Expanded(
                           child: Divider(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             thickness: 1,
                           ),
                         ),
@@ -950,7 +950,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                         ),
                         Expanded(
                           child: Divider(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             thickness: 1,
                           ),
                         ),
@@ -970,7 +970,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                     children: [
                       Expanded(
                         child: Divider(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           thickness: 1,
                         ),
                       ),
@@ -987,7 +987,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                       ),
                       Expanded(
                         child: Divider(
-                          color: Colors.white.withOpacity(0.3),
+                          color: Colors.white.withValues(alpha: 0.3),
                           thickness: 1,
                         ),
                       ),
@@ -1055,7 +1055,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
             Icon(
               Icons.people_outline,
               size: 64,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
             ),
             const SizedBox(height: 16),
             Text(
@@ -1070,7 +1070,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
             Text(
               'Share your household code to invite members',
               style: TextStyle(
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
                 fontSize: 16,
                 fontFamily: 'VarelaRound',
               ),
@@ -1102,9 +1102,9 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
       ),
       child: ListTile(
         contentPadding: const EdgeInsets.all(12),
@@ -1181,9 +1181,9 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     return Container(
       height: 195, // Increased further to fix 12px overflow
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
       ),
       padding: const EdgeInsets.all(10),
       child: Column(
@@ -1257,7 +1257,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                 child: Text(
                   'Chores completed in household',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 11,
                     fontFamily: 'VarelaRound',
                     height: 1.2,
@@ -1289,7 +1289,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                 child: Text(
                   'Chores assigned in household',
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 11,
                     fontFamily: 'VarelaRound',
                     height: 1.2,
