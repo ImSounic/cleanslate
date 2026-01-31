@@ -8,6 +8,7 @@ import 'package:cleanslate/features/home/screens/home_screen.dart';
 import 'package:cleanslate/features/members/screens/members_screen.dart';
 import 'package:cleanslate/features/schedule/screens/schedule_screen.dart';
 import 'package:cleanslate/features/settings/screens/settings_screen.dart';
+import 'package:cleanslate/core/utils/error_handler.dart';
 
 class AppShell extends StatefulWidget {
   /// Optional initial tab index (default 0 = Home).
@@ -23,11 +24,13 @@ class _AppShellState extends State<AppShell> {
   late int _currentIndex;
 
   // Keep all tab screens alive using GlobalKeys to preserve state.
+  // Each screen is wrapped in an ErrorBoundary to catch rendering errors
+  // gracefully instead of crashing the entire app.
   final List<Widget> _screens = const [
-    HomeScreen(),
-    MembersScreen(),
-    ScheduleScreen(),
-    SettingsScreen(),
+    ErrorBoundary(child: HomeScreen()),
+    ErrorBoundary(child: MembersScreen()),
+    ErrorBoundary(child: ScheduleScreen()),
+    ErrorBoundary(child: SettingsScreen()),
   ];
 
   @override

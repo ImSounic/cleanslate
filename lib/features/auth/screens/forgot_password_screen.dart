@@ -2,6 +2,9 @@
 
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/constants/app_text_styles.dart';
+import 'package:cleanslate/core/utils/error_handler.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -41,9 +44,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${error.toString()}')));
+        ErrorHandler.handle(context, error, prefix: 'Reset failed');
         setState(() {
           _isLoading = false;
         });
@@ -54,11 +55,30 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: _emailSent ? _buildSuccessContent() : _buildResetForm(),
+      body: Container(
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/background.png'),
+            fit: BoxFit.cover,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight:
+                    MediaQuery.of(context).size.height -
+                    MediaQuery.of(context).padding.top -
+                    MediaQuery.of(context).padding.bottom,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: _emailSent ? _buildSuccessContent() : _buildResetForm(),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -68,28 +88,67 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Form(
       key: _formKey,
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Forgot Password',
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
+          // Back button
+          Align(
+            alignment: Alignment.topLeft,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           const Text(
-            'Enter your email and we\'ll send you instructions to reset your password.',
-            textAlign: TextAlign.center,
+            'Forgot Password?',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'Switzer',
+            ),
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 8),
+          Text(
+            'No worries! Enter your email and\nwe\'ll send you reset instructions.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white.withValues(alpha: 0.8),
+              fontFamily: 'VarelaRound',
+            ),
+          ),
+          const SizedBox(height: 40),
+
+          // Email field
+          Text(
+            'Email',
+            style: AppTextStyles.bodyMedium.copyWith(color: Colors.white),
+          ),
+          const SizedBox(height: 8),
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(
-              labelText: 'Email',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.email),
-            ),
             keyboardType: TextInputType.emailAddress,
+            style: const TextStyle(
+              color: Colors.white,
+              fontFamily: 'VarelaRound',
+            ),
+            decoration: InputDecoration(
+              hintText: 'Enter your email',
+              hintStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.5),
+                fontFamily: 'VarelaRound',
+              ),
+              filled: true,
+              fillColor: Colors.white.withValues(alpha: 0.15),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: Icon(
+                Icons.email_outlined,
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email';
@@ -103,25 +162,57 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             },
           ),
           const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _handleResetPassword,
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+
+          // Reset button
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: ElevatedButton(
+              onPressed: _isLoading ? null : _handleResetPassword,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: AppColors.primary,
+                disabledBackgroundColor: Colors.white.withValues(alpha: 0.5),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child:
+                  _isLoading
+                      ? SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: AppColors.primary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                      : const Text(
+                        'RESET PASSWORD',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Switzer',
+                        ),
+                      ),
             ),
-            child:
-                _isLoading
-                    ? const CircularProgressIndicator()
-                    : const Text(
-                      'RESET PASSWORD',
-                      style: TextStyle(fontSize: 16),
-                    ),
           ),
           const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-            },
-            child: const Text('Back to Login'),
+
+          // Back to login
+          Center(
+            child: TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Back to Login',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontFamily: 'VarelaRound',
+                  fontSize: 14,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -130,30 +221,71 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   Widget _buildSuccessContent() {
     return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Icon(Icons.check_circle_outline, color: Colors.green, size: 80),
+        // Back button
+        Align(
+          alignment: Alignment.topLeft,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        const SizedBox(height: 40),
+        const Center(
+          child: Icon(
+            Icons.mark_email_read_outlined,
+            color: Colors.white,
+            size: 80,
+          ),
+        ),
         const SizedBox(height: 24),
-        const Text(
-          'Email Sent!',
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-          textAlign: TextAlign.center,
+        const Center(
+          child: Text(
+            'Email Sent!',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              fontFamily: 'Switzer',
+            ),
+          ),
         ),
         const SizedBox(height: 16),
-        Text(
-          'We\'ve sent password reset instructions to ${_emailController.text}',
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {
-            Navigator.pop(context);
-          },
-          style: ElevatedButton.styleFrom(
-            padding: const EdgeInsets.symmetric(vertical: 16),
+        Center(
+          child: Text(
+            'We\'ve sent password reset instructions to\n${_emailController.text}',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.white.withValues(alpha: 0.8),
+              fontFamily: 'VarelaRound',
+            ),
           ),
-          child: const Text('BACK TO LOGIN', style: TextStyle(fontSize: 16)),
+        ),
+        const SizedBox(height: 40),
+        SizedBox(
+          width: double.infinity,
+          height: 52,
+          child: ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
+            ),
+            child: const Text(
+              'BACK TO LOGIN',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Switzer',
+              ),
+            ),
+          ),
         ),
       ],
     );

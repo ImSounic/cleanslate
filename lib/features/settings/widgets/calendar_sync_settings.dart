@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CalendarSyncSettings extends StatefulWidget {
@@ -93,7 +94,7 @@ class _CalendarSyncSettingsState extends State<CalendarSyncSettings> {
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = ThemeUtils.isDarkMode(context);
 
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());

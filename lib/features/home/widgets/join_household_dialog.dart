@@ -126,6 +126,10 @@ class _JoinHouseholdDialogState extends State<JoinHouseholdDialog> {
 
                     if (scannedCode != null && mounted) {
                       _codeController.text = scannedCode;
+                      // Auto-submit if the scanned code is valid (8 characters)
+                      if (scannedCode.length == 8) {
+                        _handleJoin();
+                      }
                     }
                   },
                   icon: Icon(Icons.qr_code_scanner, color: AppColors.primary),
@@ -138,6 +142,29 @@ class _JoinHouseholdDialogState extends State<JoinHouseholdDialog> {
                   ),
                 ),
               ),
+              // Show scanning indicator when loading after QR scan
+              if (_isLoading)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        'Joining household...',
+                        style: TextStyle(
+                          fontFamily: 'VarelaRound',
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _handleJoin,

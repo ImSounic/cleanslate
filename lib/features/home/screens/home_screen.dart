@@ -945,10 +945,17 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   Widget _buildEmptyState(bool isDarkMode) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _loadChores,
+      color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
           Icon(
             Icons.assignment_outlined,
             size: 80,
@@ -999,6 +1006,9 @@ class _HomeScreenState extends State<HomeScreen>
               ),
             ),
           ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -1009,43 +1019,53 @@ class _HomeScreenState extends State<HomeScreen>
     String message,
     bool isDarkMode,
   ) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return RefreshIndicator(
+      onRefresh: _loadChores,
+      color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         children: [
-          Icon(
-            Icons.assignment_outlined,
-            size: 80,
-            color:
-                isDarkMode
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondary,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color:
-                  isDarkMode
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
-              fontFamily: 'Switzer',
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.assignment_outlined,
+                  size: 80,
+                  color:
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    fontFamily: 'Switzer',
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  message,
+                  style: TextStyle(
+                    fontSize: 16,
+                    color:
+                        isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                    fontFamily: 'VarelaRound',
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: TextStyle(
-              fontSize: 16,
-              color:
-                  isDarkMode
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondary,
-              fontFamily: 'VarelaRound',
-            ),
-            textAlign: TextAlign.center,
           ),
         ],
       ),

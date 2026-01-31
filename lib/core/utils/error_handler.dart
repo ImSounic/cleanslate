@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
+import 'package:cleanslate/core/utils/theme_utils.dart';
 
 class ErrorHandler {
   // Handle errors and show appropriate messages
@@ -173,7 +174,7 @@ class ErrorHandler {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final isDarkMode = ThemeUtils.isDarkMode(context);
 
         return AlertDialog(
           title: Text(
@@ -235,7 +236,7 @@ class ErrorHandler {
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
-        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        final isDarkMode = ThemeUtils.isDarkMode(context);
 
         return PopScope(
           canPop: false,
@@ -305,7 +306,7 @@ class ErrorBoundary extends StatelessWidget {
     BuildContext context,
     FlutterErrorDetails errorDetails,
   ) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final isDarkMode = ThemeUtils.isDarkMode(context);
 
     return Scaffold(
       backgroundColor:

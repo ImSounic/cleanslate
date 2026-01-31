@@ -33,6 +33,7 @@ class _MembersScreenState extends State<MembersScreen> {
       TextEditingController();
 
   List<HouseholdMemberModel> _members = [];
+  List<HouseholdMemberModel> _filteredMembers = [];
   bool _isLoading = true;
   String _householdName = '';
   String? _errorMessage;
@@ -42,10 +43,27 @@ class _MembersScreenState extends State<MembersScreen> {
   void initState() {
     super.initState();
     _loadMembers();
+    _searchController.addListener(_filterMembers);
+  }
+
+  void _filterMembers() {
+    final query = _searchController.text.toLowerCase();
+    setState(() {
+      if (query.isEmpty) {
+        _filteredMembers = _members;
+      } else {
+        _filteredMembers = _members.where((member) {
+          final name = (member.fullName ?? '').toLowerCase();
+          final email = (member.email ?? '').toLowerCase();
+          return name.contains(query) || email.contains(query);
+        }).toList();
+      }
+    });
   }
 
   @override
   void dispose() {
+    _searchController.removeListener(_filterMembers);
     _searchController.dispose();
     _householdNameController.dispose();
     _householdCodeController.dispose();
@@ -93,9 +111,14 @@ class _MembersScreenState extends State<MembersScreen> {
 
       setState(() {
         _members = members;
+        _filteredMembers = members;
         _isLoading = false;
         _isCurrentUserAdmin = isAdmin;
       });
+      // Re-apply search filter if there's an active query
+      if (_searchController.text.isNotEmpty) {
+        _filterMembers();
+      }
     } catch (e) {
       // Handle error
       if (!context.mounted) return;
@@ -1304,7 +1327,7 @@ class _MembersScreenState extends State<MembersScreen> {
   // This widget displays both the member list and the add flatmates content
   Widget _buildMembersListWithAddContent(bool isDarkMode) {
     // Only show admin users first
-    final adminMembers = _members.where((m) => m.role == 'admin').toList();
+    final adminMembers = _filteredMembers.where((m) => m.role == 'admin').toList();
 
     return ListView(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -1313,13 +1336,28 @@ class _MembersScreenState extends State<MembersScreen> {
         ...adminMembers.map((member) => _buildMemberCard(member, isDarkMode)),
 
         // Other members if there are any
-        if (_members.length > adminMembers.length)
-          ..._members
+        if (_filteredMembers.length > adminMembers.length)
+          ..._filteredMembers
               .where((m) => m.role != 'admin')
               .map((member) => _buildMemberCard(member, isDarkMode)),
 
+        // Show no results message when search has no matches
+        if (_filteredMembers.isEmpty && _searchController.text.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Center(
+              child: Text(
+                'No members found',
+                style: TextStyle(
+                  color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
+            ),
+          ),
+
         // Add the "Add your flatmates" section if admin is the only member
-        if (_members.length <= 1) _buildAddFlatmatesSection(isDarkMode),
+        if (_members.length <= 1 && _searchController.text.isEmpty) _buildAddFlatmatesSection(isDarkMode),
 
         // Add some space at the bottom for the Admin Mode button
         const SizedBox(height: 60),
