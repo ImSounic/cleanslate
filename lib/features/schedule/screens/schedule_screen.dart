@@ -483,7 +483,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '0${_chores.length} tasks',
+                          '${_chores.length.toString().padLeft(2, '0')} tasks',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.white,

@@ -1,5 +1,4 @@
 // lib/features/members/screens/members_screen.dart
-// ignore_for_file: use_super_parameters, use_build_context_synchronously, deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -17,7 +16,7 @@ import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 
 class MembersScreen extends StatefulWidget {
-  const MembersScreen({Key? key}) : super(key: key);
+  const MembersScreen({super.key});
 
   @override
   State<MembersScreen> createState() => _MembersScreenState();
@@ -54,7 +53,7 @@ class _MembersScreenState extends State<MembersScreen> {
   }
 
   Future<void> _loadMembers() async {
-    if (!mounted) return;
+    if (!context.mounted) return;
 
     setState(() {
       _isLoading = true;
@@ -84,7 +83,7 @@ class _MembersScreenState extends State<MembersScreen> {
         currentHousehold.id,
       );
 
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       // Check if current user is admin
       final currentUserId = _supabaseService.currentUser?.id;
@@ -99,17 +98,17 @@ class _MembersScreenState extends State<MembersScreen> {
       });
     } catch (e) {
       // Handle error
-      if (!mounted) return;
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading members: $e')),
+      );
 
       setState(() {
         _isLoading = false;
         _errorMessage = 'Error loading members: $e';
         _isCurrentUserAdmin = false;
       });
-
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading members: $e')));
     }
   }
 
@@ -129,7 +128,7 @@ class _MembersScreenState extends State<MembersScreen> {
       await _householdService.createAndSetHousehold(name);
 
       // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -139,14 +138,14 @@ class _MembersScreenState extends State<MembersScreen> {
       await _loadMembers();
 
       // Check again if mounted before showing success message
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       ScaffoldMessenger.of(currentContext).showSnackBar(
         SnackBar(content: Text('Household "$name" created successfully!')),
       );
     } catch (e) {
       // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -176,7 +175,7 @@ class _MembersScreenState extends State<MembersScreen> {
       await _householdService.initializeHousehold();
 
       // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       setState(() {
         _isLoading = false;
@@ -186,14 +185,14 @@ class _MembersScreenState extends State<MembersScreen> {
       await _loadMembers();
 
       // Check again if mounted before showing success message
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       ScaffoldMessenger.of(
         currentContext,
       ).showSnackBar(SnackBar(content: Text('Successfully joined household!')));
     } catch (e) {
       // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       debugLog("Error joining household: $e");
 
@@ -688,20 +687,20 @@ class _MembersScreenState extends State<MembersScreen> {
       await _householdRepository.updateMemberRole(memberId, newRole);
 
       // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       // Refresh members list
       await _loadMembers();
 
       // Check again if mounted before showing success message
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text('Member role updated successfully')),
       );
     } catch (e) {
       // Check if widget is still mounted before showing error
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       ScaffoldMessenger.of(
         currentContext,
@@ -800,20 +799,20 @@ class _MembersScreenState extends State<MembersScreen> {
       await _householdRepository.removeMemberFromHousehold(memberId);
 
       // Check if widget is still mounted before updating UI
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       // Refresh members list
       await _loadMembers();
 
       // Check again if mounted before showing success message
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       ScaffoldMessenger.of(currentContext).showSnackBar(
         const SnackBar(content: Text('Member removed successfully')),
       );
     } catch (e) {
       // Check if widget is still mounted before showing error
-      if (!mounted) return;
+      if (!context.mounted) return;
 
       ScaffoldMessenger.of(
         currentContext,

@@ -282,7 +282,8 @@ class CalendarService {
   Future<void> connectICalUrl(String calendarUrl) async {
     try {
       // Validate URL
-      if (!Uri.tryParse(calendarUrl)!.hasScheme) {
+      final uri = Uri.tryParse(calendarUrl);
+      if (uri == null || !uri.hasScheme) {
         throw Exception('Invalid calendar URL');
       }
 

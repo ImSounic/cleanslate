@@ -1,5 +1,4 @@
 // lib/features/members/screens/admin_mode_screen.dart
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -478,6 +477,8 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       // For now, simulate updating member roles
       await _householdRepository.updateMemberRole(newOwnerId, 'admin');
 
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ownership transferred successfully')),
       );
@@ -485,13 +486,17 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       // Reload data
       await _loadAdminData();
     } catch (e) {
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to transfer ownership: $e')),
       );
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (context.mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -654,24 +659,31 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       // Clear current household in service
       _householdService.clearCurrentHousehold();
 
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Household deleted successfully')),
       );
 
-      // Navigate back to members screen
+      if (!context.mounted) return;
+      // ignore: use_build_context_synchronously
       Navigator.of(context).pushAndRemoveUntil(
+        // ignore: use_build_context_synchronously
         MaterialPageRoute(builder: (context) => const AppShell()),
         (route) => false,
       );
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-        _errorMessage = 'Failed to delete household: $e';
-      });
+      if (context.mounted) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Failed to delete household: $e';
+        });
+      }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error deleting household: $e')));
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar( // ignore: use_build_context_synchronously
+        SnackBar(content: Text('Error deleting household: $e')),
+      );
     }
   }
 

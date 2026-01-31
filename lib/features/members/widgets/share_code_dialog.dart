@@ -1,5 +1,4 @@
 // lib/features/members/widgets/share_code_dialog.dart
-// ignore_for_file: deprecated_member_use
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -65,7 +64,14 @@ class ShareCodeDialog extends StatelessWidget {
                   version: QrVersions.auto,
                   size: 200.0,
                   backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
+                    color: Colors.black,
+                  ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: Colors.black,
+                  ),
                   errorStateBuilder: (cxt, err) {
                     return Center(
                       child: Text(
