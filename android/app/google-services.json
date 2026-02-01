@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "881682204755",
+    "project_id": "cleanslate-a4586",
+    "storage_bucket": "cleanslate-a4586.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:881682204755:android:39e81f4ae30abd00b89ea6",
+        "android_client_info": {
+          "package_name": "com.imsounic.cleanslate"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCumjhY-saN8KgQjYVTlnfAdpiOcE8Z2Ww"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
