@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
+import 'package:cleanslate/features/household/screens/room_config_screen.dart';
 
 class HouseholdDetailScreen extends StatefulWidget {
   final String householdId;
@@ -22,6 +24,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
   final SupabaseService _supabaseService = SupabaseService();
 
   Map<String, dynamic>? _household;
+  HouseholdModel? _householdModel;
   List<Map<String, dynamic>> _chores = [];
   List<HouseholdMemberModel> _members = [];
   bool _isLoading = true;
@@ -42,6 +45,9 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       final household = await _householdRepository.getHousehold(
         widget.householdId,
       );
+      final householdModel = await _householdRepository.getHouseholdModel(
+        widget.householdId,
+      );
       final chores = await _choreRepository.getChoresForHousehold(
         widget.householdId,
       );
@@ -59,6 +65,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
 
       setState(() {
         _household = household;
+        _householdModel = householdModel;
         _chores = chores;
         _members = members;
         _isCurrentUserAdmin = isAdmin;
@@ -77,7 +84,26 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_household?['name'] ?? 'Household')),
+      appBar: AppBar(
+        title: Text(_household?['name'] ?? 'Household'),
+        actions: [
+          if (_isCurrentUserAdmin && _householdModel != null)
+            IconButton(
+              icon: const Icon(Icons.meeting_room_outlined),
+              tooltip: 'Room Configuration',
+              onPressed: () async {
+                final changed = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        RoomConfigScreen(household: _householdModel!),
+                  ),
+                );
+                if (changed == true) _loadHouseholdData();
+              },
+            ),
+        ],
+      ),
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())

@@ -2,6 +2,7 @@
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/user_preferences_model.dart';
+import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/repositories/user_preferences_repository.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'dart:math';
@@ -448,6 +449,84 @@ class ChoreAssignmentService {
       debugLog('⚠️ Could not fetch assignment history: $e');
       return {};
     }
+  }
+
+  // ── Room-aware helpers ────────────────────────────────────────────
+
+  /// Fetch the household model (with room config) for a household.
+  Future<HouseholdModel?> fetchHousehold(String householdId) async {
+    try {
+      final response =
+          await _client
+              .from('households')
+              .select()
+              .eq('id', householdId)
+              .single();
+      return HouseholdModel.fromJson(response);
+    } catch (e) {
+      debugLog('⚠️ Could not fetch household model: $e');
+      return null;
+    }
+  }
+
+  /// Map a chore type to the relevant room count.
+  /// Returns null if the chore type isn't room-specific.
+  static int? roomCountForChoreType(HouseholdModel household, String? choreType) {
+    if (choreType == null) return null;
+    switch (choreType) {
+      case 'kitchen_cleaning':
+        return household.numKitchens;
+      case 'bathroom_cleaning':
+        return household.numBathrooms;
+      case 'vacuuming':
+      case 'mopping':
+        // These apply to all rooms
+        return household.totalRooms;
+      default:
+        return null;
+    }
+  }
+
+  /// Generate chore suggestions based on room configuration.
+  /// Returns a list of chore name suggestions.
+  static List<String> generateRoomChores(HouseholdModel household) {
+    final chores = <String>[];
+
+    // Bathrooms
+    if (household.numBathrooms == 1) {
+      chores.add('Clean Bathroom');
+    } else {
+      for (int i = 1; i <= household.numBathrooms; i++) {
+        chores.add('Clean Bathroom $i');
+      }
+    }
+
+    // Kitchens
+    if (household.numKitchens == 1) {
+      chores.add('Clean Kitchen');
+    } else {
+      for (int i = 1; i <= household.numKitchens; i++) {
+        chores.add('Clean Kitchen $i');
+      }
+    }
+
+    // Living rooms
+    if (household.numLivingRooms == 1) {
+      chores.add('Clean Living Room');
+    } else {
+      for (int i = 1; i <= household.numLivingRooms; i++) {
+        chores.add('Clean Living Area $i');
+      }
+    }
+
+    // General chores that scale with room count
+    chores.add('Take Out Trash');
+    chores.add('Vacuum Common Areas');
+    chores.add('Mop Floors');
+    chores.add('Grocery Shopping');
+    chores.add('Wash Dishes');
+
+    return chores;
   }
 
   // ── Utilities ───────────────────────────────────────────────────────

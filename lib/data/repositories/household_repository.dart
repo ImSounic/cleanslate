@@ -501,6 +501,41 @@ class HouseholdRepository {
     }
   }
 
+  // Update room configuration for a household
+  Future<HouseholdModel> updateRoomConfig(
+    String householdId, {
+    int? numKitchens,
+    int? numBathrooms,
+    int? numBedrooms,
+    int? numLivingRooms,
+  }) async {
+    try {
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
+      final updates = <String, dynamic>{
+        'updated_at': DateTime.now().toIso8601String(),
+      };
+      if (numKitchens != null) updates['num_kitchens'] = numKitchens;
+      if (numBathrooms != null) updates['num_bathrooms'] = numBathrooms;
+      if (numBedrooms != null) updates['num_bedrooms'] = numBedrooms;
+      if (numLivingRooms != null) updates['num_living_rooms'] = numLivingRooms;
+
+      final response =
+          await _client
+              .from('households')
+              .update(updates)
+              .eq('id', householdId)
+              .select()
+              .single();
+
+      return HouseholdModel.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to update room configuration: $e');
+    }
+  }
+
   // Cache management helpers
   bool _shouldUseCache(String householdId) {
     if (!_membersCache.containsKey(householdId)) return false;
