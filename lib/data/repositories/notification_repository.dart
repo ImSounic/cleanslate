@@ -170,7 +170,7 @@ class NotificationRepository {
     _streamController = null;
   }
 
-  // Create a notification (mainly for testing or manual notifications)
+  // Create a notification and trigger server-side push
   Future<void> createNotification({
     required String userId,
     String? householdId,
@@ -188,8 +188,39 @@ class NotificationRepository {
         'message': message,
         'metadata': metadata ?? {},
       });
+
+      // Trigger server-side push notification (best-effort)
+      await _triggerPush(
+        userId: userId,
+        title: title,
+        body: message,
+        data: {'type': type, ...?metadata},
+      );
     } catch (e) {
       throw Exception('Failed to create notification: $e');
+    }
+  }
+
+  /// Call the Edge Function to send FCM push to the user's devices.
+  /// Best-effort — failures are logged but never thrown.
+  Future<void> _triggerPush({
+    required String userId,
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      await _client.functions.invoke(
+        'send-push-notification',
+        body: {
+          'user_id': userId,
+          'title': title,
+          'body': body,
+          'data': data?.map((k, v) => MapEntry(k, v.toString())) ?? {},
+        },
+      );
+    } catch (e) {
+      debugLog('📱 Push trigger failed (non-fatal): $e');
     }
   }
 
