@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
 class ErrorService {
   static const Map<String, ErrorInfo> _errorMap = {
@@ -35,6 +36,14 @@ class ErrorService {
     debugLog('Type: ${error.runtimeType}');
     debugLog('Message: $error');
     debugLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+
+    // Log to Crashlytics (non-fatal)
+    FirebaseCrashlytics.instance.recordError(
+      error,
+      StackTrace.current,
+      reason: operation,
+      fatal: false,
+    );
 
     final errorType = error.runtimeType.toString();
     final info = _errorMap[errorType];
