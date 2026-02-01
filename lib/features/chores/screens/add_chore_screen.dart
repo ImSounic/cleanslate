@@ -1379,8 +1379,9 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       _selectedChoreType = template.choreType;
 
       // Set repeat pattern from template (null = once / no repeat)
+      // Dropdown items use lowercase values
       if (template.defaultFrequency != 'once') {
-        _repeatPattern = template.defaultFrequency;
+        _repeatPattern = template.defaultFrequency.toLowerCase();
       }
     });
 
