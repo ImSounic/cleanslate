@@ -9,6 +9,7 @@ import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
+import 'package:cleanslate/data/services/chore_assignment_service.dart';
 
 class AdminModeScreen extends StatefulWidget {
   const AdminModeScreen({super.key});
@@ -21,10 +22,12 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
   final HouseholdService _householdService = HouseholdService();
   final HouseholdRepository _householdRepository = HouseholdRepository();
   final ChoreRepository _choreRepository = ChoreRepository();
+  final ChoreAssignmentService _assignmentService = ChoreAssignmentService();
   final TextEditingController _deleteConfirmController =
       TextEditingController();
 
   bool _isLoading = true;
+  bool _isRebalancing = false;
   String _errorMessage = '';
 
   // Store real data
@@ -152,6 +155,280 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         });
       }
     }
+  }
+
+  // ── Rebalance chores ───────────────────────────────────────────────
+
+  Future<void> _handleRebalance() async {
+    final household = _householdService.currentHousehold;
+    if (household == null) return;
+
+    setState(() => _isRebalancing = true);
+
+    try {
+      // 1. Get all pending chore assignments for this household
+      final chores = await _choreRepository.getChoresForHousehold(household.id);
+
+      // Collect pending assignments with their chore names
+      final pendingAssignments = <Map<String, dynamic>>[];
+      for (final chore in chores) {
+        final assignments = chore['chore_assignments'] as List? ?? [];
+        for (final assignment in assignments) {
+          if (assignment['status'] != 'completed') {
+            pendingAssignments.add({
+              'assignment_id': assignment['id'],
+              'chore_id': chore['id'],
+              'chore_name': chore['name'] as String,
+              'current_assignee': assignment['assigned_to'] as String?,
+              'due_date': assignment['due_date'] != null
+                  ? DateTime.parse(assignment['due_date'] as String)
+                  : DateTime.now(),
+            });
+          }
+        }
+      }
+
+      if (pendingAssignments.isEmpty) {
+        if (mounted) {
+          _showRebalanceResult('No pending chores to rebalance.');
+        }
+        return;
+      }
+
+      // 2. Get member names for display
+      final members =
+          await _householdRepository.getHouseholdMembers(household.id);
+      final memberNames = <String, String>{};
+      for (final m in members) {
+        memberNames[m.userId] = m.fullName ?? m.email ?? 'Unknown';
+      }
+
+      // 3. Run algorithm on each pending assignment
+      final changes = <Map<String, dynamic>>[];
+
+      for (final pa in pendingAssignments) {
+        final recommended = await _assignmentService.findBestAssignee(
+          householdId: household.id,
+          choreName: pa['chore_name'] as String,
+          dueDate: pa['due_date'] as DateTime,
+        );
+
+        if (recommended != null && recommended != pa['current_assignee']) {
+          changes.add({
+            'assignment_id': pa['assignment_id'],
+            'chore_name': pa['chore_name'],
+            'from': pa['current_assignee'],
+            'from_name': memberNames[pa['current_assignee']] ?? 'Unassigned',
+            'to': recommended,
+            'to_name': memberNames[recommended] ?? 'Unknown',
+          });
+        }
+      }
+
+      if (!mounted) return;
+
+      if (changes.isEmpty) {
+        _showRebalanceResult('All chores are already optimally assigned! ✨');
+        return;
+      }
+
+      // 4. Show preview dialog
+      _showRebalancePreview(changes);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Rebalance failed: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isRebalancing = false);
+    }
+  }
+
+  void _showRebalanceResult(String message) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Rebalance Chores',
+          style: TextStyle(color: Colors.white, fontFamily: 'Switzer'),
+        ),
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+            fontFamily: 'VarelaRound',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showRebalancePreview(List<Map<String, dynamic>> changes) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            const Text(
+              'Rebalance Preview',
+              style: TextStyle(color: Colors.white, fontFamily: 'Switzer'),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '${changes.length} chore${changes.length == 1 ? '' : 's'} will be reassigned:',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                  fontFamily: 'VarelaRound',
+                ),
+              ),
+              const SizedBox(height: 12),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 300),
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: changes.length,
+                  separatorBuilder: (_, __) => Divider(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    height: 16,
+                  ),
+                  itemBuilder: (_, i) {
+                    final c = changes[i];
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          c['chore_name'] as String,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'Switzer',
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                c['from_name'] as String,
+                                style: TextStyle(
+                                  color: Colors.white.withValues(alpha: 0.7),
+                                  fontSize: 13,
+                                  fontFamily: 'VarelaRound',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(horizontal: 8),
+                              child: Icon(Icons.arrow_forward,
+                                  color: Colors.white, size: 16),
+                            ),
+                            Flexible(
+                              child: Text(
+                                c['to_name'] as String,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  fontFamily: 'VarelaRound',
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.7),
+              ),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(dialogContext);
+              await _applyRebalance(changes, scaffoldMessenger);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppColors.primary,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text('Apply ${changes.length} Changes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _applyRebalance(
+    List<Map<String, dynamic>> changes,
+    ScaffoldMessengerState scaffoldMessenger,
+  ) async {
+    int applied = 0;
+    int failed = 0;
+
+    for (final change in changes) {
+      try {
+        await _choreRepository.updateChoreAssignment(
+          assignmentId: change['assignment_id'] as String,
+          assignedTo: change['to'] as String,
+        );
+        applied++;
+      } catch (e) {
+        debugLog('❌ Failed to reassign ${change['chore_name']}: $e');
+        failed++;
+      }
+    }
+
+    String message;
+    if (failed == 0) {
+      message = '$applied chore${applied == 1 ? '' : 's'} reassigned ✨';
+    } else {
+      message = '$applied reassigned, $failed failed';
+    }
+
+    scaffoldMessenger.showSnackBar(SnackBar(content: Text(message)));
+
+    // Refresh admin data
+    if (mounted) _loadAdminData();
   }
 
   void _showOptionsOverlay() {
@@ -948,6 +1225,119 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                         },
                       ),
                     ),
+
+                const SizedBox(height: 24),
+
+                // Rebalance Chores section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Chore Management',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.auto_awesome,
+                                color: Colors.white, size: 24),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Rebalance Chores',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Switzer',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Redistribute pending chores fairly based on '
+                          'availability, preferences, and workload.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed:
+                                _isRebalancing ? null : _handleRebalance,
+                            icon: _isRebalancing
+                                ? const SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(Icons.balance),
+                            label: Text(
+                              _isRebalancing
+                                  ? 'Analyzing...'
+                                  : 'Rebalance Now',
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 24),
               ],

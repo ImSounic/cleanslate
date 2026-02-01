@@ -66,15 +66,18 @@ class ChoreAssignmentService {
   // ── Main entry point ────────────────────────────────────────────────
 
   /// Returns the user-id of the best assignee, or `null` when no one fits.
+  ///
+  /// If [choreType] is provided it takes precedence over keyword detection.
   Future<String?> findBestAssignee({
     required String householdId,
     required String choreName,
     required DateTime dueDate,
+    String? choreType,
   }) async {
     try {
       debugLog('🤖 Auto-assign: scoring members for "$choreName"');
 
-      final choreType = inferChoreType(choreName);
+      choreType ??= inferChoreType(choreName);
       debugLog('🏷️ Inferred chore type: ${choreType ?? "unknown"}');
 
       // Fetch all active members
@@ -164,9 +167,10 @@ class ChoreAssignmentService {
     required String householdId,
     required String choreName,
     required DateTime dueDate,
+    String? choreType,
   }) async {
     try {
-      final choreType = inferChoreType(choreName);
+      choreType ??= inferChoreType(choreName);
 
       final members = await _client
           .from('household_members')

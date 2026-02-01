@@ -38,6 +38,23 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   bool _showTodoInput = false; // To toggle todo input visibility
   final List<String> _todoItems = []; // To store todo items
 
+  // Chore type state
+  String _selectedChoreType = 'auto'; // 'auto' = keyword detection
+  String? _detectedChoreType; // what keyword matching found
+
+  static const Map<String, String> _choreTypeLabels = {
+    'auto': 'Auto-detect',
+    'kitchen_cleaning': 'Kitchen Cleaning',
+    'bathroom_cleaning': 'Bathroom Cleaning',
+    'taking_out_trash': 'Taking Out Trash',
+    'vacuuming': 'Vacuuming',
+    'mopping': 'Mopping',
+    'grocery_shopping': 'Grocery Shopping',
+    'dishwashing': 'Dishwashing',
+    'restocking_supplies': 'Restocking Supplies',
+    'other': 'Other',
+  };
+
   // Auto-assign state
   bool _autoAssignEnabled = true;
   bool _isAutoAssigning = false;
@@ -70,12 +87,31 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
     super.dispose();
   }
 
+  /// The effective chore type: explicit selection or auto-detected.
+  String? get _effectiveChoreType {
+    if (_selectedChoreType == 'auto') return _detectedChoreType;
+    if (_selectedChoreType == 'other') return null;
+    return _selectedChoreType;
+  }
+
+  /// Update the auto-detected chore type from the title field.
+  void _updateDetectedType() {
+    final title = _titleController.text.trim();
+    final detected = ChoreAssignmentService.inferChoreType(title);
+    if (detected != _detectedChoreType) {
+      setState(() => _detectedChoreType = detected);
+    }
+  }
+
   /// Run the auto-assignment algorithm and pre-select the best member.
   Future<void> _runAutoAssign() async {
     final household = _householdService.currentHousehold;
     final title = _titleController.text.trim();
     if (household == null || title.isEmpty) return;
     if (!_autoAssignEnabled || _manualOverride) return;
+
+    // Update detected type
+    _updateDetectedType();
 
     setState(() {
       _isAutoAssigning = true;
@@ -88,6 +124,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
         householdId: household.id,
         choreName: title,
         dueDate: _dueDate,
+        choreType: _effectiveChoreType,
       );
 
       if (!mounted) return;
@@ -418,9 +455,98 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                 onFieldSubmitted: (_) => _runAutoAssign(),
                 onEditingComplete: () {
                   FocusScope.of(context).nextFocus();
+                  _updateDetectedType();
                   _runAutoAssign();
                 },
+                onChanged: (_) => _updateDetectedType(),
               ),
+              const SizedBox(height: 20),
+
+              // Chore Type selector
+              _buildSectionTitle('Chore Type', isDarkMode),
+              Container(
+                height: 50,
+                decoration: BoxDecoration(
+                  color: isDarkMode ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    isExpanded: true,
+                    dropdownColor:
+                        isDarkMode ? AppColors.surfaceDark : Colors.white,
+                    value: _selectedChoreType,
+                    items: _choreTypeLabels.entries.map((entry) {
+                      return DropdownMenuItem<String>(
+                        value: entry.key,
+                        child: Text(
+                          entry.value,
+                          style: TextStyle(
+                            color: isDarkMode
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimary,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedChoreType = value ?? 'auto';
+                      });
+                      // Re-run auto-assign with new type
+                      if (!_manualOverride) _runAutoAssign();
+                    },
+                    icon: Icon(
+                      Icons.arrow_drop_down,
+                      color: isDarkMode
+                          ? AppColors.primaryDark
+                          : AppColors.primary,
+                    ),
+                  ),
+                ),
+              ),
+              // Show detected type hint when on auto-detect
+              if (_selectedChoreType == 'auto' && _detectedChoreType != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.auto_fix_high,
+                        size: 14,
+                        color: isDarkMode
+                            ? AppColors.primaryDark
+                            : AppColors.primary,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Detected: ${_choreTypeLabels[_detectedChoreType] ?? _detectedChoreType}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'VarelaRound',
+                          color: isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_selectedChoreType == 'auto' && _detectedChoreType == null && _titleController.text.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Could not detect type — select manually or leave as Other',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontFamily: 'VarelaRound',
+                      color: isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // Description
