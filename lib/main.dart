@@ -19,7 +19,9 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.dart';
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
+import 'package:cleanslate/features/onboarding/screens/onboarding_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 
@@ -107,6 +109,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool _isLoading = true;
   bool _isLoggedIn = false;
+  bool _onboardingComplete = true; // default true to avoid flash
   StreamSubscription<AuthState>? _authSubscription;
 
   @override
@@ -174,6 +177,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       _isLoading = true;
     });
 
+    // Check onboarding status
+    final prefs = await SharedPreferences.getInstance();
+    final onboardingDone = prefs.getBool('onboarding_complete') ?? false;
+
     final isLoggedIn = _supabaseService.isAuthenticated;
 
     if (isLoggedIn) {
@@ -195,6 +202,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
     setState(() {
       _isLoggedIn = isLoggedIn;
+      _onboardingComplete = onboardingDone;
       _isLoading = false;
     });
   }
@@ -238,6 +246,8 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   )
                   : _isLoggedIn
                   ? const AppShell()
+                  : !_onboardingComplete
+                  ? const OnboardingScreen()
                   : const LandingScreen(),
           routes: {
             '/login': (context) => const LoginScreen(),
