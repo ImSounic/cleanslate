@@ -20,9 +20,20 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('📱 Background message: ${message.messageId}');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Set status bar to be transparent
   SystemChrome.setSystemUIOverlayStyle(

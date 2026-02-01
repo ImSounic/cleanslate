@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:uuid/uuid.dart';
+import 'package:cleanslate/data/services/push_notification_service.dart';
 
 class SupabaseService {
   final SupabaseClient client = Supabase.instance.client;
@@ -385,6 +386,9 @@ class SupabaseService {
 
   // Sign out (updated to handle Google sign out too)
   Future<void> signOut() async {
+    // Remove FCM token before signing out
+    await PushNotificationService().removeToken();
+
     // Sign out from Google if signed in
     try {
       await _googleSignIn.signOut();
