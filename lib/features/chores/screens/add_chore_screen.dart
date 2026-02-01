@@ -9,6 +9,7 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
+import 'package:cleanslate/data/services/chore_assignment_service.dart';
 
 class AddChoreScreen extends StatefulWidget {
   const AddChoreScreen({super.key});
@@ -25,6 +26,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
 
   final _choreRepository = ChoreRepository();
   final _householdService = HouseholdService();
+  final _assignmentService = ChoreAssignmentService();
 
   String? _selectedMemberId;
   String _priority = 'Medium';
@@ -35,6 +37,13 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   bool _isLoading = false;
   bool _showTodoInput = false; // To toggle todo input visibility
   final List<String> _todoItems = []; // To store todo items
+
+  // Auto-assign state
+  bool _autoAssignEnabled = true;
+  bool _isAutoAssigning = false;
+  bool _manualOverride = false; // true once user manually picks someone
+  AssignmentRecommendation? _recommendation;
+  String? _autoAssignError;
 
   final List<String> _priorities = ['Low', 'Medium', 'High'];
   final List<Map<String, dynamic>> _members = [];
@@ -59,6 +68,50 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
     _descriptionController.dispose();
     _todoTextController.dispose();
     super.dispose();
+  }
+
+  /// Run the auto-assignment algorithm and pre-select the best member.
+  Future<void> _runAutoAssign() async {
+    final household = _householdService.currentHousehold;
+    final title = _titleController.text.trim();
+    if (household == null || title.isEmpty) return;
+    if (!_autoAssignEnabled || _manualOverride) return;
+
+    setState(() {
+      _isAutoAssigning = true;
+      _autoAssignError = null;
+      _recommendation = null;
+    });
+
+    try {
+      final rec = await _assignmentService.getRecommendation(
+        householdId: household.id,
+        choreName: title,
+        dueDate: _dueDate,
+      );
+
+      if (!mounted) return;
+
+      if (rec != null) {
+        setState(() {
+          _recommendation = rec;
+          _selectedMemberId = rec.userId;
+          _isAutoAssigning = false;
+        });
+      } else {
+        setState(() {
+          _autoAssignError = 'No one available — please assign manually';
+          _selectedMemberId = null;
+          _isAutoAssigning = false;
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _autoAssignError = 'Auto-assign failed';
+        _isAutoAssigning = false;
+      });
+    }
   }
 
   Future<void> _loadMembers() async {
@@ -250,6 +303,8 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       setState(() {
         _dueDate = picked;
       });
+      // Re-run auto-assign with new date
+      _runAutoAssign();
     }
   }
 
@@ -359,6 +414,11 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                     return 'Please enter a title for the chore';
                   }
                   return null;
+                },
+                onFieldSubmitted: (_) => _runAutoAssign(),
+                onEditingComplete: () {
+                  FocusScope.of(context).nextFocus();
+                  _runAutoAssign();
                 },
               ),
               const SizedBox(height: 20),
@@ -554,13 +614,125 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Assign To
-              _buildSectionTitle('Assign to', isDarkMode),
+              // Assign To — with Auto-assign toggle
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSectionTitle('Assign to', isDarkMode),
+                  Row(
+                    children: [
+                      Text(
+                        'Auto',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontFamily: 'VarelaRound',
+                          color: isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      SizedBox(
+                        height: 28,
+                        child: Switch(
+                          value: _autoAssignEnabled,
+                          onChanged: (value) {
+                            setState(() {
+                              _autoAssignEnabled = value;
+                              if (value) {
+                                _manualOverride = false;
+                                _runAutoAssign();
+                              } else {
+                                _recommendation = null;
+                                _autoAssignError = null;
+                              }
+                            });
+                          },
+                          activeTrackColor: (isDarkMode
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary)
+                              .withValues(alpha: 0.5),
+                          thumbColor: WidgetStatePropertyAll(
+                            isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+
+              // Auto-assign loading indicator
+              if (_isAutoAssigning)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Finding best match...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'VarelaRound',
+                          color: isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Auto-assign error
+              if (_autoAssignError != null && _autoAssignEnabled)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 16, color: Colors.orange),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          _autoAssignError!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'VarelaRound',
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // Member dropdown
               Container(
                 height: 50,
                 decoration: BoxDecoration(
                   color: isDarkMode ? AppColors.surfaceDark : Colors.white,
                   borderRadius: BorderRadius.circular(16),
+                  border: _recommendation != null &&
+                          _selectedMemberId == _recommendation!.userId
+                      ? Border.all(
+                          color: isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary,
+                          width: 1.5,
+                        )
+                      : null,
                 ),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: DropdownButtonHideUnderline(
@@ -572,55 +744,139 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                       children: [
                         Icon(
                           Icons.person_outline,
-                          color:
-                              isDarkMode
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondary,
+                          color: isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
                           size: 20,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Select household member',
                           style: TextStyle(
-                            color:
-                                isDarkMode
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondary,
+                            color: isDarkMode
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondary,
                           ),
                         ),
                       ],
                     ),
                     value: _selectedMemberId,
-                    items:
-                        _members.map((member) {
-                          return DropdownMenuItem<String>(
-                            value: member['id'],
-                            child: Text(
-                              member['name'],
-                              style: TextStyle(
-                                color:
-                                    isDarkMode
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimary,
+                    items: _members.map((member) {
+                      final isRecommended = _recommendation != null &&
+                          member['id'] == _recommendation!.userId;
+                      return DropdownMenuItem<String>(
+                        value: member['id'],
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                member['name'],
+                                style: TextStyle(
+                                  color: isDarkMode
+                                      ? AppColors.textPrimaryDark
+                                      : AppColors.textPrimary,
+                                ),
                               ),
                             ),
-                          );
-                        }).toList(),
+                            if (isRecommended)
+                              Icon(
+                                Icons.auto_awesome,
+                                size: 16,
+                                color: isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
                     onChanged: (value) {
                       setState(() {
                         _selectedMemberId = value;
+                        // Mark as manual override if user picks someone
+                        // different from recommendation
+                        if (_recommendation != null &&
+                            value != _recommendation!.userId) {
+                          _manualOverride = true;
+                        }
                       });
                     },
                     icon: Icon(
                       Icons.arrow_drop_down,
-                      color:
-                          isDarkMode
-                              ? AppColors.primaryDark
-                              : AppColors.primary,
+                      color: isDarkMode
+                          ? AppColors.primaryDark
+                          : AppColors.primary,
                     ),
                   ),
                 ),
               ),
+
+              // Recommendation reason chips
+              if (_recommendation != null &&
+                  _selectedMemberId == _recommendation!.userId &&
+                  _recommendation!.reasons.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.auto_awesome,
+                            size: 14,
+                            color: isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Recommended based on:',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontFamily: 'VarelaRound',
+                              color: isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: _recommendation!.reasons
+                            .map(
+                              (reason) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: (isDarkMode
+                                          ? AppColors.primaryDark
+                                          : AppColors.primary)
+                                      .withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  reason,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontFamily: 'VarelaRound',
+                                    color: isDarkMode
+                                        ? AppColors.primaryDark
+                                        : AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 20),
 
               // Priority
