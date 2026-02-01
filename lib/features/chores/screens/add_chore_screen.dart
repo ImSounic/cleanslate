@@ -12,6 +12,7 @@ import 'package:cleanslate/core/utils/input_sanitizer.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/data/models/chore_template.dart';
 
 class AddChoreScreen extends StatefulWidget {
   const AddChoreScreen({super.key});
@@ -416,6 +417,10 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Quick Add Templates
+              _buildQuickAddSection(isDarkMode),
+              const SizedBox(height: 8),
+
               // Chore Title
               _buildSectionTitle('Chore Title', isDarkMode),
               TextFormField(
@@ -1301,6 +1306,88 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
         ),
       ),
     );
+  }
+
+  // ── Quick Add Templates ──────────────────────────────────────
+
+  Widget _buildQuickAddSection(bool isDarkMode) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('Quick Add', isDarkMode),
+        SizedBox(
+          height: 44,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: ChoreTemplate.templates.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (context, index) {
+              final template = ChoreTemplate.templates[index];
+              return _buildTemplateChip(template, isDarkMode);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTemplateChip(ChoreTemplate template, bool isDarkMode) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(22),
+        onTap: () => _applyTemplate(template),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: isDarkMode ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(
+              color: isDarkMode ? AppColors.borderDark : AppColors.border,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                template.icon,
+                size: 18,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                template.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontFamily: 'VarelaRound',
+                  color: isDarkMode
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _applyTemplate(ChoreTemplate template) {
+    setState(() {
+      _titleController.text = template.name;
+      _descriptionController.text = template.description;
+      _selectedChoreType = template.choreType;
+
+      // Set repeat pattern from template (null = once / no repeat)
+      if (template.defaultFrequency != 'once') {
+        _repeatPattern = template.defaultFrequency;
+      }
+    });
+
+    // Trigger auto-assign recalculation with the new chore type
+    if (_autoAssignEnabled && !_manualOverride) {
+      _runAutoAssign();
+    }
   }
 
   Widget _buildSectionTitle(String title, bool isDarkMode) {
