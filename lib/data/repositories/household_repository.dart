@@ -712,6 +712,22 @@ class HouseholdRepository {
       return false;
     }
   }
+
+  /// Regenerate the household join code. Returns the new code.
+  Future<String> regenerateCode(String householdId) async {
+    try {
+      final newCode = _generateHouseholdCode();
+      await _client
+          .from('households')
+          .update({'code': newCode, 'updated_at': DateTime.now().toIso8601String()})
+          .eq('id', householdId);
+
+      _clearCache();
+      return newCode;
+    } catch (e) {
+      throw Exception('Failed to regenerate code: $e');
+    }
+  }
 }
 
 // ── Leave result types ──────────────────────────────────────────────

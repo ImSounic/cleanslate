@@ -8,6 +8,7 @@ import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/household/screens/room_config_screen.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/features/household/widgets/share_invite_sheet.dart';
 
 class HouseholdDetailScreen extends StatefulWidget {
   final String householdId;
@@ -87,6 +88,20 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       appBar: AppBar(
         title: Text(_household?['name'] ?? 'Household'),
         actions: [
+          if (_isCurrentUserAdmin && _householdModel != null)
+            IconButton(
+              icon: const Icon(Icons.share_rounded),
+              tooltip: 'Share Invite Code',
+              onPressed: () async {
+                final newCode = await ShareInviteSheet.show(
+                  context,
+                  householdId: _householdModel!.id,
+                  householdName: _householdModel!.name,
+                  code: _householdModel!.code,
+                );
+                if (newCode != null) _loadHouseholdData();
+              },
+            ),
           if (_isCurrentUserAdmin && _householdModel != null)
             IconButton(
               icon: const Icon(Icons.meeting_room_outlined),

@@ -82,6 +82,7 @@ dependencies:
   fl_chart: ^0.65.0             # For chore statistics charts
   url_launcher: ^6.2.2          # For opening privacy policy links
   connectivity_plus: ^5.0.2     # For checking internet connection
+  share_plus: ^10.1.4           # For native share sheet
   flutter_secure_storage: ^9.0.0 # For secure token storage
   
   # Firebase for push notifications
