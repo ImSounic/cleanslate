@@ -11,6 +11,8 @@ import 'package:cleanslate/features/settings/screens/add_password_screen.dart';
 import 'package:cleanslate/features/profile/screens/chore_preferences_screen.dart';
 import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.dart';
 import 'package:cleanslate/features/settings/widgets/calendar_sync_settings.dart';
+import 'package:cleanslate/features/settings/screens/privacy_policy_screen.dart';
+import 'package:cleanslate/features/settings/screens/terms_of_service_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
@@ -556,7 +558,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
           subtitle: 'Learn how we protect your data',
           isDarkMode: isDarkMode,
           onTap: () {
-            // Open privacy policy
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const PrivacyPolicyScreen(),
+              ),
+            );
+          },
+        ),
+
+        _buildSettingsTile(
+          icon: Icons.description_outlined,
+          iconColor: Colors.blueGrey,
+          title: 'Terms of Service',
+          subtitle: 'Review the terms of using CleanSlate',
+          isDarkMode: isDarkMode,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const TermsOfServiceScreen(),
+              ),
+            );
           },
         ),
       ],
