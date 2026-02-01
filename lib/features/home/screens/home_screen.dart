@@ -14,6 +14,7 @@ import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/household/screens/household_detail_screen.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
+import 'package:cleanslate/widgets/theme_toggle_button.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
@@ -33,7 +34,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
+    {
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
   String _userName = '';
@@ -44,9 +45,6 @@ class _HomeScreenState extends State<HomeScreen>
   List<Map<String, dynamic>> _completedChores = [];
   bool _isLoading = true;
   int _selectedTabIndex = 0;
-
-  late AnimationController _toggleController;
-  late Animation<double> _toggleAnimation;
 
   // Updated tab titles to include Completed
   final List<String> _tabTitles = [
@@ -62,32 +60,6 @@ class _HomeScreenState extends State<HomeScreen>
     _loadUserData();
     _loadChores();
     _processRecurringChores();
-
-    // Initialize animation controller
-    _toggleController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 300),
-    );
-
-    _toggleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _toggleController, curve: Curves.easeInOut),
-    );
-
-    // Set initial animation state based on current theme
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-      if (themeProvider.isDarkMode) {
-        _toggleController.value = 1.0;
-      } else {
-        _toggleController.value = 0.0;
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _toggleController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadUserData() async {
@@ -338,16 +310,7 @@ class _HomeScreenState extends State<HomeScreen>
               ? Switch(
                 value: isDarkMode,
                 onChanged: (value) {
-                  // Toggle the theme using the provider
                   themeProvider.toggleTheme();
-
-                  // Update the animation based on the new theme
-                  if (value) {
-                    _toggleController.forward();
-                  } else {
-                    _toggleController.reverse();
-                  }
-
                   Navigator.pop(context);
                 },
                 activeThumbColor: AppColors.primary,
@@ -667,13 +630,6 @@ class _HomeScreenState extends State<HomeScreen>
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
 
-    // Ensure the animation state matches the theme
-    if (isDarkMode && _toggleController.value == 0.0) {
-      _toggleController.value = 1.0;
-    } else if (!isDarkMode && _toggleController.value == 1.0) {
-      _toggleController.value = 0.0;
-    }
-
     return SafeArea(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -684,80 +640,8 @@ class _HomeScreenState extends State<HomeScreen>
             child: Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Theme toggle
-                  GestureDetector(
-                    onTap: () {
-                      // Toggle theme using the provider
-                      themeProvider.toggleTheme();
-
-                      // Animation will update automatically based on didUpdateWidget
-                    },
-                    child: Container(
-                      height: 32,
-                      width: 64,
-                      decoration: BoxDecoration(
-                        color:
-                            isDarkMode
-                                ? AppColors.primaryDark
-                                : AppColors.primary,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      padding: const EdgeInsets.all(2),
-                      child: AnimatedBuilder(
-                        animation: _toggleAnimation,
-                        builder: (context, child) {
-                          return Stack(
-                            children: [
-                              // Sliding circle background
-                              Transform.translate(
-                                offset: Offset(_toggleAnimation.value * 32, 0),
-                                child: Container(
-                                  width: 28,
-                                  height: 28,
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isDarkMode
-                                            ? AppColors.surfaceDark
-                                            : AppColors.surface,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                              ),
-                              // Light mode icon
-                              Positioned(
-                                left: 6,
-                                top: 6,
-                                child: Opacity(
-                                  opacity: 1 - _toggleAnimation.value,
-                                  child: Icon(
-                                    Icons.light_mode,
-                                    size: 16,
-                                    color: AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                              // Dark mode icon
-                              Positioned(
-                                right: 6,
-                                top: 6,
-                                child: Opacity(
-                                  opacity: _toggleAnimation.value,
-                                  child: Icon(
-                                    Icons.dark_mode,
-                                    size: 16,
-                                    color:
-                                        isDarkMode
-                                            ? AppColors.textLight
-                                            : AppColors.primary,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
+                  // Theme toggle — uses shared widget
+                  const ThemeToggleButton(),
                   const SizedBox(width: 12),
                   // Notifications with Consumer
                   Consumer<NotificationService>(
