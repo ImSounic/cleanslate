@@ -13,6 +13,9 @@ import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/household/screens/household_detail_screen.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/data/services/chore_assignment_service.dart';
+import 'package:cleanslate/features/chores/screens/edit_chore_screen.dart';
 import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
@@ -33,9 +36,10 @@ class _HomeScreenState extends State<HomeScreen>
   final _choreRepository = ChoreRepository();
   String _userName = '';
   String? _profileImageUrl; // Added property for profile image URL
-  List<Map<String, dynamic>> _myChores = [];
-  List<Map<String, dynamic>> _completedChores =
-      []; // Added completed chores list
+  List<Map<String, dynamic>> _myChores = []; // pending
+  List<Map<String, dynamic>> _inProgressChores = [];
+  List<Map<String, dynamic>> _allAssignedChores = []; // pending + in_progress
+  List<Map<String, dynamic>> _completedChores = [];
   bool _isLoading = true;
   int _selectedTabIndex = 0;
 
@@ -108,20 +112,29 @@ class _HomeScreenState extends State<HomeScreen>
     try {
       final chores = await _choreRepository.getMyChores();
 
-      // Separate completed and pending chores
+      // Separate chores by status
       final completed = <Map<String, dynamic>>[];
       final pending = <Map<String, dynamic>>[];
+      final inProgress = <Map<String, dynamic>>[];
+      final allAssigned = <Map<String, dynamic>>[];
 
       for (final chore in chores) {
-        if (chore['status'] == 'completed') {
+        final status = chore['status'] ?? 'pending';
+        if (status == 'completed') {
           completed.add(chore);
+        } else if (status == 'in_progress') {
+          inProgress.add(chore);
+          allAssigned.add(chore);
         } else {
           pending.add(chore);
+          allAssigned.add(chore);
         }
       }
 
       setState(() {
         _myChores = pending;
+        _inProgressChores = inProgress;
+        _allAssignedChores = allAssigned;
         _completedChores = completed;
       });
     } catch (e) {
@@ -914,10 +927,26 @@ class _HomeScreenState extends State<HomeScreen>
   Widget _buildChoreContent(bool isDarkMode) {
     // Show appropriate content based on selected tab
     switch (_selectedTabIndex) {
-      case 0: // My Tasks
+      case 0: // My Tasks (pending only)
         return _myChores.isEmpty
             ? _buildEmptyState(isDarkMode)
             : _buildChoresList(_myChores, isDarkMode);
+      case 1: // In-progress
+        return _inProgressChores.isEmpty
+            ? _buildEmptyStateWithMessage(
+              'No chores in progress',
+              'Tap the menu on a chore and select "Start" to begin working on it',
+              isDarkMode,
+            )
+            : _buildChoresList(_inProgressChores, isDarkMode);
+      case 2: // Assigned to me (pending + in_progress)
+        return _allAssignedChores.isEmpty
+            ? _buildEmptyStateWithMessage(
+              'No assigned chores',
+              'Chores assigned to you will appear here',
+              isDarkMode,
+            )
+            : _buildChoresList(_allAssignedChores, isDarkMode);
       case 3: // Completed
         return _completedChores.isEmpty
             ? _buildEmptyStateWithMessage(
@@ -926,12 +955,8 @@ class _HomeScreenState extends State<HomeScreen>
               isDarkMode,
             )
             : _buildChoresList(_completedChores, isDarkMode);
-      default: // Other tabs - placeholder for now
-        return _buildEmptyStateWithMessage(
-          'Coming Soon',
-          'This tab is under development',
-          isDarkMode,
-        );
+      default:
+        return _buildEmptyState(isDarkMode);
     }
   }
 
@@ -1157,8 +1182,10 @@ class _HomeScreenState extends State<HomeScreen>
       }
     }
 
-    // Determine completion status
-    final isCompleted = assignment['status'] == 'completed';
+    // Determine status
+    final status = assignment['status'] ?? 'pending';
+    final isCompleted = status == 'completed';
+    final isInProgress = status == 'in_progress';
 
     // Get assignee first name only
     final assigneeFullName = _userName;
@@ -1189,10 +1216,8 @@ class _HomeScreenState extends State<HomeScreen>
           GestureDetector(
             onTap: () {
               if (isCompleted) {
-                // If task is completed, allow unchecking
                 _uncompleteChore(assignment['id']);
               } else {
-                // If task is pending, mark as complete
                 _completeChore(assignment['id']);
               }
             },
@@ -1202,19 +1227,24 @@ class _HomeScreenState extends State<HomeScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color:
-                      isCompleted
-                          ? AppColors.primary
-                          : isDarkMode
+                  color: isCompleted || isInProgress
+                      ? AppColors.primary
+                      : isDarkMode
                           ? AppColors.borderDark
                           : AppColors.borderPrimary,
                   width: 2,
                 ),
-                color: isCompleted ? AppColors.primary : Colors.transparent,
+                color: isCompleted
+                    ? AppColors.primary
+                    : isInProgress
+                        ? AppColors.primary.withValues(alpha: 0.2)
+                        : Colors.transparent,
               ),
-              child:
-                  isCompleted
-                      ? Icon(Icons.check, color: AppColors.textLight, size: 16)
+              child: isCompleted
+                  ? Icon(Icons.check, color: AppColors.textLight, size: 16)
+                  : isInProgress
+                      ? Icon(Icons.play_arrow,
+                          color: AppColors.primary, size: 14)
                       : null,
             ),
           ),
@@ -1411,7 +1441,9 @@ class _HomeScreenState extends State<HomeScreen>
     Map<String, dynamic> assignment,
     Map<String, dynamic> chore,
   ) {
-    final isCompleted = assignment['status'] == 'completed';
+    final status = assignment['status'] ?? 'pending';
+    final isCompleted = status == 'completed';
+    final isInProgress = status == 'in_progress';
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
@@ -1421,46 +1453,78 @@ class _HomeScreenState extends State<HomeScreen>
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (BuildContext context) {
+      builder: (BuildContext sheetContext) {
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Edit Chore
               ListTile(
                 leading: Icon(Icons.edit, color: AppColors.primary),
                 title: Text(
                   'Edit Chore',
                   style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
+                    color: isDarkMode
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
                   ),
                 ),
-                onTap: () {
-                  Navigator.pop(context);
-                  // Navigate to edit chore screen
+                onTap: () async {
+                  Navigator.pop(sheetContext);
+                  final changed = await Navigator.push<bool>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => EditChoreScreen(
+                        chore: chore,
+                        assignment: assignment,
+                      ),
+                    ),
+                  );
+                  if (changed == true) _loadChores();
                 },
               ),
-              if (!isCompleted)
+
+              // Mark as In Progress (only for pending)
+              if (!isCompleted && !isInProgress)
                 ListTile(
-                  leading: Icon(Icons.check_circle, color: AppColors.primary),
+                  leading:
+                      Icon(Icons.play_circle_outline, color: AppColors.primary),
                   title: Text(
-                    'Mark as Complete',
+                    'Start (In Progress)',
                     style: TextStyle(
-                      color:
-                          isDarkMode
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
+                      color: isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
+                    Navigator.pop(sheetContext);
+                    _updateChoreStatus(assignment['id'], 'in_progress');
+                  },
+                ),
+
+              // Mark as Complete
+              if (!isCompleted)
+                ListTile(
+                  leading:
+                      Icon(Icons.check_circle, color: AppColors.primary),
+                  title: Text(
+                    'Mark as Complete',
+                    style: TextStyle(
+                      color: isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
                     _completeChore(assignment['id']);
                   },
                 ),
-              if (isCompleted)
+
+              // Mark as Pending (from completed or in_progress)
+              if (isCompleted || isInProgress)
                 ListTile(
                   leading: Icon(
                     Icons.radio_button_unchecked,
@@ -1469,33 +1533,39 @@ class _HomeScreenState extends State<HomeScreen>
                   title: Text(
                     'Mark as Pending',
                     style: TextStyle(
-                      color:
-                          isDarkMode
-                              ? AppColors.textPrimaryDark
-                              : AppColors.textPrimary,
+                      color: isDarkMode
+                          ? AppColors.textPrimaryDark
+                          : AppColors.textPrimary,
                     ),
                   ),
                   onTap: () {
-                    Navigator.pop(context);
-                    _uncompleteChore(assignment['id']);
+                    Navigator.pop(sheetContext);
+                    if (isCompleted) {
+                      _uncompleteChore(assignment['id']);
+                    } else {
+                      _updateChoreStatus(assignment['id'], 'pending');
+                    }
                   },
                 ),
+
+              // Reassign Chore
               ListTile(
                 leading: Icon(Icons.person_add, color: AppColors.primary),
                 title: Text(
                   'Reassign Chore',
                   style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
+                    color: isDarkMode
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
                   ),
                 ),
                 onTap: () {
-                  Navigator.pop(context);
-                  // Show reassign dialog
+                  Navigator.pop(sheetContext);
+                  _showReassignSheet(assignment, chore);
                 },
               ),
+
+              // Delete Chore
               ListTile(
                 leading: const Icon(Icons.delete_outline, color: Colors.red),
                 title: const Text(
@@ -1503,10 +1573,210 @@ class _HomeScreenState extends State<HomeScreen>
                   style: TextStyle(color: Colors.red),
                 ),
                 onTap: () {
-                  Navigator.pop(context);
+                  Navigator.pop(sheetContext);
                   _confirmDeleteChore(chore['id'], assignment['id']);
                 },
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  /// Update a chore assignment's status (pending, in_progress, completed).
+  Future<void> _updateChoreStatus(String assignmentId, String status) async {
+    try {
+      await _choreRepository.updateChoreAssignment(
+        assignmentId: assignmentId,
+        status: status,
+      );
+      await _loadChores();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
+  /// Show bottom sheet to reassign a chore to another household member.
+  Future<void> _showReassignSheet(
+    Map<String, dynamic> assignment,
+    Map<String, dynamic> chore,
+  ) async {
+    final household = HouseholdService().currentHousehold;
+    if (household == null) return;
+
+    final isDarkMode =
+        Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+
+    // Load members and their workload in parallel
+    final householdRepo = HouseholdRepository();
+    final assignmentService = ChoreAssignmentService();
+
+    final members = await householdRepo.getHouseholdMembers(household.id);
+    final workloadCounts = await assignmentService.getRecentAssignmentCounts(
+      household.id,
+      days: 7,
+    );
+
+    // Get algorithm recommendation
+    final recommendation = await assignmentService.getRecommendation(
+      householdId: household.id,
+      choreName: chore['name'] ?? '',
+      dueDate: assignment['due_date'] != null
+          ? DateTime.parse(assignment['due_date'])
+          : DateTime.now(),
+    );
+
+    if (!mounted) return;
+
+    final currentAssignee = assignment['assigned_to'] as String?;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Reassign "${chore['name']}"',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Switzer',
+                    color: isDarkMode
+                        ? AppColors.textPrimaryDark
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              ...members.map((member) {
+                final isCurrent = member.userId == currentAssignee;
+                final isRecommended =
+                    recommendation != null &&
+                    member.userId == recommendation.userId;
+                final workload = workloadCounts[member.userId] ?? 0;
+
+                return ListTile(
+                  leading: CircleAvatar(
+                    radius: 18,
+                    backgroundColor: isCurrent
+                        ? AppColors.primary
+                        : (isDarkMode
+                            ? AppColors.surfaceDark
+                            : Colors.grey[200]),
+                    backgroundImage: member.profileImageUrl != null
+                        ? NetworkImage(member.profileImageUrl!)
+                        : null,
+                    child: member.profileImageUrl == null
+                        ? Text(
+                            (member.fullName ?? 'U')[0].toUpperCase(),
+                            style: TextStyle(
+                              color:
+                                  isCurrent ? Colors.white : AppColors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          )
+                        : null,
+                  ),
+                  title: Row(
+                    children: [
+                      Text(
+                        member.fullName ?? member.email ?? 'User',
+                        style: TextStyle(
+                          fontWeight:
+                              isCurrent ? FontWeight.bold : FontWeight.normal,
+                          color: isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                      if (isCurrent)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Text(
+                            '(current)',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      if (isRecommended)
+                        Padding(
+                          padding: const EdgeInsets.only(left: 6),
+                          child: Icon(
+                            Icons.auto_awesome,
+                            size: 16,
+                            color: isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                          ),
+                        ),
+                    ],
+                  ),
+                  subtitle: Text(
+                    '$workload chore${workload == 1 ? '' : 's'} this week'
+                    '${isRecommended ? ' · Recommended' : ''}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'VarelaRound',
+                      color: isRecommended
+                          ? (isDarkMode
+                              ? AppColors.primaryDark
+                              : AppColors.primary)
+                          : (isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary),
+                    ),
+                  ),
+                  onTap: isCurrent
+                      ? null
+                      : () async {
+                          Navigator.pop(sheetContext);
+                          try {
+                            await _choreRepository.updateChoreAssignment(
+                              assignmentId: assignment['id'],
+                              assignedTo: member.userId,
+                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Reassigned to ${member.fullName ?? 'member'}',
+                                  ),
+                                ),
+                              );
+                            }
+                            await _loadChores();
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Error reassigning: $e'),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                );
+              }),
+              const SizedBox(height: 8),
             ],
           ),
         );

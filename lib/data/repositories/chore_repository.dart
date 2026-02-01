@@ -249,6 +249,23 @@ class ChoreRepository {
     }
   }
 
+  // Update a chore's details (name, description, frequency)
+  Future<void> updateChore({
+    required String choreId,
+    String? name,
+    String? description,
+    String? frequency,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (name != null) updates['name'] = name;
+    if (description != null) updates['description'] = description;
+    if (frequency != null) updates['frequency'] = frequency;
+
+    if (updates.isNotEmpty) {
+      await _client.from('chores').update(updates).eq('id', choreId);
+    }
+  }
+
   // Update a chore assignment
   Future<void> updateChoreAssignment({
     required String assignmentId,
