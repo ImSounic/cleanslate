@@ -35,19 +35,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    debugPrint('🔔 NotificationsScreen: initState called');
     _loadNotificationPreferences();
 
     // Reload notifications when screen opens
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('🔔 NotificationsScreen: Loading notifications after frame');
       context.read<NotificationService>().loadNotifications();
     });
   }
 
   @override
   void dispose() {
-    debugPrint('🔔 NotificationsScreen: dispose called');
     super.dispose();
   }
 
@@ -69,7 +66,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   // Test notification creation with phone preview
   Future<void> _createTestNotification(String type) async {
-    debugPrint('🧪 TEST: Creating test notification of type: $type');
 
     setState(() {
       _isTestingNotifications = true;
@@ -82,21 +78,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final currentHousehold = _householdService.currentHousehold;
 
       if (currentUser == null) {
-        debugPrint('❌ TEST: No current user found');
         throw Exception('No user logged in');
       }
 
-      debugPrint('🧪 TEST: Current user ID: ${currentUser.id}');
-      debugPrint(
-        '🧪 TEST: Current household ID: ${currentHousehold?.id ?? "No household"}',
-      );
-
       final testData = _getTestNotificationData(type);
 
-      debugPrint('🧪 TEST: Creating notification with data:');
-      debugPrint('  - Type: ${testData['type']}');
-      debugPrint('  - Title: ${testData['title']}');
-      debugPrint('  - Message: ${testData['message']}');
 
       // Create the notification in the database
       await notificationRepo.createNotification(
@@ -108,10 +94,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         metadata: testData['metadata'] as Map<String, dynamic>? ?? {},
       );
 
-      debugPrint('✅ TEST: Notification created successfully');
 
       // Show phone notification preview immediately
-      debugPrint('📱 Showing phone notification preview');
       await _pushService.showNotification(
         title: testData['title']!,
         body: testData['message']!,
@@ -134,7 +118,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         );
       }
     } catch (e) {
-      debugPrint('❌ TEST: Error creating notification: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -513,7 +496,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDarkMode = ThemeUtils.isDarkMode(context);
-    debugPrint('🔔 NotificationsScreen: build called, isDarkMode: $isDarkMode');
 
     return Scaffold(
       backgroundColor:
@@ -528,7 +510,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
           ),
           onPressed: () {
-            debugPrint('🔔 NotificationsScreen: Back button pressed');
             Navigator.pop(context);
           },
         ),
@@ -567,15 +548,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
             ),
             onSelected: (value) async {
-              debugPrint('🔔 NotificationsScreen: Menu selected: $value');
               final service = context.read<NotificationService>();
               switch (value) {
                 case 'mark_all_read':
-                  debugPrint('🔔 Marking all notifications as read');
                   await service.markAllAsRead();
                   break;
                 case 'clear_all':
-                  debugPrint('🔔 Showing clear all confirmation');
                   _showClearAllConfirmation();
                   break;
               }
@@ -630,13 +608,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       body: Consumer<NotificationService>(
         builder: (context, service, child) {
-          debugPrint('🔔 NotificationsScreen: Consumer rebuild');
-          debugPrint('  - isLoading: ${service.isLoading}');
-          debugPrint(
-            '  - notifications count: ${service.notifications.length}',
-          );
-          debugPrint('  - unread count: ${service.unreadCount}');
-
           if (service.isLoading) {
             return Center(
               child: CircularProgressIndicator(
@@ -651,7 +622,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
           return RefreshIndicator(
             onRefresh: () {
-              debugPrint('🔔 Pull to refresh triggered');
               return service.loadNotifications();
             },
             color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
@@ -660,9 +630,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               itemCount: service.notifications.length,
               itemBuilder: (context, index) {
                 final notification = service.notifications[index];
-                debugPrint(
-                  '🔔 Building notification tile $index: ${notification.title}',
-                );
                 return _buildNotificationTile(notification, isDarkMode);
               },
             ),
@@ -693,7 +660,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildEmptyState(bool isDarkMode) {
-    debugPrint('🔔 Building empty state');
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -768,9 +734,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     bool isDarkMode,
   ) {
     final service = context.read<NotificationService>();
-    debugPrint(
-      '🔔 Building tile for: ${notification.title} (read: ${notification.isRead})',
-    );
 
     return Dismissible(
       key: Key(notification.id),
@@ -782,7 +745,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: const Icon(Icons.delete, color: Colors.white),
       ),
       onDismissed: (direction) {
-        debugPrint('🔔 Dismissing notification: ${notification.id}');
         service.deleteNotification(notification.id);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -790,7 +752,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             action: SnackBarAction(
               label: 'Undo',
               onPressed: () {
-                debugPrint('🔔 Undo delete requested (not implemented)');
               },
             ),
           ),
@@ -813,9 +774,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ),
         child: ListTile(
           onTap: () async {
-            debugPrint('🔔 Notification tapped: ${notification.id}');
             if (!notification.isRead) {
-              debugPrint('🔔 Marking as read: ${notification.id}');
               await service.markAsRead(notification.id);
             }
             _handleNotificationTap(notification);
@@ -901,28 +860,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   void _handleNotificationTap(NotificationModel notification) {
-    debugPrint('🔔 Handling notification tap for type: ${notification.type}');
 
     // Handle navigation based on notification type
     switch (notification.type) {
       case 'chore_created':
       case 'chore_assigned':
       case 'deadline_approaching':
-        debugPrint('🔔 Navigating to chore details');
         Navigator.pop(context);
         break;
       case 'member_joined':
-        debugPrint('🔔 Navigating to members screen');
         Navigator.pop(context);
         break;
       default:
-        debugPrint('🔔 Unknown notification type, no navigation');
         break;
     }
   }
 
   void _showClearAllConfirmation() {
-    debugPrint('🔔 Showing clear all confirmation dialog');
     // Fix: Use listen: false to avoid the provider error
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
@@ -955,7 +909,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           actions: [
             TextButton(
               onPressed: () {
-                debugPrint('🔔 Clear all cancelled');
                 Navigator.pop(context);
               },
               child: Text(
@@ -970,12 +923,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             ),
             TextButton(
               onPressed: () async {
-                debugPrint('🔔 Clearing all notifications');
                 Navigator.pop(context);
                 await context
                     .read<NotificationService>()
                     .clearAllNotifications();
-                debugPrint('✅ All notifications cleared');
               },
               style: TextButton.styleFrom(foregroundColor: AppColors.error),
               child: const Text('Clear All'),

@@ -43,9 +43,10 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           hasScanned = true;
         });
 
-        // Validate the code format (8 characters, alphanumeric)
-        if (RegExp(r'^[A-Z0-9]{8}$').hasMatch(code)) {
-          Navigator.pop(context, code);
+        // Validate the code format (8 characters, alphanumeric, case-insensitive)
+        final normalizedCode = code.toUpperCase();
+        if (RegExp(r'^[A-Z0-9]{8}$').hasMatch(normalizedCode)) {
+          Navigator.pop(context, normalizedCode);
         } else {
           // Invalid code format
           ScaffoldMessenger.of(context).showSnackBar(

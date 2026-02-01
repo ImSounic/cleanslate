@@ -11,6 +11,7 @@ class AppTheme {
       primary: AppColors.primary,
       secondary: AppColors.primaryLight,
       surface: AppColors.surface,
+      surfaceContainerHighest: AppColors.background,
       error: AppColors.error,
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(

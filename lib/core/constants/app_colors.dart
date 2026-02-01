@@ -75,7 +75,29 @@ class AppColors {
   static const Color priorityMedium = Color(0xFFFF9800);
   static const Color priorityLow = Color(0xFF4CAF50);
 
-  // Avatar Colors
+  // Avatar Colors — deterministic palette based on userId hash
+  static const List<Color> avatarPalette = [
+    Color(0xFFE57373), // red
+    Color(0xFFFF8A65), // deep orange
+    Color(0xFFFFB74D), // orange
+    Color(0xFFFFD54F), // amber
+    Color(0xFF81C784), // green
+    Color(0xFF4DB6AC), // teal
+    Color(0xFF4FC3F7), // light blue
+    Color(0xFF7986CB), // indigo
+    Color(0xFFBA68C8), // purple
+    Color(0xFFF06292), // pink
+    Color(0xFFA1887F), // brown
+    Color(0xFF90A4AE), // blue grey
+  ];
+
+  /// Returns a consistent avatar color for a given userId.
+  static Color avatarColorFor(String userId) {
+    final hash = userId.hashCode.abs();
+    return avatarPalette[hash % avatarPalette.length];
+  }
+
+  // Legacy — kept for backward compatibility but prefer avatarColorFor()
   static const Color avatarAmber = Colors.amber;
   static const Color avatarGreen = Colors.green;
   static const Color avatarBrown = Colors.brown;

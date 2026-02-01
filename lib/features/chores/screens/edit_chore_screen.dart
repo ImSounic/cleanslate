@@ -8,6 +8,7 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
+import 'package:cleanslate/core/utils/string_extensions.dart';
 
 /// Screen for editing an existing chore's details.
 class EditChoreScreen extends StatefulWidget {
@@ -48,9 +49,7 @@ class _EditChoreScreenState extends State<EditChoreScreen> {
     _descriptionController =
         TextEditingController(text: chore['description'] ?? '');
 
-    _priority = _capitalize(
-      (assignment['priority'] ?? 'medium').toString(),
-    );
+    _priority = (assignment['priority'] ?? 'medium').toString().capitalize();
 
     if (assignment['due_date'] != null) {
       final dt = DateTime.parse(assignment['due_date']);
@@ -465,6 +464,4 @@ class _EditChoreScreenState extends State<EditChoreScreen> {
     );
   }
 
-  String _capitalize(String s) =>
-      s.isEmpty ? s : s[0].toUpperCase() + s.substring(1).toLowerCase();
 }

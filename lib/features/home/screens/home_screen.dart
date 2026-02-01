@@ -13,6 +13,7 @@ import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
 import 'package:cleanslate/features/household/screens/household_detail_screen.dart';
 import 'package:cleanslate/data/services/household_service.dart';
+import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
@@ -633,7 +634,9 @@ class _HomeScreenState extends State<HomeScreen>
                             )
                             : CircleAvatar(
                               radius: 16,
-                              backgroundColor: AppColors.avatarAmber,
+                              backgroundColor: AppColors.avatarColorFor(
+                                _supabaseService.currentUser?.id ?? _userName,
+                              ),
                               child: Text(
                                 _userName.isNotEmpty
                                     ? _userName[0].toUpperCase()
@@ -1342,7 +1345,9 @@ class _HomeScreenState extends State<HomeScreen>
                         )
                         : CircleAvatar(
                           radius: 10,
-                          backgroundColor: AppColors.avatarAmber,
+                          backgroundColor: AppColors.avatarColorFor(
+                            _supabaseService.currentUser?.id ?? _userName,
+                          ),
                           child: Text(
                             assigneeInitial,
                             style: TextStyle(
@@ -1421,9 +1426,7 @@ class _HomeScreenState extends State<HomeScreen>
 
                   // Priority text
                   Text(
-                    _capitalize(
-                      (assignment['priority'] ?? 'Medium').toString(),
-                    ),
+                    (assignment['priority'] ?? 'Medium').toString().capitalize(),
                     style: TextStyle(
                       fontSize: 12,
                       fontFamily: 'VarelaRound',
@@ -1890,11 +1893,5 @@ class _HomeScreenState extends State<HomeScreen>
     );
   }
 
-  // Helper function to capitalize strings
-  String _capitalize(String s) {
-    if (s.isEmpty) {
-      return s;
-    }
-    return s[0].toUpperCase() + s.substring(1).toLowerCase();
-  }
+  // capitalize helper moved to string_extensions.dart
 }

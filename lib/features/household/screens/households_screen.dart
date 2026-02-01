@@ -34,6 +34,7 @@ class _HouseholdsScreenState extends State<HouseholdsScreen> {
         _households = households;
       });
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error loading households: $e')));
