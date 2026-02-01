@@ -24,6 +24,7 @@ class ChoreRepository {
     String? description,
     int? estimatedDuration,
     String? frequency = 'weekly',
+    bool isRecurring = false,
   }) async {
     final response =
         await _client
@@ -34,6 +35,7 @@ class ChoreRepository {
               'description': description,
               'estimated_duration': estimatedDuration,
               'frequency': frequency,
+              'is_recurring': isRecurring,
               'created_by': _client.auth.currentUser!.id,
             })
             .select()

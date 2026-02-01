@@ -15,6 +15,7 @@ import 'package:cleanslate/features/household/screens/household_detail_screen.da
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
+import 'package:cleanslate/data/services/recurrence_service.dart';
 import 'package:cleanslate/features/chores/screens/edit_chore_screen.dart';
 import 'package:intl/intl.dart';
 
@@ -59,6 +60,7 @@ class _HomeScreenState extends State<HomeScreen>
     super.initState();
     _loadUserData();
     _loadChores();
+    _processRecurringChores();
 
     // Initialize animation controller
     _toggleController = AnimationController(
@@ -148,6 +150,21 @@ class _HomeScreenState extends State<HomeScreen>
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  /// Check and generate any missed recurring chore instances on app open.
+  Future<void> _processRecurringChores() async {
+    final householdId = HouseholdService().currentHousehold?.id;
+    if (householdId == null) return;
+
+    final recurrenceService = RecurrenceService();
+    final generated =
+        await recurrenceService.processAllRecurringChores(householdId);
+
+    if (generated > 0 && mounted) {
+      // Refresh the list to show new instances
+      _loadChores();
     }
   }
 
@@ -358,9 +375,38 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  Future<void> _completeChore(String assignmentId) async {
+  Future<void> _completeChore(
+    String assignmentId, {
+    String? choreId,
+    String? householdId,
+  }) async {
     try {
       await _choreRepository.completeChore(assignmentId);
+
+      // Trigger recurring chore generation if applicable
+      if (choreId != null) {
+        final hId =
+            householdId ?? HouseholdService().currentHousehold?.id;
+        if (hId != null) {
+          final recurrenceService = RecurrenceService();
+          final next = await recurrenceService.onChoreCompleted(
+            choreId: choreId,
+            assignmentId: assignmentId,
+            householdId: hId,
+          );
+          if (next != null && mounted) {
+            final freq = next['frequency'] ?? '';
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Next "${next['name']}" scheduled ($freq)',
+                ),
+              ),
+            );
+          }
+        }
+      }
+
       // Refresh chores list
       _loadChores();
     } catch (e) {
@@ -1218,7 +1264,10 @@ class _HomeScreenState extends State<HomeScreen>
               if (isCompleted) {
                 _uncompleteChore(assignment['id']);
               } else {
-                _completeChore(assignment['id']);
+                _completeChore(
+                  assignment['id'],
+                  choreId: chore['id'],
+                );
               }
             },
             child: Container(
@@ -1519,7 +1568,10 @@ class _HomeScreenState extends State<HomeScreen>
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    _completeChore(assignment['id']);
+                    _completeChore(
+                      assignment['id'],
+                      choreId: chore['id'],
+                    );
                   },
                 ),
 

@@ -10,6 +10,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
+import 'package:cleanslate/data/services/recurrence_service.dart';
 
 class AddChoreScreen extends StatefulWidget {
   const AddChoreScreen({super.key});
@@ -255,6 +256,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
         name: sanitizedName,
         description: sanitizedDescription,
         frequency: _repeatPattern,
+        isRecurring: RecurrenceService.isRecurring(_repeatPattern),
       );
 
       // If a member is selected, assign the chore to them
@@ -1232,6 +1234,37 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                   ),
                 ),
               ),
+              // Recurring info hint
+              if (_repeatPattern != null &&
+                  RecurrenceService.isRecurring(_repeatPattern))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.autorenew,
+                        size: 14,
+                        color: isDarkMode
+                            ? AppColors.primaryDark
+                            : AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'This chore will repeat ${_repeatPattern!}. '
+                          'A new instance is created when you complete the current one.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontFamily: 'VarelaRound',
+                            color: isDarkMode
+                                ? AppColors.primaryDark
+                                : AppColors.primary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const SizedBox(height: 40),
 
               // Add Chore Button
