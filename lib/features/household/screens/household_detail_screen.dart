@@ -7,6 +7,7 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/household/screens/room_config_screen.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class HouseholdDetailScreen extends StatefulWidget {
   final String householdId;
@@ -71,9 +72,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading household: $e')));
+        ErrorService.showError(context, e, operation: 'loadHousehold');
       }
     } finally {
       setState(() {
@@ -367,9 +366,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
                       ),
                     );
                   } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('Error deleting chore: $e')),
-                    );
+                    ErrorService.showErrorSafe(scaffoldMessenger, e, operation: 'deleteChore');
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -514,9 +511,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating member role: $e')),
-        );
+        ErrorService.showError(context, e, operation: 'updateMemberRole');
       }
     }
   }
@@ -561,9 +556,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
                       ),
                     );
                   } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(content: Text('Error removing member: $e')),
-                    );
+                    ErrorService.showErrorSafe(scaffoldMessenger, e, operation: 'removeMember');
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -679,11 +672,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
                       (route) => false,
                     );
                   } catch (e) {
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                        content: Text('Error leaving household: $e'),
-                      ),
-                    );
+                    ErrorService.showErrorSafe(scaffoldMessenger, e, operation: 'leaveHousehold');
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),

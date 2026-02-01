@@ -14,6 +14,7 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({super.key});
@@ -123,13 +124,11 @@ class _MembersScreenState extends State<MembersScreen> {
       // Handle error
       if (!context.mounted) return;
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading members: $e')),
-      );
+      ErrorService.showError(context, e, operation: 'loadMembers');
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Error loading members: $e';
+        _errorMessage = 'Failed to load members';
         _isCurrentUserAdmin = false;
       });
     }
@@ -172,12 +171,11 @@ class _MembersScreenState extends State<MembersScreen> {
 
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Failed to create household: $e';
+        _errorMessage = 'Failed to create household';
       });
 
-      ScaffoldMessenger.of(
-        currentContext,
-      ).showSnackBar(SnackBar(content: Text('Error creating household: $e')));
+      // ignore: use_build_context_synchronously
+      ErrorService.showError(currentContext, e, operation: 'createHousehold');
     }
   }
 
@@ -221,17 +219,11 @@ class _MembersScreenState extends State<MembersScreen> {
 
       setState(() {
         _isLoading = false;
-        // Extract meaningful error message from exception
-        String errorMsg = e.toString();
-        if (errorMsg.contains('Exception: ')) {
-          errorMsg = errorMsg.split('Exception: ')[1];
-        }
-        _errorMessage = 'Failed to join household: $errorMsg';
+        _errorMessage = 'Failed to join household';
       });
 
-      ScaffoldMessenger.of(currentContext).showSnackBar(
-        SnackBar(content: Text(_errorMessage ?? 'Error joining household')),
-      );
+      // ignore: use_build_context_synchronously
+      ErrorService.showError(currentContext, e, operation: 'joinHousehold');
     }
   }
 
@@ -725,9 +717,8 @@ class _MembersScreenState extends State<MembersScreen> {
       // Check if widget is still mounted before showing error
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(
-        currentContext,
-      ).showSnackBar(SnackBar(content: Text('Error updating member role: $e')));
+      // ignore: use_build_context_synchronously
+      ErrorService.showError(currentContext, e, operation: 'updateMemberRole');
     }
   }
 
@@ -837,9 +828,8 @@ class _MembersScreenState extends State<MembersScreen> {
       // Check if widget is still mounted before showing error
       if (!context.mounted) return;
 
-      ScaffoldMessenger.of(
-        currentContext,
-      ).showSnackBar(SnackBar(content: Text('Error removing member: $e')));
+      // ignore: use_build_context_synchronously
+      ErrorService.showError(currentContext, e, operation: 'removeMember');
     }
   }
 

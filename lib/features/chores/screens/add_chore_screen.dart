@@ -11,6 +11,7 @@ import 'package:intl/intl.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class AddChoreScreen extends StatefulWidget {
   const AddChoreScreen({super.key});
@@ -179,9 +180,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       } catch (e) {
         // Handle error
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error loading household members: $e')),
-          );
+          ErrorService.showError(context, e, operation: 'loadMembers');
         }
       }
     }
@@ -277,9 +276,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error adding chore: $e')));
+        ErrorService.showError(context, e, operation: 'addChore');
       }
     } finally {
       if (mounted) {

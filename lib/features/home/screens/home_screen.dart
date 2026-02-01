@@ -20,6 +20,7 @@ import 'package:cleanslate/data/services/chore_assignment_service.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
 import 'package:cleanslate/features/chores/screens/edit_chore_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
@@ -115,9 +116,7 @@ class _HomeScreenState extends State<HomeScreen>
     } catch (e) {
       // Handle error
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading chores: $e')));
+        ErrorService.showError(context, e, operation: 'loadChores');
       }
     } finally {
       setState(() {
@@ -332,9 +331,7 @@ class _HomeScreenState extends State<HomeScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error logging out: ${e.toString()}')),
-        );
+        ErrorService.showError(context, e, operation: 'logout');
       }
     }
   }
@@ -375,9 +372,7 @@ class _HomeScreenState extends State<HomeScreen>
       _loadChores();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error completing chore: $e')));
+        ErrorService.showError(context, e, operation: 'completeChore');
       }
     }
   }
@@ -392,9 +387,7 @@ class _HomeScreenState extends State<HomeScreen>
       _loadChores();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error uncompleting chore: $e')));
+        ErrorService.showError(context, e, operation: 'uncompleteChore');
       }
     }
   }
@@ -428,9 +421,7 @@ class _HomeScreenState extends State<HomeScreen>
         setState(() {
           _isLoading = false;
         });
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error deleting chore: $e')));
+        ErrorService.showError(context, e, operation: 'deleteChore');
       }
     } finally {
       if (mounted && _isLoading) {
@@ -1533,9 +1524,7 @@ class _HomeScreenState extends State<HomeScreen>
       await _loadChores();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
+        ErrorService.showError(context, e, operation: 'updateChoreStatus');
       }
     }
   }
@@ -1705,11 +1694,7 @@ class _HomeScreenState extends State<HomeScreen>
                             await _loadChores();
                           } catch (e) {
                             if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error reassigning: $e'),
-                                ),
-                              );
+                              ErrorService.showError(context, e, operation: 'reassignChore');
                             }
                           }
                         },

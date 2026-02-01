@@ -4,6 +4,7 @@
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/features/household/screens/household_detail_screen.dart'; // Add this import
+import 'package:cleanslate/core/services/error_service.dart';
 
 class HouseholdsScreen extends StatefulWidget {
   const HouseholdsScreen({super.key});
@@ -35,9 +36,7 @@ class _HouseholdsScreenState extends State<HouseholdsScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading households: $e')));
+      ErrorService.showError(context, e, operation: 'loadHouseholds');
     } finally {
       setState(() {
         _isLoading = false;
@@ -191,9 +190,7 @@ class _HouseholdsScreenState extends State<HouseholdsScreen> {
                                   }
                                 } catch (e) {
                                   if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Error: $e')),
-                                    );
+                                    ErrorService.showError(context, e, operation: 'createHousehold');
                                   }
                                 } finally {
                                   if (mounted) {

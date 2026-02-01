@@ -10,6 +10,7 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class AdminModeScreen extends StatefulWidget {
   const AdminModeScreen({super.key});
@@ -88,7 +89,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       });
     } catch (e) {
       setState(() {
-        _errorMessage = 'Error loading data: $e';
+        _errorMessage = 'Failed to load admin data';
         _isLoading = false;
       });
     }
@@ -236,9 +237,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       _showRebalancePreview(changes);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Rebalance failed: $e')),
-        );
+        ErrorService.showError(context, e, operation: 'rebalanceChores');
       }
     } finally {
       if (mounted) setState(() => _isRebalancing = false);
@@ -765,9 +764,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
     } catch (e) {
       if (!context.mounted) return;
       // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to transfer ownership: $e')),
-      );
+      ErrorService.showError(context, e, operation: 'transferOwnership');
     } finally {
       if (context.mounted) {
         setState(() {
@@ -953,14 +950,12 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
       if (context.mounted) {
         setState(() {
           _isLoading = false;
-          _errorMessage = 'Failed to delete household: $e';
+          _errorMessage = 'Failed to delete household';
         });
       }
 
       if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar( // ignore: use_build_context_synchronously
-        SnackBar(content: Text('Error deleting household: $e')),
-      );
+      ErrorService.showError(context, e, operation: 'deleteHousehold'); // ignore: use_build_context_synchronously
     }
   }
 
@@ -982,9 +977,7 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
         ),
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ErrorService.showError(context, e, operation: 'handleRequest');
     } finally {
       setState(() {
         _isLoading = false;

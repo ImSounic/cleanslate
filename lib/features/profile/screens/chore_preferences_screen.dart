@@ -6,6 +6,7 @@ import 'package:cleanslate/data/models/user_preferences_model.dart';
 import 'package:cleanslate/data/repositories/user_preferences_repository.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class ChorePreferencesScreen extends StatefulWidget {
   const ChorePreferencesScreen({super.key});
@@ -109,9 +110,7 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
         _isLoading = false;
       });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading preferences: $e')),
-        );
+        ErrorService.showError(context, e, operation: 'loadPreferences');
       }
     }
   }
@@ -164,9 +163,7 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error saving preferences: $e')));
+        ErrorService.showError(context, e, operation: 'savePreferences');
       }
     } finally {
       setState(() {

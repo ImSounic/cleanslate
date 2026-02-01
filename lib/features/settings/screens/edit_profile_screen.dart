@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'dart:io';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -62,9 +63,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: ${e.toString()}')),
-        );
+        ErrorService.showError(context, e, operation: 'loadProfile');
       }
     } finally {
       setState(() {
@@ -123,9 +122,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating profile: ${e.toString()}')),
-        );
+        ErrorService.showError(context, e, operation: 'saveProfile');
       }
     } finally {
       setState(() {
@@ -268,9 +265,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error picking image: ${e.toString()}')),
-        );
+        ErrorService.showError(context, e, operation: 'pickImage');
       }
     }
   }
@@ -799,9 +794,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           _isLoading = false;
         });
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting account: ${e.toString()}')),
-        );
+        ErrorService.showError(context, e, operation: 'deleteAccount');
       }
     }
   }

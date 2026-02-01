@@ -9,6 +9,7 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -151,9 +152,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error loading chores: $e')));
+        ErrorService.showError(context, e, operation: 'loadChores');
         setState(() {
           _isLoading = false;
         });
@@ -284,9 +283,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       _loadChores();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error updating chore: $e')));
+        ErrorService.showError(context, e, operation: 'updateChore');
       }
     }
   }
@@ -307,9 +304,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error deleting chore: $e')));
+        ErrorService.showError(context, e, operation: 'deleteChore');
       }
     }
   }

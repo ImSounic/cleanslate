@@ -12,6 +12,7 @@ import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/push_notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -119,12 +120,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: AppColors.error,
-          ),
-        );
+        ErrorService.showError(context, e, operation: 'testNotification');
       }
     } finally {
       setState(() {

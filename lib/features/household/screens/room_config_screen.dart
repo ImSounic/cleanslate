@@ -5,6 +5,7 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 /// Screen for configuring the number of rooms in a household.
 /// Used by the auto-assignment algorithm and chore generation.
@@ -66,9 +67,7 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving: $e')),
-        );
+        ErrorService.showError(context, e, operation: 'saveRoomConfig');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

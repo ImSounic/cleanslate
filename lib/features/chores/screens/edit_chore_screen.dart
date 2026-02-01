@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 /// Screen for editing an existing chore's details.
 class EditChoreScreen extends StatefulWidget {
@@ -112,9 +113,7 @@ class _EditChoreScreenState extends State<EditChoreScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error updating chore: $e')),
-        );
+        ErrorService.showError(context, e, operation: 'updateChore');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);

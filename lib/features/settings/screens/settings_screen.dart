@@ -14,6 +14,7 @@ import 'package:cleanslate/features/settings/widgets/calendar_sync_settings.dart
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -118,9 +119,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error logging out: ${e.toString()}')),
-        );
+        ErrorService.showError(context, e, operation: 'logout');
       }
     }
   }
@@ -482,9 +481,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 }
               } catch (e) {
                 if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error linking Google account: $e')),
-                  );
+                  ErrorService.showError(context, e, operation: 'linkGoogle');
                 }
               }
             },
@@ -534,9 +531,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                    ErrorService.showError(context, e, operation: 'unlinkGoogle');
                   }
                 }
               }

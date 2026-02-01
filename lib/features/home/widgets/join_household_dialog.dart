@@ -5,6 +5,7 @@ import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/features/members/screens/qr_scanner_screen.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class JoinHouseholdDialog extends StatefulWidget {
   const JoinHouseholdDialog({super.key});
@@ -46,9 +47,7 @@ class _JoinHouseholdDialogState extends State<JoinHouseholdDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ErrorService.showError(context, e, operation: 'joinHousehold');
       }
     } finally {
       if (mounted) {

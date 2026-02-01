@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
+import 'package:cleanslate/core/services/error_service.dart';
 
 class CreateHouseholdDialog extends StatefulWidget {
   const CreateHouseholdDialog({super.key});
@@ -39,9 +40,7 @@ class _CreateHouseholdDialogState extends State<CreateHouseholdDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ErrorService.showError(context, e, operation: 'createHousehold');
       }
     } finally {
       if (mounted) {
