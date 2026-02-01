@@ -60,7 +60,11 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton>
       _animationController.value = 0.0;
     }
 
-    return GestureDetector(
+    return Semantics(
+      label: isDarkMode ? 'Switch to light mode' : 'Switch to dark mode',
+      button: true,
+      toggled: isDarkMode,
+      child: GestureDetector(
       onTap: () {
         themeProvider.toggleTheme();
         if (isDarkMode) {
@@ -131,6 +135,7 @@ class _ThemeToggleButtonState extends State<ThemeToggleButton>
           },
         ),
       ),
+    ),
     );
   }
 }

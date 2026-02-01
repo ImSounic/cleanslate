@@ -107,22 +107,28 @@ class MainScaffold extends StatelessWidget {
     bool isDarkMode,
   ) {
     return BottomNavigationBarItem(
-      icon: SvgPicture.asset(
-        svgPath,
-        height: 24,
-        width: 24,
-        colorFilter: ColorFilter.mode(
-          currentIndex == index
-              ? (isDarkMode
-                  ? AppColors.navSelectedDark
-                  : AppColors.navSelected)
-              : (isDarkMode
-                  ? AppColors.navUnselectedDark
-                  : AppColors.navUnselected),
-          BlendMode.srcIn,
+      icon: Semantics(
+        label: label,
+        button: true,
+        selected: currentIndex == index,
+        child: SvgPicture.asset(
+          svgPath,
+          height: 24,
+          width: 24,
+          colorFilter: ColorFilter.mode(
+            currentIndex == index
+                ? (isDarkMode
+                    ? AppColors.navSelectedDark
+                    : AppColors.navSelected)
+                : (isDarkMode
+                    ? AppColors.navUnselectedDark
+                    : AppColors.navUnselected),
+            BlendMode.srcIn,
+          ),
         ),
       ),
       label: label,
+      tooltip: label,
     );
   }
 }
