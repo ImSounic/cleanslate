@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/data/services/household_service.dart';
-import 'package:cleanslate/features/home/screens/home_screen.dart';
+import 'package:cleanslate/features/app_shell.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
@@ -47,8 +47,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await _householdService.initializeHousehold();
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AppShell()), (route) => false,
         );
       }
     } catch (error) {
@@ -91,8 +91,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await _householdService.initializeHousehold();
 
       if (mounted) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const AppShell()), (route) => false,
         );
       }
     } catch (error) {
