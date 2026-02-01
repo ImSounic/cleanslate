@@ -26,6 +26,7 @@ import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
+import 'package:cleanslate/features/stats/screens/chore_stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -633,6 +634,25 @@ class _HomeScreenState extends State<HomeScreen>
                 children: [
                   // Theme toggle — uses shared widget
                   const ThemeToggleButton(),
+                  const SizedBox(width: 12),
+                  // Stats icon
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const ChoreStatsScreen(),
+                        ),
+                      );
+                    },
+                    child: Icon(
+                      Icons.bar_chart_rounded,
+                      size: 24,
+                      color: isDarkMode
+                          ? AppColors.iconPrimaryDark
+                          : AppColors.iconPrimary,
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   // Notifications with Consumer
                   Consumer<NotificationService>(
