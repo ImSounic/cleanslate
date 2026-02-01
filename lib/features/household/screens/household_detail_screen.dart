@@ -584,8 +584,50 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       orElse: () => throw Exception('Member not found'),
     );
 
-    // Capture references BEFORE any async gaps to avoid
-    // "deactivated widget's ancestor" crashes.
+    // Determine context for the confirmation dialog
+    final activeMembers = _members.where((m) => m.isActive).toList();
+    final isLastMember = activeMembers.length == 1;
+    final isAdmin = currentMember.role == 'admin';
+    final adminCount =
+        activeMembers.where((m) => m.role == 'admin').length;
+    final isLastAdmin = isAdmin && adminCount == 1 && !isLastMember;
+
+    // Find who would be promoted (longest-tenured non-current member)
+    String? nextAdminName;
+    if (isLastAdmin) {
+      final candidates = activeMembers
+          .where((m) => m.userId != currentUserId)
+          .toList()
+        ..sort((a, b) => a.joinedAt.compareTo(b.joinedAt));
+      if (candidates.isNotEmpty) {
+        nextAdminName =
+            candidates.first.fullName ?? candidates.first.email ?? 'a member';
+      }
+    }
+
+    // Build the appropriate warning message
+    String title;
+    String message;
+    if (isLastMember) {
+      title = 'Delete Household?';
+      message =
+          'You are the last member. Leaving will permanently delete '
+          '"${_household?['name'] ?? 'this household'}" and all its chores. '
+          'This cannot be undone.';
+    } else if (isLastAdmin && nextAdminName != null) {
+      title = 'Leave Household?';
+      message =
+          'You are the only admin. $nextAdminName will be automatically '
+          'promoted to admin when you leave.\n\n'
+          'You will need an invite code to rejoin.';
+    } else {
+      title = 'Leave Household?';
+      message =
+          'Are you sure you want to leave this household? '
+          'You will need an invite code to rejoin.';
+    }
+
+    // Capture references BEFORE any async gaps
     final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
@@ -593,10 +635,8 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       context: context,
       builder:
           (dialogContext) => AlertDialog(
-            title: const Text('Leave Household'),
-            content: const Text(
-              'Are you sure you want to leave this household? You will need an invite code to rejoin.',
-            ),
+            title: Text(title),
+            content: Text(message),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
@@ -607,22 +647,33 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
                   Navigator.pop(dialogContext); // close dialog
 
                   try {
-                    await _householdRepository.removeMemberFromHousehold(
-                      currentMember.id,
+                    final result = await _householdRepository.leaveHousehold(
+                      householdId: widget.householdId,
+                      memberRecordId: currentMember.id,
+                      userId: currentUserId,
                     );
 
-                    // Clear cached household so home screen refreshes cleanly
+                    // Clear cached household
                     HouseholdService().clearCurrentHousehold();
 
-                    // Show success THEN navigate (using pre-captured refs)
+                    // Show context-aware success message
+                    String successMsg;
+                    switch (result.type) {
+                      case LeaveResultType.householdDeleted:
+                        successMsg = 'Household deleted';
+                      case LeaveResultType.adminPromoted:
+                        successMsg =
+                            'Left household. ${result.promotedMemberName} '
+                            'is now admin.';
+                      case LeaveResultType.normalLeave:
+                        successMsg = 'You have left the household';
+                    }
+
                     scaffoldMessenger.showSnackBar(
-                      const SnackBar(
-                        content: Text('You have left the household'),
-                      ),
+                      SnackBar(content: Text(successMsg)),
                     );
 
-                    // Navigate to home and clear the back stack so there's
-                    // no stale household screen to return to.
+                    // Navigate to home, clear nav stack
                     navigator.pushNamedAndRemoveUntil(
                       '/home',
                       (route) => false,
@@ -636,7 +687,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('Leave'),
+                child: Text(isLastMember ? 'Delete & Leave' : 'Leave'),
               ),
             ],
           ),

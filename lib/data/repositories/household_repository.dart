@@ -536,6 +536,133 @@ class HouseholdRepository {
     }
   }
 
+  /// Smart leave: handles last-member deletion and last-admin promotion.
+  ///
+  /// Returns a [LeaveResult] describing what happened.
+  Future<LeaveResult> leaveHousehold({
+    required String householdId,
+    required String memberRecordId,
+    required String userId,
+  }) async {
+    try {
+      final members = await getHouseholdMembers(householdId);
+      final activeMembers = members.where((m) => m.isActive).toList();
+      final isLastMember = activeMembers.length == 1;
+      final isAdmin = activeMembers
+          .any((m) => m.userId == userId && m.role == 'admin');
+      final adminCount =
+          activeMembers.where((m) => m.role == 'admin').length;
+      final isLastAdmin = isAdmin && adminCount == 1;
+
+      if (isLastMember) {
+        // Last person → nuke the household
+        await deleteHouseholdCompletely(householdId);
+        return LeaveResult(
+          type: LeaveResultType.householdDeleted,
+        );
+      }
+
+      if (isLastAdmin) {
+        // Promote the longest-tenured non-current member to admin
+        final candidates = activeMembers
+            .where((m) => m.userId != userId)
+            .toList()
+          ..sort((a, b) => a.joinedAt.compareTo(b.joinedAt));
+
+        final promoted = candidates.first;
+        await updateMemberRole(promoted.id, 'admin');
+
+        // Now remove the leaving member
+        await removeMemberFromHousehold(memberRecordId);
+
+        return LeaveResult(
+          type: LeaveResultType.adminPromoted,
+          promotedMemberName: promoted.fullName ?? promoted.email ?? 'a member',
+        );
+      }
+
+      // Normal leave
+      await removeMemberFromHousehold(memberRecordId);
+      return LeaveResult(type: LeaveResultType.normalLeave);
+    } catch (e) {
+      throw Exception('Failed to leave household: $e');
+    }
+  }
+
+  /// Delete a household and ALL related data (cascade).
+  /// Use when the last member leaves.
+  Future<void> deleteHouseholdCompletely(String householdId) async {
+    try {
+      if (householdId.isEmpty) {
+        throw Exception('Household ID cannot be empty');
+      }
+
+      // 1. Delete chore_assignments for chores in this household
+      final chores = await _client
+          .from('chores')
+          .select('id')
+          .eq('household_id', householdId);
+
+      final choreIds =
+          (chores as List).map((c) => c['id'] as String).toList();
+
+      if (choreIds.isNotEmpty) {
+        await _client
+            .from('chore_assignments')
+            .delete()
+            .inFilter('chore_id', choreIds);
+      }
+
+      // 2. Delete scheduled_assignments for those chores (if table exists)
+      try {
+        if (choreIds.isNotEmpty) {
+          // Get assignment IDs first
+          final assignments = await _client
+              .from('chore_assignments')
+              .select('id')
+              .inFilter('chore_id', choreIds);
+          final assignmentIds =
+              (assignments as List).map((a) => a['id'] as String).toList();
+          if (assignmentIds.isNotEmpty) {
+            await _client
+                .from('scheduled_assignments')
+                .delete()
+                .inFilter('assignment_id', assignmentIds);
+          }
+        }
+      } catch (_) {
+        // Table may not exist yet — safe to ignore
+      }
+
+      // 3. Delete chores
+      await _client.from('chores').delete().eq('household_id', householdId);
+
+      // 4. Delete notifications for this household
+      try {
+        await _client
+            .from('notifications')
+            .delete()
+            .eq('household_id', householdId);
+      } catch (_) {
+        // notifications may not have household_id column — safe to ignore
+      }
+
+      // 5. Delete all household members
+      await _client
+          .from('household_members')
+          .delete()
+          .eq('household_id', householdId);
+
+      // 6. Delete the household itself
+      await _client.from('households').delete().eq('id', householdId);
+
+      // Clear cache
+      _membersCache.remove(householdId);
+    } catch (e) {
+      throw Exception('Failed to delete household completely: $e');
+    }
+  }
+
   // Cache management helpers
   bool _shouldUseCache(String householdId) {
     if (!_membersCache.containsKey(householdId)) return false;
@@ -585,4 +712,19 @@ class HouseholdRepository {
       return false;
     }
   }
+}
+
+// ── Leave result types ──────────────────────────────────────────────
+
+enum LeaveResultType {
+  normalLeave,
+  adminPromoted,
+  householdDeleted,
+}
+
+class LeaveResult {
+  final LeaveResultType type;
+  final String? promotedMemberName;
+
+  LeaveResult({required this.type, this.promotedMemberName});
 }
