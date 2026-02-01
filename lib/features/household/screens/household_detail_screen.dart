@@ -1,10 +1,9 @@
 // lib/features/household/screens/household_detail_screen.dart
-// ignore_for_file: use_build_context_synchronously
-
 import 'package:flutter/material.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/household/screens/room_config_screen.dart';
@@ -71,9 +70,11 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
         _isCurrentUserAdmin = isAdmin;
       });
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error loading household: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error loading household: $e')));
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -337,38 +338,38 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       return;
     }
 
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (dialogContext) => AlertDialog(
             title: const Text('Delete Chore'),
             content: const Text(
               'Are you sure you want to delete this chore? This action cannot be undone.',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   try {
                     await _choreRepository.deleteChore(choreId);
-                    await _loadHouseholdData(); // Refresh the data
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Chore deleted successfully'),
-                        ),
-                      );
+                      await _loadHouseholdData(); // Refresh the data
                     }
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Chore deleted successfully'),
+                      ),
+                    );
                   } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error deleting chore: $e')),
-                      );
-                    }
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text('Error deleting chore: $e')),
+                    );
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -529,40 +530,40 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       return;
     }
 
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (dialogContext) => AlertDialog(
             title: const Text('Remove Member'),
             content: Text(
               'Are you sure you want to remove ${member.fullName ?? 'this member'} from the household?',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext);
                   try {
                     await _householdRepository.removeMemberFromHousehold(
                       member.id,
                     );
-                    await _loadHouseholdData(); // Refresh the data
                     if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Member removed successfully'),
-                        ),
-                      );
+                      await _loadHouseholdData(); // Refresh the data
                     }
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('Member removed successfully'),
+                      ),
+                    );
                   } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error removing member: $e')),
-                      );
-                    }
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(content: Text('Error removing member: $e')),
+                    );
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -583,41 +584,55 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       orElse: () => throw Exception('Member not found'),
     );
 
+    // Capture references BEFORE any async gaps to avoid
+    // "deactivated widget's ancestor" crashes.
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
     showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
+          (dialogContext) => AlertDialog(
             title: const Text('Leave Household'),
             content: const Text(
               'Are you sure you want to leave this household? You will need an invite code to rejoin.',
             ),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
+                onPressed: () => Navigator.pop(dialogContext),
                 child: const Text('Cancel'),
               ),
               TextButton(
                 onPressed: () async {
-                  Navigator.pop(context);
+                  Navigator.pop(dialogContext); // close dialog
+
                   try {
                     await _householdRepository.removeMemberFromHousehold(
                       currentMember.id,
                     );
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('You have left the household'),
-                        ),
-                      );
-                      // Navigate back to previous screen
-                      Navigator.pop(context);
-                    }
+
+                    // Clear cached household so home screen refreshes cleanly
+                    HouseholdService().clearCurrentHousehold();
+
+                    // Show success THEN navigate (using pre-captured refs)
+                    scaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('You have left the household'),
+                      ),
+                    );
+
+                    // Navigate to home and clear the back stack so there's
+                    // no stale household screen to return to.
+                    navigator.pushNamedAndRemoveUntil(
+                      '/home',
+                      (route) => false,
+                    );
                   } catch (e) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error leaving household: $e')),
-                      );
-                    }
+                    scaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error leaving household: $e'),
+                      ),
+                    );
                   }
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
