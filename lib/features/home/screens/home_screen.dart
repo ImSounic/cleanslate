@@ -9,7 +9,10 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/constants/app_text_styles.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/features/auth/screens/landing_screen.dart';
-import 'package:cleanslate/features/settings/screens/settings_screen.dart';
+import 'package:cleanslate/features/app_shell.dart';
+import 'package:cleanslate/features/settings/screens/edit_profile_screen.dart';
+import 'package:cleanslate/features/household/screens/household_detail_screen.dart';
+import 'package:cleanslate/data/services/household_service.dart';
 import 'package:intl/intl.dart';
 
 import 'package:provider/provider.dart';
@@ -192,7 +195,12 @@ class _HomeScreenState extends State<HomeScreen>
                   title: 'View Profile',
                   onTap: () {
                     Navigator.pop(context);
-                    // Navigate to profile screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const EditProfileScreen(),
+                      ),
+                    );
                   },
                 ),
                 _buildProfileMenuItem(
@@ -200,7 +208,23 @@ class _HomeScreenState extends State<HomeScreen>
                   title: 'Household Settings',
                   onTap: () {
                     Navigator.pop(context);
-                    // Navigate to household settings
+                    final household = HouseholdService().currentHousehold;
+                    if (household != null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => HouseholdDetailScreen(
+                            householdId: household.id,
+                          ),
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('No household selected. Join or create one first.'),
+                        ),
+                      );
+                    }
                   },
                 ),
                 _buildProfileMenuItem(
@@ -208,11 +232,12 @@ class _HomeScreenState extends State<HomeScreen>
                   title: 'App Settings',
                   onTap: () {
                     Navigator.pop(context);
-                    Navigator.push(
-                      context,
+                    // Navigate to Settings tab (index 3) in AppShell
+                    Navigator.of(context).pushAndRemoveUntil(
                       MaterialPageRoute(
-                        builder: (context) => const SettingsScreen(),
+                        builder: (context) => const AppShell(initialIndex: 3),
                       ),
+                      (route) => false,
                     );
                   },
                 ),
