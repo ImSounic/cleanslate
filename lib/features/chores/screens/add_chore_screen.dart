@@ -13,6 +13,8 @@ import 'package:cleanslate/data/services/chore_assignment_service.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
 import 'package:cleanslate/core/services/error_service.dart';
 import 'package:cleanslate/data/models/chore_template.dart';
+import 'package:cleanslate/data/services/subscription_service.dart';
+import 'package:cleanslate/core/widgets/feature_gate.dart';
 
 class AddChoreScreen extends StatefulWidget {
   const AddChoreScreen({super.key});
@@ -220,6 +222,42 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
 
   Future<void> _handleAddChore() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // ── Subscription limit checks ──────────────────────────────
+    final currentHouseholdForCheck = _householdService.currentHousehold;
+    if (currentHouseholdForCheck != null) {
+      final subService = SubscriptionService();
+      final canAdd = await subService.canAddChore(currentHouseholdForCheck.id);
+      if (!canAdd && mounted) {
+        UpgradePromptSheet.show(
+          context,
+          title: 'Chore limit reached',
+          message:
+              'Your Free plan allows a limited number of active chores. '
+              'Upgrade to Pro for up to 500 active chores.',
+          householdId: currentHouseholdForCheck.id,
+        );
+        return;
+      }
+
+      final isRecurring = RecurrenceService.isRecurring(_repeatPattern);
+      if (isRecurring) {
+        final canAddRecurring =
+            await subService.canAddRecurringChore(currentHouseholdForCheck.id);
+        if (!canAddRecurring && mounted) {
+          UpgradePromptSheet.show(
+            context,
+            title: 'Recurring chore limit reached',
+            message:
+                'Your Free plan allows a limited number of recurring chores. '
+                'Upgrade to Pro for up to 100 recurring chores.',
+            householdId: currentHouseholdForCheck.id,
+          );
+          return;
+        }
+      }
+    }
+    // ── End subscription checks ────────────────────────────────
 
     setState(() {
       _isLoading = true;

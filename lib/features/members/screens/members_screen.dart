@@ -15,6 +15,8 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/data/services/subscription_service.dart';
+import 'package:cleanslate/core/widgets/feature_gate.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({super.key});
@@ -937,9 +939,27 @@ class _MembersScreenState extends State<MembersScreen> {
                       const SizedBox(width: 8),
                       // Code button
                       ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
                           // Show household code
                           if (_householdService.currentHousehold != null) {
+                            // Check member limit before sharing code
+                            final hId =
+                                _householdService.currentHousehold!.id;
+                            final canAdd =
+                                await SubscriptionService()
+                                    .canAddMember(hId);
+                            if (!canAdd && context.mounted) {
+                              UpgradePromptSheet.show(
+                                // ignore: use_build_context_synchronously
+                                context,
+                                title: 'Member limit reached',
+                                message:
+                                    'Your Free plan allows up to 4 household '
+                                    'members. Upgrade to Pro for up to 50.',
+                                householdId: hId,
+                              );
+                              return;
+                            }
                             _showHouseholdCode(
                               _householdService.currentHousehold!.code,
                             );
