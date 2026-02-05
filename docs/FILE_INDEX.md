@@ -1,12 +1,12 @@
 # CleanSlate — File Index
 
-> Last updated: 2026-02-02
+> Last updated: 2026-02-05
 
 ## Models (`lib/data/models/`)
 
 | File | Description |
 |------|-------------|
-| `household_model.dart` | Household with code, room config, subscription fields |
+| `household_model.dart` | Household with code, room config |
 | `household_member_model.dart` | Member with userId, role, isActive |
 | `notification_model.dart` | Notification with type, title, message, isRead |
 | `user_preferences_model.dart` | Chore preferences (liked/disliked types) |
@@ -25,7 +25,6 @@
 | `chore_stats_service.dart` | Member stats, personal stats, chore type distribution |
 | `calendar_service.dart` | Google Calendar event sync |
 | `recurrence_service.dart` | Recurring chore auto-generation on completion |
-| `subscription_service.dart` | Tier lookup, limit checks (member/chore/recurring), usage summary |
 
 ## Repositories (`lib/data/repositories/`)
 
@@ -40,7 +39,6 @@
 
 | File | Description |
 |------|-------------|
-| `config/subscription_config.dart` | Free/Pro limits, pricing, SubscriptionTier enum |
 | `constants/app_colors.dart` | All colors (light/dark), avatarColorFor(userId), auth gradients |
 | `constants/app_text_styles.dart` | 18 text styles (greeting, heading1-3, body, button, badge, etc.) |
 | `providers/theme_provider.dart` | ChangeNotifier for theme mode |
@@ -51,8 +49,6 @@
 | `utils/input_sanitizer.dart` | sanitizeSingleLine(), sanitizeMultiLine() |
 | `utils/string_extensions.dart` | String.capitalize() extension |
 | `utils/theme_utils.dart` | ThemeUtils.isDarkMode(context) |
-| `widgets/feature_gate.dart` | UpgradePromptSheet for subscription limits |
-| `widgets/pro_badge.dart` | Gold "PRO" chip widget |
 
 ## Screens (`lib/features/`)
 
@@ -75,13 +71,13 @@
 ### Chores
 | File | Description |
 |------|-------------|
-| `chores/screens/add_chore_screen.dart` | Add chore with templates, auto-assign, recurring, subscription gates |
+| `chores/screens/add_chore_screen.dart` | Add chore with templates, auto-assign, recurring |
 | `chores/screens/edit_chore_screen.dart` | Edit existing chore |
 
 ### Members
 | File | Description |
 |------|-------------|
-| `members/screens/members_screen.dart` | Member list, invite, role management, subscription gate |
+| `members/screens/members_screen.dart` | Member list, invite, role management |
 | `members/screens/admin_mode_screen.dart` | Admin panel — rebalance, transfer ownership, delete household |
 | `members/screens/qr_scanner_screen.dart` | QR code scanner for join codes |
 | `members/widgets/share_code_dialog.dart` | Share household code dialog |
@@ -103,12 +99,11 @@
 | `profile/screens/chore_preferences_screen.dart` | Like/dislike chore types, availability |
 | `schedule/screens/schedule_screen.dart` | Calendar view of chores |
 | `stats/screens/chore_stats_screen.dart` | Charts, leaderboard, personal stats |
-| `subscription/screens/upgrade_screen.dart` | Paywall — usage, comparison, pricing cards |
 
 ### Settings
 | File | Description |
 |------|-------------|
-| `settings/screens/settings_screen.dart` | Profile, subscription, privacy, ToS, logout, delete account |
+| `settings/screens/settings_screen.dart` | Profile, privacy, ToS, logout |
 | `settings/screens/edit_profile_screen.dart` | Edit name, email, profile picture |
 | `settings/screens/add_password_screen.dart` | Add password for Google-only accounts |
 | `settings/screens/privacy_policy_screen.dart` | Privacy policy display |
@@ -133,7 +128,6 @@
 | `delete_household_cascade.sql` | Cascade delete for households |
 | `add_recurring_fields.sql` | Recurring chore columns |
 | `add_fcm_tokens.sql` | FCM token table + RLS |
-| `add_subscription_fields.sql` | Subscription tier columns |
 
 ## Edge Functions (`supabase/functions/`)
 

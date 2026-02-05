@@ -1,6 +1,6 @@
 # CleanSlate — Project State
 
-> Last updated: 2026-02-02
+> Last updated: 2026-02-05
 
 ## Tech Stack
 
@@ -29,13 +29,12 @@
 lib/
 ├── main.dart                    # Entry point, Firebase init, Supabase init, auth routing
 ├── core/                        # Shared non-feature code
-│   ├── config/                  # SubscriptionConfig
 │   ├── constants/               # AppColors, AppTextStyles
 │   ├── providers/               # ThemeProvider (ChangeNotifier)
 │   ├── services/                # ErrorService (Crashlytics + user-friendly messages)
 │   ├── theme/                   # AppTheme (light + dark)
 │   ├── utils/                   # ThemeUtils, InputSanitizer, StringExtensions, DebugLogger
-│   └── widgets/                 # FeatureGate, ProBadge
+│   └── widgets/                 # (currently empty)
 ├── data/
 │   ├── models/                  # HouseholdModel, HouseholdMemberModel, NotificationModel, etc.
 │   ├── repositories/            # ChoreRepository, HouseholdRepository, NotificationRepository
@@ -53,8 +52,7 @@ lib/
 │   ├── profile/                 # ChorePreferencesScreen
 │   ├── schedule/                # ScheduleScreen (calendar view)
 │   ├── settings/                # Settings, EditProfile, AddPassword, PrivacyPolicy, ToS
-│   ├── stats/                   # ChoreStatsScreen (charts, leaderboard)
-│   └── subscription/            # UpgradeScreen (paywall)
+│   └── stats/                   # ChoreStatsScreen (charts, leaderboard)
 ├── routes/                      # AppRouter (unused legacy)
 └── widgets/                     # MainScaffold, ThemeToggleButton, AppLoadingIndicator
 ```
@@ -74,7 +72,7 @@ Post-login always navigates to `AppShell()` via `pushAndRemoveUntil`.
 | Table | Purpose |
 |-------|---------|
 | `profiles` | User profiles (full_name, email, profile_image_url) |
-| `households` | Household info (name, code, room config, subscription fields) |
+| `households` | Household info (name, code, room config) |
 | `household_members` | Membership (user_id, household_id, role, is_active) |
 | `chores` | Chore definitions (name, description, household_id, chore_type, is_recurring, recurrence_pattern) |
 | `chore_assignments` | Assigned chores (chore_id, assigned_to, status, priority, due_date) |
@@ -88,18 +86,6 @@ Post-login always navigates to `AppShell()` via `pushAndRemoveUntil`.
 - `delete_own_account` — account deletion with cascade
 - `check_deadline_notifications` — deadline notification check
 
-## Subscription Tiers
-
-| Limit | Free | Pro |
-|-------|------|-----|
-| Members | 4 | 50 |
-| Active chores | 15 | 500 |
-| Recurring chores | 5 | 100 |
-| Stats history | 7 days | 365 days |
-| Price (monthly) | $0 | $4.99 |
-| Price (annual) | $0 | $39.99 |
-| Student (monthly) | — | $2.99 |
-
 ## SQL Migrations to Deploy
 
 | File | Status |
@@ -110,7 +96,6 @@ Post-login always navigates to `AppShell()` via `pushAndRemoveUntil`.
 | `supabase/delete_household_cascade.sql` | ⚠️ Needs deploy |
 | `supabase/add_recurring_fields.sql` | ⚠️ Needs deploy |
 | `supabase/add_fcm_tokens.sql` | ⚠️ Needs deploy |
-| `supabase/add_subscription_fields.sql` | ⚠️ Needs deploy |
 
 ## Edge Functions
 
