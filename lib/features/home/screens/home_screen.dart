@@ -27,9 +27,6 @@ import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
 import 'package:cleanslate/features/stats/screens/chore_stats_screen.dart';
-import 'package:cleanslate/core/widgets/pro_badge.dart';
-import 'package:cleanslate/data/services/subscription_service.dart';
-import 'package:cleanslate/core/config/subscription_config.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -50,7 +47,6 @@ class _HomeScreenState extends State<HomeScreen>
   List<Map<String, dynamic>> _completedChores = [];
   bool _isLoading = true;
   int _selectedTabIndex = 0;
-  SubscriptionTier _subscriptionTier = SubscriptionTier.free;
 
   // Updated tab titles to include Completed
   final List<String> _tabTitles = [
@@ -66,7 +62,6 @@ class _HomeScreenState extends State<HomeScreen>
     _loadUserData();
     _loadChores();
     _processRecurringChores();
-    _loadSubscriptionTier();
   }
 
   Future<void> _loadUserData() async {
@@ -83,21 +78,6 @@ class _HomeScreenState extends State<HomeScreen>
         // Add profile image URL loading
         _profileImageUrl = userData?['profile_image_url'];
       });
-    }
-  }
-
-  Future<void> _loadSubscriptionTier() async {
-    try {
-      final household = HouseholdService().currentHousehold;
-      if (household != null) {
-        final tier =
-            await SubscriptionService().getHouseholdTier(household.id);
-        if (mounted) {
-          setState(() => _subscriptionTier = tier);
-        }
-      }
-    } catch (_) {
-      // Keep default free tier
     }
   }
 
@@ -812,25 +792,15 @@ class _HomeScreenState extends State<HomeScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Flexible(
-                        child: Text(
-                          'Hello $firstName!',
-                          style: AppTextStyles.greeting.copyWith(
-                            color:
-                                isDarkMode
-                                    ? AppColors.textPrimaryDark
-                                    : AppColors.textPrimary,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (_subscriptionTier.isPro) ...[
-                        const SizedBox(width: 8),
-                        const ProBadge(fontSize: 12),
-                      ],
-                    ],
+                  Text(
+                    'Hello $firstName!',
+                    style: AppTextStyles.greeting.copyWith(
+                      color:
+                          isDarkMode
+                              ? AppColors.textPrimaryDark
+                              : AppColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     'Have a nice day.',

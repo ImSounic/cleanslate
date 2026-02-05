@@ -17,10 +17,6 @@ import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/core/services/error_service.dart';
-import 'package:cleanslate/data/services/subscription_service.dart';
-import 'package:cleanslate/core/config/subscription_config.dart';
-import 'package:cleanslate/features/subscription/screens/upgrade_screen.dart';
-import 'package:cleanslate/data/services/household_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -39,14 +35,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
   bool _hasGoogleLinked = false;
   String? _authProvider;
-  SubscriptionTier _subscriptionTier = SubscriptionTier.free;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
     _checkGoogleLinkStatus();
-    _loadSubscriptionTier();
   }
 
   Future<void> _loadUserData() async {
@@ -116,21 +110,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _loadSubscriptionTier() async {
-    try {
-      final household = HouseholdService().currentHousehold;
-      if (household != null) {
-        final tier =
-            await SubscriptionService().getHouseholdTier(household.id);
-        if (mounted) {
-          setState(() => _subscriptionTier = tier);
-        }
-      }
-    } catch (_) {
-      // Keep default free tier on error
-    }
-  }
-
   Future<void> _handleLogout() async {
     try {
       await _supabaseService.signOut();
@@ -171,7 +150,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           // Profile Section
                           _buildSectionTitle('Profile', isDarkMode),
                           _buildEditProfileOption(isDarkMode),
-                          _buildSubscriptionOption(isDarkMode),
                           _buildChorePreferencesOption(isDarkMode),
                           _buildCalendarConnectionOption(isDarkMode),
 
@@ -312,39 +290,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
         if (result == true) {
           _loadUserData();
-        }
-      },
-    );
-  }
-
-  Widget _buildSubscriptionOption(bool isDarkMode) {
-    final tierLabel = _subscriptionTier.isPro
-        ? '${_subscriptionTier.displayName} Plan ✨'
-        : 'Free Plan';
-
-    return _buildSettingsTile(
-      icon: Icons.workspace_premium_rounded,
-      iconColor: const Color(0xFFFFB800),
-      title: 'Subscription',
-      subtitle: tierLabel,
-      isDarkMode: isDarkMode,
-      onTap: () {
-        final household = HouseholdService().currentHousehold;
-        if (household != null) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => UpgradeScreen(householdId: household.id),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'No household selected. Join or create one first.',
-              ),
-            ),
-          );
         }
       },
     );
