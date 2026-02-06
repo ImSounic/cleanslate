@@ -2,6 +2,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'dart:math';
 
 class HouseholdRepository {
@@ -141,7 +142,7 @@ class HouseholdRepository {
     }
   }
 
-  // Create a new household with validation
+  // Create a new household with validation (uses RPC to bypass RLS)
   Future<HouseholdModel> createHousehold(String name) async {
     try {
       // Validate input
@@ -154,38 +155,22 @@ class HouseholdRepository {
         throw Exception('Household name is too long (max 100 characters)');
       }
 
-      final userId = _client.auth.currentUser?.id;
-      debugLog('createHousehold: userId=$userId');
-      debugLog('createHousehold: currentUser=${_client.auth.currentUser}');
-      debugLog('createHousehold: session=${_client.auth.currentSession}');
-      if (userId == null) throw Exception('User not authenticated');
-
       // Generate a unique code
       String code = _generateHouseholdCode();
 
-      debugLog('createHousehold: inserting with created_by=$userId, name=$trimmedName, code=$code');
+      debugLog('createHousehold: using RPC with name=$trimmedName, code=$code');
 
-      // Create household with the generated code
-      final response =
-          await _client
-              .from('households')
-              .insert({
-                'name': trimmedName,
-                'created_by': userId,
-                'code': code, // Explicitly set the code
-              })
-              .select()
-              .single();
-
-      final household = HouseholdModel.fromJson(response);
-
-      // Create the first household member record (creator as admin)
-      await _client.from('household_members').insert({
-        'household_id': household.id,
-        'user_id': userId,
-        'role': 'admin',
-        'is_active': true,
+      // Use RPC function to create household (handles RLS and membership)
+      final response = await _client.rpc('create_household_for_user', params: {
+        'p_name': trimmedName,
+        'p_code': code,
       });
+
+      final householdId = response as String;
+      debugLog('createHousehold: RPC returned householdId=$householdId');
+
+      // Fetch the full household data
+      final household = await getHouseholdModel(householdId);
 
       // Clear cache since we have a new household
       _clearCache();

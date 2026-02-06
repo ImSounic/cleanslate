@@ -1,22 +1,15 @@
 -- =============================================================
 -- Create Household Function (bypasses RLS with SECURITY DEFINER)
 -- =============================================================
--- Use this if direct INSERT with RLS is problematic.
 -- This function validates the user is authenticated and creates
 -- the household + membership in a single transaction.
 -- =============================================================
 
 CREATE OR REPLACE FUNCTION create_household_for_user(
-  household_name TEXT,
-  household_code TEXT
+  p_name TEXT,
+  p_code TEXT
 )
-RETURNS TABLE (
-  id UUID,
-  name TEXT,
-  code TEXT,
-  created_by UUID,
-  created_at TIMESTAMPTZ
-)
+RETURNS UUID
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -33,28 +26,25 @@ BEGIN
   END IF;
   
   -- Validate inputs
-  IF household_name IS NULL OR trim(household_name) = '' THEN
+  IF p_name IS NULL OR trim(p_name) = '' THEN
     RAISE EXCEPTION 'Household name cannot be empty';
   END IF;
   
-  IF household_code IS NULL OR length(household_code) != 8 THEN
+  IF p_code IS NULL OR length(p_code) != 8 THEN
     RAISE EXCEPTION 'Invalid household code format';
   END IF;
   
   -- Create the household
   INSERT INTO households (name, code, created_by)
-  VALUES (trim(household_name), household_code, current_user_id)
-  RETURNING households.id INTO new_household_id;
+  VALUES (trim(p_name), p_code, current_user_id)
+  RETURNING id INTO new_household_id;
   
   -- Create the membership record (creator as admin)
   INSERT INTO household_members (household_id, user_id, role, is_active)
   VALUES (new_household_id, current_user_id, 'admin', TRUE);
   
-  -- Return the created household
-  RETURN QUERY
-  SELECT h.id, h.name, h.code, h.created_by, h.created_at
-  FROM households h
-  WHERE h.id = new_household_id;
+  -- Return the household ID
+  RETURN new_household_id;
 END;
 $$;
 
@@ -63,5 +53,5 @@ GRANT EXECUTE ON FUNCTION create_household_for_user(TEXT, TEXT) TO authenticated
 
 -- =============================================================
 -- Test the function (run after creating):
--- SELECT * FROM create_household_for_user('Test House', 'ABCD1234');
+-- SELECT create_household_for_user('Test House', 'ABCD1234');
 -- =============================================================
