@@ -35,6 +35,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
   bool _hasGoogleLinked = false;
   String? _authProvider;
+  
+  // Key to force FutureBuilder refresh for calendar status
+  int _calendarStatusKey = 0;
 
   @override
   void initState() {
@@ -324,6 +327,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildCalendarConnectionOption(bool isDarkMode) {
     return FutureBuilder<bool>(
+      // Key forces rebuild when _calendarStatusKey changes
+      key: ValueKey('calendar_status_$_calendarStatusKey'),
       future: _checkCalendarConnectionStatus(),
       builder: (context, snapshot) {
         final isConnected = snapshot.data ?? false;
@@ -353,17 +358,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           onTap: () async {
-            final result = await Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => const CalendarConnectionScreen(),
               ),
             );
 
-            // Refresh status if calendar was connected/disconnected
-            if (result == true) {
-              setState(() {});
-            }
+            // Always refresh status when returning from calendar screen
+            // (user may have connected, disconnected, or just browsed)
+            setState(() {
+              _calendarStatusKey++;
+            });
           },
         );
       },
