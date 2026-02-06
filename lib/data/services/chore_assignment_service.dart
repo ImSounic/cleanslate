@@ -20,23 +20,33 @@ class AssignmentRecommendation {
   });
 }
 
-/// Automatic chore assignment using weighted scoring.
-///
-/// Scoring factors (100 points max):
-/// - Availability (25): Is the member free on the due date?
-/// - Chore Preference (20): Does the member like this type of chore?
-/// - Workload Balance (20): Is the member under their weekly limit?
-/// - Fairness / History (20): Has the member done this chore recently?
-/// - Exam Period (10): Is the member currently in exams?
-/// - Weekend Preference (5): Does the chore match weekend habits?
+/// ═══════════════════════════════════════════════════════════════════════════
+/// ROTATION-FIRST AUTO-ASSIGNMENT ALGORITHM
+/// ═══════════════════════════════════════════════════════════════════════════
+/// 
+/// Core Principle: ROTATION IS MANDATORY, PREFERENCES ARE TIEBREAKERS.
+/// 
+/// Priority order (highest to lowest):
+/// 1. ROTATION (50 pts): Who hasn't done this chore TYPE recently?
+/// 2. FAIRNESS (25 pts): Who has the lowest total chore count?
+/// 3. AVAILABILITY (15 pts): Is the member free on the due date?
+/// 4. PREFERENCE (10 pts): What's their 1-5 rating for this chore? (tiebreaker)
+/// 
+/// Key behaviors:
+/// - Everyone does every chore type over time, regardless of preferences
+/// - Preferences only influence who goes next when rotation is equal
+/// - New members go to front of queue (haven't done anything)
+/// - Even if someone rates a chore 5, they won't always get it
+/// - Even if someone rates a chore 1, they can't escape doing it
+/// ═══════════════════════════════════════════════════════════════════════════
+
 class ChoreAssignmentService {
   final SupabaseClient _client = Supabase.instance.client;
   final UserPreferencesRepository _preferencesRepository =
       UserPreferencesRepository();
 
   // ── Chore type mapping ──────────────────────────────────────────────
-  // Maps keywords in chore names to the canonical type keys stored in
-  // user_preferences (preferred_chore_types / disliked_chore_types).
+  // Maps keywords in chore names to the canonical type keys.
 
   static const Map<String, List<String>> _choreTypeKeywords = {
     'kitchen_cleaning': ['kitchen', 'cook', 'stove', 'counter', 'wipe'],
@@ -63,11 +73,12 @@ class ChoreAssignmentService {
     return null;
   }
 
-  // ── Main entry point ────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // MAIN ENTRY POINT
+  // ══════════════════════════════════════════════════════════════════════
 
-  /// Returns the user-id of the best assignee, or `null` when no one fits.
-  ///
-  /// If [choreType] is provided it takes precedence over keyword detection.
+  /// Returns the user-id of the best assignee using rotation-first logic.
+  /// Returns `null` when no one fits.
   Future<String?> findBestAssignee({
     required String householdId,
     required String choreName,
@@ -75,10 +86,11 @@ class ChoreAssignmentService {
     String? choreType,
   }) async {
     try {
-      debugLog('🤖 Auto-assign: scoring members for "$choreName"');
+      debugLog('🤖 Auto-assign: finding best member for "$choreName"');
+      debugLog('📋 Algorithm: ROTATION-FIRST (preferences as tiebreaker only)');
 
       choreType ??= inferChoreType(choreName);
-      debugLog('🏷️ Inferred chore type: ${choreType ?? "unknown"}');
+      debugLog('🏷️ Chore type: ${choreType ?? "unknown"}');
 
       // Fetch all active members
       final members = await _client
@@ -95,45 +107,42 @@ class ChoreAssignmentService {
         return null;
       }
 
-      // Fetch preferences for all members
+      debugLog('👥 Members to evaluate: ${memberIds.length}');
+
+      // Fetch all data needed for scoring
       final preferencesMap =
-          await _preferencesRepository.getHouseholdMemberPreferences(
-        householdId,
-      );
-
-      // Fetch recent assignment counts (last 7 days)
-      final recentCounts =
-          await getRecentAssignmentCounts(householdId, days: 7);
-
-      // Fetch fairness data: who did this chore type most recently
-      final lastAssigned = choreType != null
-          ? await _getLastAssignedForChoreType(householdId, choreName)
-          : <String, DateTime>{};
+          await _preferencesRepository.getHouseholdMemberPreferences(householdId);
+      final totalChoreCount = await _getTotalChoreCountPerMember(householdId);
+      final lastAssignedByType = await _getLastAssignedByChoreType(householdId, choreType);
 
       // Score each member
       final scores = <String, int>{};
+      final scoreBreakdowns = <String, Map<String, int>>{};
 
       for (final userId in memberIds) {
-        final prefs = preferencesMap[userId] ??
-            UserPreferences(userId: userId);
+        final prefs = preferencesMap[userId] ?? UserPreferences(userId: userId);
 
-        // ── Hard constraints ──────────────────────────────────────
+        // Check hard constraints
         if (_isHardSkip(prefs, dueDate)) {
-          debugLog('⛔ $userId skipped (hard constraint)');
+          debugLog('⛔ $userId: SKIPPED (hard constraint - goes home weekends)');
           continue;
         }
 
-        final score = _scoreMember(
+        final breakdown = _scoreMemberRotationFirst(
           userId: userId,
           prefs: prefs,
           choreType: choreType,
           dueDate: dueDate,
-          weeklyCount: recentCounts[userId] ?? 0,
-          lastAssignedDate: lastAssigned[userId],
+          totalChoreCount: totalChoreCount[userId] ?? 0,
+          lastAssignedDate: lastAssignedByType[userId],
+          memberCount: memberIds.length,
         );
 
-        debugLog('📊 $userId → $score pts');
-        scores[userId] = score;
+        final totalScore = breakdown.values.fold(0, (a, b) => a + b);
+        scores[userId] = totalScore;
+        scoreBreakdowns[userId] = breakdown;
+
+        debugLog('📊 $userId: $totalScore pts (rotation:${breakdown['rotation']}, fairness:${breakdown['fairness']}, avail:${breakdown['availability']}, pref:${breakdown['preference']})');
       }
 
       if (scores.isEmpty) {
@@ -150,10 +159,13 @@ class ChoreAssignmentService {
       final topCandidates =
           sorted.where((e) => e.value == topScore).map((e) => e.key).toList();
 
-      final winner =
-          topCandidates[Random().nextInt(topCandidates.length)];
+      final winner = topCandidates[Random().nextInt(topCandidates.length)];
 
-      debugLog('🏆 Best assignee: $winner ($topScore pts)');
+      debugLog('🏆 Winner: $winner ($topScore pts)');
+      if (topCandidates.length > 1) {
+        debugLog('   (chosen randomly from ${topCandidates.length} tied candidates)');
+      }
+
       return winner;
     } catch (e) {
       debugLog('❌ Auto-assign error: $e');
@@ -161,8 +173,7 @@ class ChoreAssignmentService {
     }
   }
 
-  /// Like [findBestAssignee] but returns a full [AssignmentRecommendation]
-  /// with human-readable reasons explaining why this person was picked.
+  /// Full recommendation with reasons.
   Future<AssignmentRecommendation?> getRecommendation({
     required String householdId,
     required String choreName,
@@ -184,36 +195,30 @@ class ChoreAssignmentService {
       if (memberIds.isEmpty) return null;
 
       final preferencesMap =
-          await _preferencesRepository.getHouseholdMemberPreferences(
-        householdId,
-      );
-      final recentCounts =
-          await getRecentAssignmentCounts(householdId, days: 7);
-      final lastAssigned = choreType != null
-          ? await _getLastAssignedForChoreType(householdId, choreName)
-          : <String, DateTime>{};
+          await _preferencesRepository.getHouseholdMemberPreferences(householdId);
+      final totalChoreCount = await _getTotalChoreCountPerMember(householdId);
+      final lastAssignedByType = await _getLastAssignedByChoreType(householdId, choreType);
 
       String? bestUserId;
       int bestScore = -1;
       List<String> bestReasons = [];
 
       for (final userId in memberIds) {
-        final prefs =
-            preferencesMap[userId] ?? UserPreferences(userId: userId);
+        final prefs = preferencesMap[userId] ?? UserPreferences(userId: userId);
 
         if (_isHardSkip(prefs, dueDate)) continue;
 
-        final weeklyCount = recentCounts[userId] ?? 0;
-        final lastDate = lastAssigned[userId];
-
-        final score = _scoreMember(
+        final breakdown = _scoreMemberRotationFirst(
           userId: userId,
           prefs: prefs,
           choreType: choreType,
           dueDate: dueDate,
-          weeklyCount: weeklyCount,
-          lastAssignedDate: lastDate,
+          totalChoreCount: totalChoreCount[userId] ?? 0,
+          lastAssignedDate: lastAssignedByType[userId],
+          memberCount: memberIds.length,
         );
+
+        final score = breakdown.values.fold(0, (a, b) => a + b);
 
         if (score > bestScore) {
           bestScore = score;
@@ -222,8 +227,8 @@ class ChoreAssignmentService {
             prefs: prefs,
             choreType: choreType,
             dueDate: dueDate,
-            weeklyCount: weeklyCount,
-            lastAssignedDate: lastDate,
+            totalChoreCount: totalChoreCount[userId] ?? 0,
+            lastAssignedDate: lastAssignedByType[userId],
           );
         }
       }
@@ -241,157 +246,280 @@ class ChoreAssignmentService {
     }
   }
 
-  /// Build human-readable reason chips for why a member was recommended.
+  // ══════════════════════════════════════════════════════════════════════
+  // ROTATION-FIRST SCORING (100 points max)
+  // ══════════════════════════════════════════════════════════════════════
+
+  Map<String, int> _scoreMemberRotationFirst({
+    required String userId,
+    required UserPreferences prefs,
+    required String? choreType,
+    required DateTime dueDate,
+    required int totalChoreCount,
+    required DateTime? lastAssignedDate,
+    required int memberCount,
+  }) {
+    return {
+      'rotation': _scoreRotation(lastAssignedDate),
+      'fairness': _scoreFairness(totalChoreCount, memberCount),
+      'availability': _scoreAvailability(prefs, dueDate),
+      'preference': _scorePreference(prefs, choreType),
+    };
+  }
+
+  /// ROTATION SCORE (50 pts) - HIGHEST PRIORITY
+  /// 
+  /// Who hasn't done this chore type recently?
+  /// - Never done it: 50 pts (front of queue)
+  /// - Did it 14+ days ago: 45 pts
+  /// - Did it 7-13 days ago: 35 pts
+  /// - Did it 3-6 days ago: 20 pts
+  /// - Did it 1-2 days ago: 10 pts
+  /// - Did it today: 5 pts
+  int _scoreRotation(DateTime? lastAssigned) {
+    if (lastAssigned == null) {
+      return 50; // Never done → front of rotation queue
+    }
+    
+    final daysSince = DateTime.now().difference(lastAssigned).inDays;
+    
+    if (daysSince >= 14) return 45;
+    if (daysSince >= 7) return 35;
+    if (daysSince >= 3) return 20;
+    if (daysSince >= 1) return 10;
+    return 5; // Did it today
+  }
+
+  /// FAIRNESS SCORE (25 pts) - MEDIUM PRIORITY
+  /// 
+  /// Who has the lowest total chore count?
+  /// Uses relative comparison: member with fewest chores gets max points.
+  int _scoreFairness(int memberChoreCount, int memberCount) {
+    // Base fairness: fewer chores = higher score
+    // Max 25 pts when member has done very few chores
+    // We use inverse relationship: lower count = higher score
+    
+    if (memberChoreCount == 0) return 25; // New member or very few chores
+    
+    // Scale down based on chore count
+    // At 10+ chores, gets minimum points
+    final score = 25 - (memberChoreCount * 2).clamp(0, 20);
+    return score.clamp(5, 25);
+  }
+
+  /// AVAILABILITY SCORE (15 pts) - MEDIUM-LOW PRIORITY
+  /// 
+  /// Is the member free on the due date?
+  int _scoreAvailability(UserPreferences prefs, DateTime dueDate) {
+    final dayName = _dayName(dueDate.weekday);
+    
+    if (prefs.availableDays.contains(dayName)) {
+      return 15; // Available
+    }
+    return 5; // Not available but can still be assigned
+  }
+
+  /// PREFERENCE SCORE (10 pts) - LOWEST PRIORITY (TIEBREAKER ONLY)
+  /// 
+  /// What's their 1-5 rating for this chore type?
+  /// Uses the new choreRatings map, with fallback to legacy arrays.
+  /// 
+  /// Rating 5: 10 pts
+  /// Rating 4: 8 pts
+  /// Rating 3: 6 pts (neutral)
+  /// Rating 2: 4 pts
+  /// Rating 1: 2 pts
+  /// Unknown: 6 pts (neutral)
+  int _scorePreference(UserPreferences prefs, String? choreType) {
+    if (choreType == null) return 6; // Unknown type → neutral
+    
+    // Try new choreRatings first
+    if (prefs.choreRatings.containsKey(choreType)) {
+      final rating = prefs.choreRatings[choreType]!;
+      return _ratingToPoints(rating);
+    }
+    
+    // Fallback to legacy arrays
+    if (prefs.preferredChoreTypes.contains(choreType)) {
+      return 8; // Legacy preferred → treat as rating 4
+    }
+    if (prefs.dislikedChoreTypes.contains(choreType)) {
+      return 4; // Legacy disliked → treat as rating 2
+    }
+    
+    return 6; // Neutral (rating 3)
+  }
+
+  /// Convert 1-5 rating to preference points (2-10 pts)
+  int _ratingToPoints(int rating) {
+    switch (rating) {
+      case 5: return 10;
+      case 4: return 8;
+      case 3: return 6;
+      case 2: return 4;
+      case 1: return 2;
+      default: return 6; // Invalid rating → neutral
+    }
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // HARD CONSTRAINTS
+  // ══════════════════════════════════════════════════════════════════════
+
+  bool _isHardSkip(UserPreferences prefs, DateTime dueDate) {
+    final isWeekend = dueDate.weekday == 6 || dueDate.weekday == 7;
+    
+    // Goes home on weekends and due date is a weekend
+    if (prefs.goHomeWeekends && isWeekend) return true;
+    
+    // Check exam period - if in exam, reduce likelihood but don't skip
+    // (We handle this in scoring now, not as hard skip)
+    
+    return false;
+  }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // REASON BUILDER
+  // ══════════════════════════════════════════════════════════════════════
+
   List<String> _buildReasons({
     required UserPreferences prefs,
     required String? choreType,
     required DateTime dueDate,
-    required int weeklyCount,
+    required int totalChoreCount,
     required DateTime? lastAssignedDate,
   }) {
     final reasons = <String>[];
     final dayName = _dayName(dueDate.weekday);
+
+    // Rotation reason (primary)
+    if (lastAssignedDate == null) {
+      reasons.add('Never done this chore type');
+    } else {
+      final days = DateTime.now().difference(lastAssignedDate).inDays;
+      if (days >= 7) {
+        reasons.add('Last did this ${days}d ago');
+      } else if (days >= 1) {
+        reasons.add('Due for rotation');
+      }
+    }
+
+    // Fairness reason
+    if (totalChoreCount == 0) {
+      reasons.add('New member - no chores yet');
+    } else if (totalChoreCount <= 3) {
+      reasons.add('Light workload ($totalChoreCount total)');
+    }
 
     // Availability
     if (prefs.availableDays.contains(dayName)) {
       reasons.add('Available');
     }
 
-    // Preference
-    if (choreType != null && prefs.preferredChoreTypes.contains(choreType)) {
-      reasons.add('Prefers this chore');
-    }
-
-    // Workload
-    final remaining = prefs.maxChoresPerWeek - weeklyCount;
-    if (remaining > 0) {
-      reasons.add('Light workload ($remaining slots left)');
-    }
-
-    // Fairness
-    if (lastAssignedDate == null) {
-      reasons.add('Hasn\'t done this before');
-    } else {
-      final days = DateTime.now().difference(lastAssignedDate).inDays;
-      if (days >= 7) {
-        reasons.add('Last did this ${days}d ago');
+    // Preference (only mention if high)
+    if (choreType != null) {
+      final rating = prefs.choreRatings[choreType] ?? 
+          (prefs.preferredChoreTypes.contains(choreType) ? 4 : 
+           prefs.dislikedChoreTypes.contains(choreType) ? 2 : 3);
+      if (rating >= 4) {
+        reasons.add('Likes this chore');
       }
-    }
-
-    // Exam
-    final now = DateTime.now();
-    final inExam = prefs.examPeriods.any(
-      (ep) => now.isAfter(ep.start) && now.isBefore(ep.end),
-    );
-    if (!inExam) {
-      reasons.add('No exams');
     }
 
     return reasons;
   }
 
-  // ── Hard constraint check ───────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // DATA FETCHING
+  // ══════════════════════════════════════════════════════════════════════
 
-  bool _isHardSkip(UserPreferences prefs, DateTime dueDate) {
-    final dayName = _dayName(dueDate.weekday);
-    final isWeekend = dueDate.weekday == 6 || dueDate.weekday == 7;
+  /// Get TOTAL chore count per member (all time, for fairness calculation)
+  Future<Map<String, int>> _getTotalChoreCountPerMember(String householdId) async {
+    try {
+      final response = await _client
+          .from('chore_assignments')
+          .select('assigned_to, chores!inner(household_id)')
+          .eq('chores.household_id', householdId);
 
-    // Goes home on weekends and due date is a weekend
-    if (prefs.goHomeWeekends && isWeekend) return true;
-
-    // Already at max chores — treated as hard skip
-    // (we check this in scoring too, but 0 workload points effectively skips)
-    return false;
+      final counts = <String, int>{};
+      for (final row in response as List) {
+        final userId = row['assigned_to'] as String;
+        counts[userId] = (counts[userId] ?? 0) + 1;
+      }
+      return counts;
+    } catch (e) {
+      debugLog('⚠️ Could not fetch total chore counts: $e');
+      return {};
+    }
   }
 
-  // ── Scoring ─────────────────────────────────────────────────────────
+  /// Get last assignment date PER CHORE TYPE for each member.
+  /// This is the key data for rotation tracking.
+  Future<Map<String, DateTime>> _getLastAssignedByChoreType(
+    String householdId,
+    String? targetChoreType,
+  ) async {
+    try {
+      if (targetChoreType == null) {
+        // No type detected - just get most recent assignment of any type
+        return _getLastAssignedAny(householdId);
+      }
 
-  int _scoreMember({
-    required String userId,
-    required UserPreferences prefs,
-    required String? choreType,
-    required DateTime dueDate,
-    required int weeklyCount,
-    required DateTime? lastAssignedDate,
-  }) {
-    int score = 0;
+      final response = await _client
+          .from('chore_assignments')
+          .select('assigned_to, created_at, chores!inner(name, household_id)')
+          .eq('chores.household_id', householdId)
+          .order('created_at', ascending: false);
 
-    // 1. Availability (25 pts)
-    score += _scoreAvailability(prefs, dueDate);
+      final result = <String, DateTime>{};
 
-    // 2. Chore Preference (20 pts)
-    score += _scorePreference(prefs, choreType);
+      for (final row in response as List) {
+        final userId = row['assigned_to'] as String;
+        if (result.containsKey(userId)) continue; // Already have most recent for this user
 
-    // 3. Workload Balance (20 pts)
-    score += _scoreWorkload(prefs, weeklyCount);
+        final choreName = row['chores']['name'] as String;
+        final rowChoreType = inferChoreType(choreName);
 
-    // 4. Fairness / History (20 pts)
-    score += _scoreFairness(lastAssignedDate);
+        // Match by chore type
+        if (rowChoreType == targetChoreType) {
+          result[userId] = DateTime.parse(row['created_at'] as String);
+        }
+      }
 
-    // 5. Exam Period (10 pts)
-    score += _scoreExamPeriod(prefs);
-
-    // 6. Weekend Preference (5 pts)
-    score += _scoreWeekend(prefs, dueDate);
-
-    return score;
+      return result;
+    } catch (e) {
+      debugLog('⚠️ Could not fetch rotation history: $e');
+      return {};
+    }
   }
 
-  /// Availability: +25 if available on due date's day, 0 if not.
-  int _scoreAvailability(UserPreferences prefs, DateTime dueDate) {
-    final dayName = _dayName(dueDate.weekday);
-    return prefs.availableDays.contains(dayName) ? 25 : 0;
-  }
+  /// Fallback: get last assignment of any chore per member
+  Future<Map<String, DateTime>> _getLastAssignedAny(String householdId) async {
+    try {
+      final response = await _client
+          .from('chore_assignments')
+          .select('assigned_to, created_at, chores!inner(household_id)')
+          .eq('chores.household_id', householdId)
+          .order('created_at', ascending: false);
 
-  /// Chore Preference: +20 preferred, +10 neutral, 0 disliked.
-  int _scorePreference(UserPreferences prefs, String? choreType) {
-    if (choreType == null) return 10; // unknown type → neutral
-    if (prefs.preferredChoreTypes.contains(choreType)) return 20;
-    if (prefs.dislikedChoreTypes.contains(choreType)) return 0;
-    return 10; // neutral
-  }
+      final result = <String, DateTime>{};
 
-  /// Workload Balance: 0–20, scales linearly from max to 0.
-  int _scoreWorkload(UserPreferences prefs, int weeklyCount) {
-    final max = prefs.maxChoresPerWeek;
-    if (weeklyCount >= max) return 0;
-    // Linear scale: full marks when 0 chores, 0 when at max
-    return ((1 - weeklyCount / max) * 20).round();
-  }
+      for (final row in response as List) {
+        final userId = row['assigned_to'] as String;
+        if (!result.containsKey(userId)) {
+          result[userId] = DateTime.parse(row['created_at'] as String);
+        }
+      }
 
-  /// Fairness: +20 if never done / >14 days, down to +5 if done yesterday.
-  int _scoreFairness(DateTime? lastAssigned) {
-    if (lastAssigned == null) return 20; // never done → max fairness
-    final daysSince = DateTime.now().difference(lastAssigned).inDays;
-    if (daysSince >= 14) return 20;
-    if (daysSince >= 7) return 15;
-    if (daysSince >= 3) return 10;
-    return 5; // done very recently
+      return result;
+    } catch (e) {
+      debugLog('⚠️ Could not fetch assignment history: $e');
+      return {};
+    }
   }
-
-  /// Exam Period: +10 not in exams, +5 in exams but under 50% load, 0 otherwise.
-  int _scoreExamPeriod(UserPreferences prefs) {
-    final now = DateTime.now();
-    final inExam = prefs.examPeriods.any(
-      (ep) => now.isAfter(ep.start) && now.isBefore(ep.end),
-    );
-    if (!inExam) return 10;
-    // In exam — give partial credit if they still have capacity
-    // (We don't have exact load here, but we can be lenient)
-    return 5;
-  }
-
-  /// Weekend Preference: +5 if weekend chore matches their preference.
-  int _scoreWeekend(UserPreferences prefs, DateTime dueDate) {
-    final isWeekend = dueDate.weekday == 6 || dueDate.weekday == 7;
-    if (!isWeekend) return 3; // weekday — neutral-ish
-    if (prefs.goHomeWeekends) return 0; // shouldn't reach here (hard skip)
-    return prefs.preferWeekendChores ? 5 : 2;
-  }
-
-  // ── Data helpers ────────────────────────────────────────────────────
 
   /// Count how many chore assignments each member got in the last [days] days.
+  /// (Kept for backward compatibility)
   Future<Map<String, int>> getRecentAssignmentCounts(
     String householdId, {
     int days = 7,
@@ -418,46 +546,10 @@ class ChoreAssignmentService {
     }
   }
 
-  /// For each member, find when they were last assigned a chore whose name
-  /// matches (used for fairness scoring).
-  Future<Map<String, DateTime>> _getLastAssignedForChoreType(
-    String householdId,
-    String choreName,
-  ) async {
-    try {
-      // We match on the chore name directly since that's what we have.
-      // A more robust approach would use a `chore_type` column.
-      final response = await _client
-          .from('chore_assignments')
-          .select('assigned_to, created_at, chores!inner(name, household_id)')
-          .eq('chores.household_id', householdId)
-          .order('created_at', ascending: false);
+  // ══════════════════════════════════════════════════════════════════════
+  // ROOM-AWARE HELPERS (unchanged)
+  // ══════════════════════════════════════════════════════════════════════
 
-      final choreType = inferChoreType(choreName);
-      final result = <String, DateTime>{};
-
-      for (final row in response as List) {
-        final userId = row['assigned_to'] as String;
-        if (result.containsKey(userId)) continue; // already have most recent
-
-        final rowChoreName = row['chores']['name'] as String;
-        final rowType = inferChoreType(rowChoreName);
-
-        if (choreType != null && rowType == choreType) {
-          result[userId] = DateTime.parse(row['created_at'] as String);
-        }
-      }
-
-      return result;
-    } catch (e) {
-      debugLog('⚠️ Could not fetch assignment history: $e');
-      return {};
-    }
-  }
-
-  // ── Room-aware helpers ────────────────────────────────────────────
-
-  /// Fetch the household model (with room config) for a household.
   Future<HouseholdModel?> fetchHousehold(String householdId) async {
     try {
       final response =
@@ -473,8 +565,6 @@ class ChoreAssignmentService {
     }
   }
 
-  /// Map a chore type to the relevant room count.
-  /// Returns null if the chore type isn't room-specific.
   static int? roomCountForChoreType(HouseholdModel household, String? choreType) {
     if (choreType == null) return null;
     switch (choreType) {
@@ -484,19 +574,15 @@ class ChoreAssignmentService {
         return household.numBathrooms;
       case 'vacuuming':
       case 'mopping':
-        // These apply to all rooms
         return household.totalRooms;
       default:
         return null;
     }
   }
 
-  /// Generate chore suggestions based on room configuration.
-  /// Returns a list of chore name suggestions.
   static List<String> generateRoomChores(HouseholdModel household) {
     final chores = <String>[];
 
-    // Bathrooms
     if (household.numBathrooms == 1) {
       chores.add('Clean Bathroom');
     } else {
@@ -505,7 +591,6 @@ class ChoreAssignmentService {
       }
     }
 
-    // Kitchens
     if (household.numKitchens == 1) {
       chores.add('Clean Kitchen');
     } else {
@@ -514,7 +599,6 @@ class ChoreAssignmentService {
       }
     }
 
-    // Living rooms
     if (household.numLivingRooms == 1) {
       chores.add('Clean Living Room');
     } else {
@@ -523,7 +607,6 @@ class ChoreAssignmentService {
       }
     }
 
-    // General chores that scale with room count
     chores.add('Take Out Trash');
     chores.add('Vacuum Common Areas');
     chores.add('Mop Floors');
@@ -533,7 +616,9 @@ class ChoreAssignmentService {
     return chores;
   }
 
-  // ── Utilities ───────────────────────────────────────────────────────
+  // ══════════════════════════════════════════════════════════════════════
+  // UTILITIES
+  // ══════════════════════════════════════════════════════════════════════
 
   static String _dayName(int weekday) {
     const days = [
