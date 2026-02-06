@@ -58,3 +58,11 @@
 ## General Android
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SourceFile
+
+## Google Play Core (deferred components - not used but referenced by Flutter)
+-dontwarn com.google.android.play.core.splitcompat.**
+-dontwarn com.google.android.play.core.splitinstall.**
+-dontwarn com.google.android.play.core.tasks.**
+
+## Suppress missing class warnings for Play Core
+-dontwarn com.google.android.play.core.**

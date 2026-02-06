@@ -23,7 +23,7 @@ class EnvConfig {
   // These are public values (anon key is meant to be public)
   // ============================================================
   static const String _fallbackSupabaseUrl = 'https://pebdyufskmshvvshfqwj.supabase.co';
-  static const String _fallbackSupabaseAnonKey = 'YOUR_ANON_KEY_HERE'; // TODO: Replace with actual anon key
+  static const String _fallbackSupabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBlYmR5dWZza21zaHZ2c2hmcXdqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg3OTk3MDEsImV4cCI6MjA2NDM3NTcwMX0.QDwek3H09Hhfac9xSeI_-IMlXlX3bFgm09_T30xaPts';
   
   /// Whether the env file has been loaded
   static bool _envLoaded = false;
