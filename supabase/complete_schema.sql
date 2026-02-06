@@ -56,12 +56,19 @@ CREATE TABLE profiles (
   phone_number TEXT,
   bio TEXT,
   profile_image_url TEXT,
+  auth_provider TEXT DEFAULT 'email',
+  google_id TEXT,
+  google_email TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  updated_at TIMESTAMPTZ DEFAULT NOW()
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  -- Constraints
+  CONSTRAINT valid_auth_provider CHECK (auth_provider IN ('email', 'google', 'email_and_google'))
 );
 
 -- Index for email lookups
 CREATE INDEX idx_profiles_email ON profiles(email);
+-- Index for google_id lookups
+CREATE INDEX idx_profiles_google_id ON profiles(google_id) WHERE google_id IS NOT NULL;
 
 -- ═══════════════════════════════════════════════════════════════
 -- SECTION 2: HOUSEHOLDS TABLE
@@ -800,11 +807,12 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, full_name, created_at, updated_at)
+  INSERT INTO public.profiles (id, email, full_name, auth_provider, created_at, updated_at)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    'email',
     NOW(),
     NOW()
   )
