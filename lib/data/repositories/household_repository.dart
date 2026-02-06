@@ -463,31 +463,26 @@ class HouseholdRepository {
     }
   }
 
-  // Delete household with proper cleanup
+  // Delete household with proper cleanup (uses RPC to bypass RLS)
   Future<void> deleteHousehold(String householdId) async {
     try {
       if (householdId.isEmpty) {
         throw Exception('Household ID cannot be empty');
       }
 
-      // Note: This should be handled by database CASCADE rules
-      // but we'll do soft delete for safety
+      debugLog('deleteHousehold: calling RPC for householdId=$householdId');
 
-      // First, deactivate all members
-      await _client
-          .from('household_members')
-          .update({
-            'is_active': false,
-            'updated_at': DateTime.now().toIso8601String(),
-          })
-          .eq('household_id', householdId);
+      // Use RPC function which handles all cascade deletions
+      await _client.rpc('delete_household_completely', params: {
+        'p_household_id': householdId,
+      });
 
-      // Then delete the household
-      await _client.from('households').delete().eq('id', householdId);
+      debugLog('deleteHousehold: RPC completed successfully');
 
       // Clear cache
       _membersCache.remove(householdId);
     } catch (e) {
+      debugLog('deleteHousehold: ERROR=$e');
       throw Exception('Failed to delete household: $e');
     }
   }
@@ -558,120 +553,58 @@ class HouseholdRepository {
     required String userId,
   }) async {
     try {
-      final members = await getHouseholdMembers(householdId);
-      final activeMembers = members.where((m) => m.isActive).toList();
-      final isLastMember = activeMembers.length == 1;
-      final isAdmin = activeMembers
-          .any((m) => m.userId == userId && m.role == 'admin');
-      final adminCount =
-          activeMembers.where((m) => m.role == 'admin').length;
-      final isLastAdmin = isAdmin && adminCount == 1;
-
-      if (isLastMember) {
-        // Last person → nuke the household
-        await deleteHouseholdCompletely(householdId);
-        return LeaveResult(
-          type: LeaveResultType.householdDeleted,
-        );
-      }
-
-      if (isLastAdmin) {
-        // Promote the longest-tenured non-current member to admin
-        final candidates = activeMembers
-            .where((m) => m.userId != userId)
-            .toList()
-          ..sort((a, b) => a.joinedAt.compareTo(b.joinedAt));
-
-        final promoted = candidates.first;
-        await updateMemberRole(promoted.id, 'admin');
-
-        // Now remove the leaving member
-        await removeMemberFromHousehold(memberRecordId);
-
+      debugLog('leaveHousehold: calling RPC for householdId=$householdId');
+      
+      // Use RPC function to handle leave (bypasses RLS)
+      final response = await _client.rpc('leave_household', params: {
+        'p_household_id': householdId,
+      });
+      
+      debugLog('leaveHousehold: RPC response=$response');
+      
+      final result = response as String;
+      
+      if (result == 'deleted') {
+        _clearCache();
+        return LeaveResult(type: LeaveResultType.householdDeleted);
+      } else if (result.startsWith('promoted:')) {
+        final promotedName = result.substring('promoted:'.length);
+        _clearCache();
         return LeaveResult(
           type: LeaveResultType.adminPromoted,
-          promotedMemberName: promoted.fullName ?? promoted.email ?? 'a member',
+          promotedMemberName: promotedName,
         );
+      } else {
+        _clearCache();
+        return LeaveResult(type: LeaveResultType.normalLeave);
       }
-
-      // Normal leave
-      await removeMemberFromHousehold(memberRecordId);
-      return LeaveResult(type: LeaveResultType.normalLeave);
     } catch (e) {
+      debugLog('leaveHousehold: ERROR=$e');
       throw Exception('Failed to leave household: $e');
     }
   }
 
   /// Delete a household and ALL related data (cascade).
-  /// Use when the last member leaves.
+  /// Uses RPC function to bypass RLS.
   Future<void> deleteHouseholdCompletely(String householdId) async {
     try {
       if (householdId.isEmpty) {
         throw Exception('Household ID cannot be empty');
       }
 
-      // 1. Delete chore_assignments for chores in this household
-      final chores = await _client
-          .from('chores')
-          .select('id')
-          .eq('household_id', householdId);
+      debugLog('deleteHouseholdCompletely: calling RPC for householdId=$householdId');
 
-      final choreIds =
-          (chores as List).map((c) => c['id'] as String).toList();
+      // Use RPC function to handle complete deletion (bypasses RLS)
+      await _client.rpc('delete_household_completely', params: {
+        'p_household_id': householdId,
+      });
 
-      if (choreIds.isNotEmpty) {
-        await _client
-            .from('chore_assignments')
-            .delete()
-            .inFilter('chore_id', choreIds);
-      }
-
-      // 2. Delete scheduled_assignments for those chores (if table exists)
-      try {
-        if (choreIds.isNotEmpty) {
-          // Get assignment IDs first
-          final assignments = await _client
-              .from('chore_assignments')
-              .select('id')
-              .inFilter('chore_id', choreIds);
-          final assignmentIds =
-              (assignments as List).map((a) => a['id'] as String).toList();
-          if (assignmentIds.isNotEmpty) {
-            await _client
-                .from('scheduled_assignments')
-                .delete()
-                .inFilter('assignment_id', assignmentIds);
-          }
-        }
-      } catch (_) {
-        // Table may not exist yet — safe to ignore
-      }
-
-      // 3. Delete chores
-      await _client.from('chores').delete().eq('household_id', householdId);
-
-      // 4. Delete notifications for this household
-      try {
-        await _client
-            .from('notifications')
-            .delete()
-            .eq('household_id', householdId);
-      } catch (_) {
-        // notifications may not have household_id column — safe to ignore
-      }
-
-      // 5. Delete all household members
-      await _client
-          .from('household_members')
-          .delete()
-          .eq('household_id', householdId);
-
-      // 6. Delete the household itself
-      await _client.from('households').delete().eq('id', householdId);
+      debugLog('deleteHouseholdCompletely: RPC completed successfully');
 
       // Clear cache
       _membersCache.remove(householdId);
     } catch (e) {
+      debugLog('deleteHouseholdCompletely: ERROR=$e');
       throw Exception('Failed to delete household completely: $e');
     }
   }
