@@ -60,14 +60,21 @@ class ChoreRepository {
   // Get chores assigned to the current user
   Future<List<Map<String, dynamic>>> getMyChores() async {
     final userId = _client.auth.currentUser!.id;
+    debugLog('📋 getMyChores: fetching for user $userId');
 
-    final response = await _client
-        .from('chore_assignments')
-        .select('*, chores(*)')
-        .eq('assigned_to', userId)
-        .order('due_date', ascending: true);
+    try {
+      final response = await _client
+          .from('chore_assignments')
+          .select('*, chores(*)')
+          .eq('assigned_to', userId)
+          .order('due_date', ascending: true);
 
-    return response;
+      debugLog('📋 getMyChores: fetched ${response.length} assignments');
+      return response;
+    } catch (e) {
+      debugLog('❌ getMyChores FAILED: $e');
+      rethrow;
+    }
   }
 
   // UPDATED: Assign a chore to a user WITH calendar sync

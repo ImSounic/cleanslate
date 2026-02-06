@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ErrorService {
   static const Map<String, ErrorInfo> _errorMap = {
@@ -14,7 +15,7 @@ class ErrorService {
     'AuthSessionMissingException': ErrorInfo('E104', 'Session expired. Please sign in again.'),
 
     // Database errors (E2xx)
-    'PostgrestException': ErrorInfo('E201', 'Unable to save data. Please try again.'),
+    'PostgrestException': ErrorInfo('E201', 'Database error. Please try again.'),
 
     // Network errors (E3xx)
     'SocketException': ErrorInfo('E301', 'No internet connection. Check your network.'),
@@ -35,6 +36,11 @@ class ErrorService {
     debugLog('❌ ERROR${operation != null ? " [$operation]" : ""}');
     debugLog('Type: ${error.runtimeType}');
     debugLog('Message: $error');
+    if (error is PostgrestException) {
+      debugLog('Code: ${error.code}');
+      debugLog('Details: ${error.details}');
+      debugLog('Hint: ${error.hint}');
+    }
     debugLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
 
     // Log to Crashlytics (non-fatal)
