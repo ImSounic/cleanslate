@@ -6,6 +6,7 @@ class UserPreferences {
   final List<String> dislikedChoreTypes;
   final List<String> availableDays;
   final Map<String, bool> preferredTimeSlots;
+  final Map<String, int> choreRatings; // NEW: Store actual 1-5 ratings
   final DateTime? semesterStart;
   final DateTime? semesterEnd;
   final List<ExamPeriod> examPeriods;
@@ -22,6 +23,7 @@ class UserPreferences {
     this.dislikedChoreTypes = const [],
     this.availableDays = const ['saturday', 'sunday'],
     Map<String, bool>? preferredTimeSlots,
+    Map<String, int>? choreRatings,
     this.semesterStart,
     this.semesterEnd,
     this.examPeriods = const [],
@@ -34,10 +36,17 @@ class UserPreferences {
   }) : preferredTimeSlots =
            preferredTimeSlots ??
            {'morning': false, 'afternoon': true, 'evening': true},
+       choreRatings = choreRatings ?? {},
        createdAt = createdAt ?? DateTime.now(),
        updatedAt = updatedAt ?? DateTime.now();
 
   factory UserPreferences.fromJson(Map<String, dynamic> json) {
+    // Parse chore_ratings from JSONB (values come as dynamic, need to cast to int)
+    final rawRatings = json['chore_ratings'] as Map<String, dynamic>? ?? {};
+    final choreRatings = rawRatings.map(
+      (key, value) => MapEntry(key, (value as num).toInt()),
+    );
+
     return UserPreferences(
       userId: json['user_id'],
       preferredChoreTypes: List<String>.from(
@@ -51,6 +60,7 @@ class UserPreferences {
         json['preferred_time_slots'] ??
             {'morning': false, 'afternoon': true, 'evening': true},
       ),
+      choreRatings: choreRatings,
       semesterStart:
           json['semester_start'] != null
               ? DateTime.parse(json['semester_start'])
@@ -79,6 +89,7 @@ class UserPreferences {
       'disliked_chore_types': dislikedChoreTypes,
       'available_days': availableDays,
       'preferred_time_slots': preferredTimeSlots,
+      'chore_ratings': choreRatings,
       'semester_start': semesterStart?.toIso8601String(),
       'semester_end': semesterEnd?.toIso8601String(),
       'exam_periods': examPeriods.map((e) => e.toJson()).toList(),
@@ -94,6 +105,7 @@ class UserPreferences {
     List<String>? dislikedChoreTypes,
     List<String>? availableDays,
     Map<String, bool>? preferredTimeSlots,
+    Map<String, int>? choreRatings,
     DateTime? semesterStart,
     DateTime? semesterEnd,
     List<ExamPeriod>? examPeriods,
@@ -108,6 +120,7 @@ class UserPreferences {
       dislikedChoreTypes: dislikedChoreTypes ?? this.dislikedChoreTypes,
       availableDays: availableDays ?? this.availableDays,
       preferredTimeSlots: preferredTimeSlots ?? this.preferredTimeSlots,
+      choreRatings: choreRatings ?? this.choreRatings,
       semesterStart: semesterStart ?? this.semesterStart,
       semesterEnd: semesterEnd ?? this.semesterEnd,
       examPeriods: examPeriods ?? this.examPeriods,

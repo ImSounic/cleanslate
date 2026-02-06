@@ -89,15 +89,21 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
           preferences.preferredTimeSlots,
         );
 
-        // Load chore ratings based on preferences
+        // Load chore ratings - use saved ratings if available, fallback to legacy logic
         for (final chore in _choreTypes) {
           final choreKey = chore.toLowerCase().replaceAll(' ', '_');
-          if (preferences.preferredChoreTypes.contains(choreKey)) {
-            _choreRatings[chore] = 5; // Preferred
+          
+          // First check if we have an actual saved rating
+          if (preferences.choreRatings.containsKey(choreKey)) {
+            _choreRatings[chore] = preferences.choreRatings[choreKey]!;
+          }
+          // Fallback to legacy preferred/disliked arrays
+          else if (preferences.preferredChoreTypes.contains(choreKey)) {
+            _choreRatings[chore] = 5; // Preferred (legacy)
           } else if (preferences.dislikedChoreTypes.contains(choreKey)) {
-            _choreRatings[chore] = 1; // Disliked
+            _choreRatings[chore] = 1; // Disliked (legacy)
           } else {
-            _choreRatings[chore] = 3; // Neutral
+            _choreRatings[chore] = 3; // Neutral (default)
           }
         }
 
@@ -128,6 +134,14 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
               .map((e) => e.key)
               .toList();
 
+      // Convert chore ratings to use snake_case keys
+      final choreRatingsToSave = <String, int>{};
+      for (final entry in _choreRatings.entries) {
+        final choreKey = entry.key.toLowerCase().replaceAll(' ', '_');
+        choreRatingsToSave[choreKey] = entry.value;
+      }
+
+      // Also maintain legacy preferred/disliked arrays for backward compatibility
       final preferredChores =
           _choreRatings.entries
               .where((e) => e.value >= 4)
@@ -146,6 +160,7 @@ class _ChorePreferencesScreenState extends State<ChorePreferencesScreen> {
         dislikedChoreTypes: dislikedChores,
         availableDays: availableDays,
         preferredTimeSlots: _timePreferences,
+        choreRatings: choreRatingsToSave,
         maxChoresPerWeek: _maxChoresPerWeek,
         goHomeWeekends: _goHomeWeekends,
         preferWeekendChores:

@@ -213,6 +213,7 @@ CREATE TABLE user_preferences (
   disliked_chore_types TEXT[] DEFAULT '{}',
   available_days TEXT[] DEFAULT ARRAY['saturday', 'sunday'],
   preferred_time_slots JSONB DEFAULT '{"morning": false, "afternoon": true, "evening": true}',
+  chore_ratings JSONB DEFAULT '{}',
   semester_start DATE,
   semester_end DATE,
   exam_periods JSONB DEFAULT '[]',
