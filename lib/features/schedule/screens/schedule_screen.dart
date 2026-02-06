@@ -15,10 +15,10 @@ class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
 
   @override
-  State<ScheduleScreen> createState() => _ScheduleScreenState();
+  ScheduleScreenState createState() => ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen>
+class ScheduleScreenState extends State<ScheduleScreen>
     with SingleTickerProviderStateMixin {
   final _choreRepository = ChoreRepository();
   final _householdService = HouseholdService();
@@ -93,6 +93,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         _currentUserId = user.id;
       });
     }
+  }
+
+  /// Public method to refresh chores (called from AppShell after adding a chore)
+  void refreshChores() {
+    _loadChores();
   }
 
   Future<void> _loadChores() async {

@@ -32,10 +32,10 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  HomeScreenState createState() => HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
+class HomeScreenState extends State<HomeScreen>
     {
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
@@ -79,6 +79,11 @@ class _HomeScreenState extends State<HomeScreen>
         _profileImageUrl = userData?['profile_image_url'];
       });
     }
+  }
+
+  /// Public method to refresh chores (called from AppShell after adding a chore)
+  void refreshChores() {
+    _loadChores();
   }
 
   Future<void> _loadChores() async {
@@ -848,24 +853,6 @@ class _HomeScreenState extends State<HomeScreen>
           ],
         ),
       );
-  }
-
-  /// Builds the FAB for adding chores — used by AppShell.
-  Widget buildFloatingActionButton() {
-    return FloatingActionButton(
-      backgroundColor: AppColors.primary,
-      shape: const CircleBorder(),
-      child: Icon(Icons.add, color: AppColors.textLight),
-      onPressed: () async {
-        final result = await Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const AddChoreScreen()),
-        );
-        if (result == true) {
-          _loadChores();
-        }
-      },
-    );
   }
 
   // Method to show appropriate content based on selected tab
