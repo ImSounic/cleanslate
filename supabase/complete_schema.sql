@@ -789,7 +789,42 @@ CREATE TRIGGER update_user_preferences_updated_at
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ═══════════════════════════════════════════════════════════════
--- SECTION 24: GRANT PERMISSIONS TO ANON AND AUTHENTICATED ROLES
+-- SECTION 24: AUTO-CREATE PROFILE ON USER SIGNUP
+-- ═══════════════════════════════════════════════════════════════
+
+-- Function to create profile on new user signup (SECURITY DEFINER to bypass RLS)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, created_at, updated_at)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', split_part(NEW.email, '@', 1)),
+    NOW(),
+    NOW()
+  )
+  ON CONFLICT (id) DO NOTHING;
+  
+  RETURN NEW;
+END;
+$$;
+
+-- Drop existing trigger if it exists
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+
+-- Create trigger to fire on new user creation
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW
+  EXECUTE FUNCTION public.handle_new_user();
+
+-- ═══════════════════════════════════════════════════════════════
+-- SECTION 25: GRANT PERMISSIONS TO ANON AND AUTHENTICATED ROLES
 -- ═══════════════════════════════════════════════════════════════
 
 -- Profiles
@@ -829,6 +864,7 @@ GRANT EXECUTE ON FUNCTION is_household_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION find_household_by_code(TEXT) TO authenticated, anon;
 GRANT EXECUTE ON FUNCTION check_deadline_notifications() TO authenticated;
 GRANT EXECUTE ON FUNCTION delete_own_account() TO authenticated;
+GRANT EXECUTE ON FUNCTION handle_new_user() TO service_role;
 
 -- ═══════════════════════════════════════════════════════════════
 -- DONE! Your database is now set up.
@@ -837,3 +873,4 @@ GRANT EXECUTE ON FUNCTION delete_own_account() TO authenticated;
 -- Verification: Run this to check everything is created
 -- SELECT table_name FROM information_schema.tables WHERE table_schema = 'public';
 -- SELECT policyname, tablename FROM pg_policies WHERE schemaname = 'public';
+-- SELECT * FROM pg_trigger WHERE tgname = 'on_auth_user_created';
