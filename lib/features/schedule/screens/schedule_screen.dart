@@ -29,9 +29,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   bool _isLoading = true;
   bool _showRecurringChores = false;
   bool _hasLoadedInitialData = false;
-  String _userName = '';
+  String? _currentUserId;
   // List to store regular and recurring chores
-  List<Map<String, dynamic>> _chores = [];
+  List<Map<String, dynamic>> _chores = []; // All household chores
+  List<Map<String, dynamic>> _myChores = []; // Only current user's chores
   List<Map<String, dynamic>> _recurringChores = [];
 
   // Selected date related variables
@@ -88,14 +89,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   Future<void> _loadUserData() async {
     final user = _supabaseService.currentUser;
     if (user != null) {
-      final userData = user.userMetadata;
       setState(() {
-        if (userData != null && userData.containsKey('full_name')) {
-          _userName = userData['full_name'] as String;
-        } else {
-          // If full_name is not available, use email or a default value
-          _userName = user.email?.split('@').first ?? 'User';
-        }
+        _currentUserId = user.id;
       });
     }
   }
@@ -112,6 +107,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         setState(() {
           _isLoading = false;
           _chores = [];
+          _myChores = [];
           _recurringChores = [];
         });
         return;
@@ -124,6 +120,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
       // Separate regular and recurring chores
       final regular = <Map<String, dynamic>>[];
+      final myRegular = <Map<String, dynamic>>[];
       final recurring = <Map<String, dynamic>>[];
 
       for (final chore in allChores) {
@@ -135,7 +132,13 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           final assignments = chore['chore_assignments'] as List? ?? [];
           if (assignments.isNotEmpty) {
             for (final assignment in assignments) {
-              regular.add({...chore, 'assignment': assignment});
+              final choreWithAssignment = {...chore, 'assignment': assignment};
+              regular.add(choreWithAssignment);
+              
+              // Check if this is assigned to current user
+              if (assignment['assigned_to'] == _currentUserId) {
+                myRegular.add(choreWithAssignment);
+              }
             }
           } else {
             regular.add(chore);
@@ -146,6 +149,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       if (mounted) {
         setState(() {
           _chores = regular;
+          _myChores = myRegular;
           _recurringChores = recurring;
           _isLoading = false;
         });
@@ -215,6 +219,51 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     } else {
       return DateFormat('MMM d').format(date);
     }
+  }
+
+  // Get my chores filtered by selected date (for counter)
+  List<Map<String, dynamic>> _getMyChoresForSelectedDate() {
+    return _myChores.where((chore) {
+      final assignment = chore['assignment'];
+      if (assignment == null) return false;
+
+      if (assignment['due_date'] != null) {
+        final dueDate = DateTime.parse(assignment['due_date']);
+        final selectedDate = DateTime(
+          _selectedDate.year,
+          _selectedDate.month,
+          _selectedDate.day,
+        );
+        final choreDate = DateTime(dueDate.year, dueDate.month, dueDate.day);
+        return choreDate.isAtSameMomentAs(selectedDate);
+      }
+      return false;
+    }).toList();
+  }
+
+  // Check if a chore is assigned to the current user
+  bool _isMyChore(Map<String, dynamic> chore) {
+    final assignment = chore['assignment'];
+    if (assignment == null) return false;
+    return assignment['assigned_to'] == _currentUserId;
+  }
+
+  // Get assignee name from assignment
+  String _getAssigneeName(Map<String, dynamic>? assignment) {
+    if (assignment == null) return 'Unassigned';
+    
+    // Check if profiles data is included
+    final profiles = assignment['profiles'];
+    if (profiles != null) {
+      return profiles['full_name'] ?? profiles['email']?.split('@').first ?? 'Unknown';
+    }
+    
+    // Fallback: if it's assigned to current user, show "You"
+    if (assignment['assigned_to'] == _currentUserId) {
+      return 'You';
+    }
+    
+    return 'Team member';
   }
 
   // Toggle recurring chores section
@@ -453,8 +502,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        // Use the first name when displaying the title
-                        '${_userName.split(' ').first}\'s chores',
+                        'Household Schedule',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -478,7 +526,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '${_chores.length.toString().padLeft(2, '0')} tasks',
+                          // Show only MY tasks in the counter
+                          '${_getMyChoresForSelectedDate().length.toString().padLeft(2, '0')} my tasks',
                           style: TextStyle(
                             fontSize: 12,
                             color: Colors.white,
@@ -902,6 +951,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
           assignment != null && assignment['due_date'] != null
               ? DateTime.parse(assignment['due_date'])
               : null;
+      final isMyChore = _isMyChore(chore);
 
       // Determine priority color
       Color priorityColor = AppColors.priorityMedium;
@@ -916,6 +966,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         }
       }
 
+      // Visual distinction: left border color
+      final leftBorderColor = isMyChore
+          ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+          : (isDarkMode ? Colors.grey[600]! : Colors.grey[400]!);
+
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Container(
@@ -927,59 +982,82 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             ),
             color: isDarkMode ? AppColors.surfaceDark : AppColors.background,
           ),
-          child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            leading: GestureDetector(
-              onTap: () {
-                if (assignment != null) {
-                  _toggleChoreComplete(assignment['id'], isCompleted);
-                }
-              },
-              child: Container(
-                width: 24,
-                height: 24,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color:
-                        isCompleted
-                            ? (isDarkMode
-                                ? AppColors.primaryDark
-                                : AppColors.primary)
-                            : (isDarkMode
-                                ? AppColors.borderDark
-                                : Colors.grey[400]!),
-                    width: 2,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(15),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(
+                    color: leftBorderColor,
+                    width: 4,
                   ),
-                  color:
-                      isCompleted
-                          ? (isDarkMode
-                              ? AppColors.primaryDark
-                              : AppColors.primary)
-                          : Colors.transparent,
                 ),
-                child:
-                    isCompleted
-                        ? const Icon(Icons.check, color: Colors.white, size: 16)
-                        : null,
               ),
-            ),
-            title: Text(
-              chore['name'] ?? 'Untitled Chore',
-              style: TextStyle(
-                fontFamily: 'VarelaRound',
-                fontWeight: FontWeight.w500,
-                color:
-                    isDarkMode
-                        ? AppColors.textPrimaryDark
-                        : AppColors.textPrimary,
-                decoration: isCompleted ? TextDecoration.lineThrough : null,
-              ),
-            ),
-            trailing: Row(
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 4,
+                ),
+                leading: GestureDetector(
+                  onTap: () {
+                    if (assignment != null && isMyChore) {
+                      _toggleChoreComplete(assignment['id'], isCompleted);
+                    }
+                  },
+                  child: Container(
+                    width: 24,
+                    height: 24,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color:
+                            isCompleted
+                                ? (isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary)
+                                : (isDarkMode
+                                    ? AppColors.borderDark
+                                    : Colors.grey[400]!),
+                        width: 2,
+                      ),
+                      color:
+                          isCompleted
+                              ? (isDarkMode
+                                  ? AppColors.primaryDark
+                                  : AppColors.primary)
+                              : Colors.transparent,
+                    ),
+                    child:
+                        isCompleted
+                            ? const Icon(Icons.check, color: Colors.white, size: 16)
+                            : null,
+                  ),
+                ),
+                title: Text(
+                  chore['name'] ?? 'Untitled Chore',
+                  style: TextStyle(
+                    fontFamily: 'VarelaRound',
+                    fontWeight: FontWeight.w500,
+                    color:
+                        isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                    decoration: isCompleted ? TextDecoration.lineThrough : null,
+                  ),
+                ),
+                subtitle: !isMyChore
+                    ? Text(
+                        _getAssigneeName(assignment),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontFamily: 'VarelaRound',
+                          color: isDarkMode
+                              ? AppColors.textSecondaryDark
+                              : AppColors.textSecondary,
+                        ),
+                      )
+                    : null,
+                trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Row(
@@ -1047,13 +1125,17 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     size: 16,
                   ),
                   onPressed: () {
-                    // Show chore options menu
-                    _showChoreOptions(chore, assignment);
+                    // Show chore options menu only for my chores
+                    if (isMyChore) {
+                      _showChoreOptions(chore, assignment);
+                    }
                   },
                 ),
               ],
             ),
           ),
+            ), // Close Container with left border
+          ), // Close ClipRRect
         ),
       );
     }).toList();
