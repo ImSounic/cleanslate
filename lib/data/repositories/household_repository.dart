@@ -102,6 +102,8 @@ class HouseholdRepository {
         throw Exception('Household ID cannot be empty');
       }
 
+      debugLog('getHouseholdModel: fetching householdId=$householdId');
+
       final response =
           await _client
               .from('households')
@@ -109,8 +111,10 @@ class HouseholdRepository {
               .eq('id', householdId)
               .single();
 
+      debugLog('getHouseholdModel: got response=$response');
       return HouseholdModel.fromJson(response);
     } catch (e) {
+      debugLog('getHouseholdModel: ERROR=$e');
       throw Exception('Failed to fetch household: $e');
     }
   }
@@ -166,11 +170,30 @@ class HouseholdRepository {
         'p_code': code,
       });
 
-      final householdId = response as String;
-      debugLog('createHousehold: RPC returned householdId=$householdId');
+      debugLog('createHousehold: RPC response type=${response.runtimeType}');
+      debugLog('createHousehold: RPC response=$response');
+
+      // Handle various response formats from Supabase RPC
+      String householdId;
+      if (response is String) {
+        householdId = response;
+      } else if (response is Map && response.containsKey('id')) {
+        householdId = response['id'].toString();
+      } else if (response is List && response.isNotEmpty) {
+        // RPC might return a list with single item
+        final first = response.first;
+        householdId = first is String ? first : first['id']?.toString() ?? first.toString();
+      } else {
+        // Fallback: convert to string
+        householdId = response.toString();
+      }
+      
+      debugLog('createHousehold: extracted householdId=$householdId');
 
       // Fetch the full household data
+      debugLog('createHousehold: fetching full household data...');
       final household = await getHouseholdModel(householdId);
+      debugLog('createHousehold: fetched household=${household.name}');
 
       // Clear cache since we have a new household
       _clearCache();
