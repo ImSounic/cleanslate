@@ -44,9 +44,12 @@
 | `providers/theme_provider.dart` | ChangeNotifier for theme mode |
 | `services/error_service.dart` | User-friendly error mapping (E1xx-E5xx), Crashlytics logging |
 | `theme/app_theme.dart` | Light + dark ThemeData |
+| `utils/auth_guard.dart` | Auth/permission verification helpers |
 | `utils/debug_logger.dart` | debugLog() — only prints in debug mode |
 | `utils/error_handler.dart` | ErrorBoundary widget wrapper |
 | `utils/input_sanitizer.dart` | sanitizeSingleLine(), sanitizeMultiLine() |
+| `utils/input_validator.dart` | Form field validators (chore, household, profile, auth) |
+| `utils/secure_storage_helper.dart` | Encrypted storage for tokens via flutter_secure_storage |
 | `utils/string_extensions.dart` | String.capitalize() extension |
 | `utils/theme_utils.dart` | ThemeUtils.isDarkMode(context) |
 
@@ -128,6 +131,8 @@
 | `delete_household_cascade.sql` | Cascade delete for households |
 | `add_recurring_fields.sql` | Recurring chore columns |
 | `add_fcm_tokens.sql` | FCM token table + RLS |
+| `security_audit_rls.sql` | Comprehensive RLS policies for all tables |
+| `add_column_constraints.sql` | CHECK constraints for input validation |
 
 ## Edge Functions (`supabase/functions/`)
 
@@ -141,6 +146,7 @@
 |------|---------|
 | `PROJECT_STATE.md` | This project overview |
 | `FILE_INDEX.md` | This file index |
+| `SECURITY_CHECKLIST.md` | Security audit checklist and status |
 | `PUSH_NOTIFICATIONS_SETUP.md` | FCM deployment guide |
 | `RELEASE_BUILD.md` | Keystore, signing, build commands |
 | `PRIVACY_POLICY.md` | Privacy policy text |

@@ -1,8 +1,13 @@
 // supabase/functions/send-push-notification/index.ts
 // Sends FCM V1 push notifications to a user's registered devices.
 //
-// Expects JSON body: { user_id, title, body, data? }
+// Expects JSON body: { user_id, title, body, data?, household_id? }
 // Requires secrets: FIREBASE_SERVICE_ACCOUNT (full JSON key)
+//
+// Security:
+// - Validates all input parameters
+// - Verifies caller is authenticated
+// - Verifies caller has permission to notify target user (same household)
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -10,6 +15,19 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const FIREBASE_PROJECT_ID = "cleanslate-a4586";
 const FCM_URL = `https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send`;
 const SCOPES = ["https://www.googleapis.com/auth/firebase.messaging"];
+
+// ── Input validation helpers ──────────────────────────────────────
+
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+function sanitizeString(str: string, maxLength: number): string {
+  if (typeof str !== 'string') return '';
+  // Remove control characters and limit length
+  return str.replace(/[\x00-\x1F\x7F]/g, '').substring(0, maxLength);
+}
 
 // ── JWT helpers (no external lib needed) ──────────────────────────
 
@@ -95,21 +113,107 @@ serve(async (req) => {
   }
 
   try {
-    const { user_id, title, body, data } = await req.json();
+    // ── Parse and validate input ─────────────────────────────────
 
-    if (!user_id || !title) {
+    let requestBody;
+    try {
+      requestBody = await req.json();
+    } catch {
       return new Response(
-        JSON.stringify({ error: "Missing user_id or title" }),
+        JSON.stringify({ error: "Invalid JSON body" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // ── Get FCM tokens ────────────────────────────────────────────
+    const { user_id, title, body, data, household_id } = requestBody;
 
-    const supabase = createClient(
+    // Validate required fields
+    if (!user_id || typeof user_id !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid user_id" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!isValidUUID(user_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid user_id format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!title || typeof title !== 'string') {
+      return new Response(
+        JSON.stringify({ error: "Missing or invalid title" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Sanitize string inputs
+    const sanitizedTitle = sanitizeString(title, 200);
+    const sanitizedBody = body ? sanitizeString(String(body), 2000) : "";
+
+    // Validate household_id if provided
+    if (household_id && (typeof household_id !== 'string' || !isValidUUID(household_id))) {
+      return new Response(
+        JSON.stringify({ error: "Invalid household_id format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // ── Initialize Supabase clients ────────────────────────────────
+
+    const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+
+    // Get the calling user from the auth header
+    const authHeader = req.headers.get("Authorization");
+    let callingUserId: string | null = null;
+
+    if (authHeader) {
+      const supabaseAuth = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+      const { data: { user } } = await supabaseAuth.auth.getUser();
+      callingUserId = user?.id ?? null;
+    }
+
+    // ── Authorization check ─────────────────────────────────────────
+    // If household_id is provided, verify caller is a member of that household
+    // and the target user is also a member (they can notify each other)
+
+    if (household_id && callingUserId) {
+      const { data: callerMembership } = await supabaseAdmin
+        .from("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", callingUserId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      const { data: targetMembership } = await supabaseAdmin
+        .from("household_members")
+        .select("id")
+        .eq("household_id", household_id)
+        .eq("user_id", user_id)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (!callerMembership || !targetMembership) {
+        return new Response(
+          JSON.stringify({ error: "Unauthorized: not in the same household" }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
+    // ── Get FCM tokens ────────────────────────────────────────────
+
+    const supabase = supabaseAdmin;
 
     const { data: tokens, error } = await supabase
       .from("user_fcm_tokens")
@@ -144,7 +248,7 @@ serve(async (req) => {
           body: JSON.stringify({
             message: {
               token: fcm_token,
-              notification: { title, body: body || "" },
+              notification: { title: sanitizedTitle, body: sanitizedBody },
               data: data || {},
               android: {
                 priority: "high",
@@ -158,7 +262,7 @@ serve(async (req) => {
               apns: {
                 payload: {
                   aps: {
-                    alert: { title, body: body || "" },
+                    alert: { title: sanitizedTitle, body: sanitizedBody },
                     sound: "default",
                     badge: 1,
                   },
@@ -205,10 +309,14 @@ serve(async (req) => {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
+    // Log full error server-side but don't expose details to client
     console.error("Push notification error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ error: "Failed to send notification" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 });

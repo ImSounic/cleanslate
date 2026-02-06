@@ -65,6 +65,14 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // Note: Flutter obfuscation is handled via flutter build command:
+            // flutter build apk --release --obfuscate --split-debug-info=build/debug-info
+            // This generates obfuscated Dart code and stores debug symbols separately.
+        }
+        debug {
+            // Debug builds are not minified for easier debugging
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

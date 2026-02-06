@@ -86,6 +86,38 @@ Post-login always navigates to `AppShell()` via `pushAndRemoveUntil`.
 - `delete_own_account` — account deletion with cascade
 - `check_deadline_notifications` — deadline notification check
 
+## Security
+
+See `docs/SECURITY_CHECKLIST.md` for full security audit status.
+
+### Security Files
+
+| File | Purpose |
+|------|---------|
+| `supabase/security_audit_rls.sql` | RLS policies for all tables |
+| `supabase/add_column_constraints.sql` | Database CHECK constraints |
+| `lib/core/utils/auth_guard.dart` | Auth/permission verification |
+| `lib/core/utils/input_validator.dart` | Form validation |
+| `lib/core/utils/input_sanitizer.dart` | Input sanitization |
+| `lib/core/utils/secure_storage_helper.dart` | Encrypted local storage |
+
+### Key Security Patterns
+
+- **RLS on all tables**: Users can only access their own household's data
+- **Input sanitization**: All user input sanitized before DB writes
+- **Client validation**: `InputValidator` for form field feedback
+- **Server validation**: CHECK constraints enforce limits at DB level
+- **Auth guards**: `AuthGuard.isHouseholdMember()`, `AuthGuard.isHouseholdAdmin()`
+- **Secure storage**: Tokens in `flutter_secure_storage`, not SharedPreferences
+- **Safe logging**: `debugLog()` only in debug mode, no PII
+
+### Release Build Security
+
+```bash
+# Android release with obfuscation
+flutter build apk --release --obfuscate --split-debug-info=build/debug-info
+```
+
 ## SQL Migrations to Deploy
 
 | File | Status |
@@ -96,6 +128,8 @@ Post-login always navigates to `AppShell()` via `pushAndRemoveUntil`.
 | `supabase/delete_household_cascade.sql` | ⚠️ Needs deploy |
 | `supabase/add_recurring_fields.sql` | ⚠️ Needs deploy |
 | `supabase/add_fcm_tokens.sql` | ⚠️ Needs deploy |
+| `supabase/security_audit_rls.sql` | ⚠️ Needs deploy (CRITICAL) |
+| `supabase/add_column_constraints.sql` | ⚠️ Needs deploy (CRITICAL) |
 
 ## Edge Functions
 
