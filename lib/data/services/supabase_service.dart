@@ -12,18 +12,23 @@ import 'package:cleanslate/data/services/push_notification_service.dart';
 class SupabaseService {
   final SupabaseClient client = Supabase.instance.client;
 
-  // Google Sign In instance - iOS needs clientId, Android needs serverClientId
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-    // iOS client ID (from GoogleService-Info.plist)
-    clientId: Platform.isIOS 
-        ? '884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv.apps.googleusercontent.com'
-        : null,
-    // Android server client ID (web client for backend auth)
-    serverClientId: Platform.isAndroid 
-        ? '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com'
-        : null,
-  );
+  // Google Sign In instance - created lazily to ensure Platform is available
+  GoogleSignIn? _googleSignInInstance;
+  
+  GoogleSignIn get _googleSignIn {
+    _googleSignInInstance ??= GoogleSignIn(
+      scopes: ['email', 'profile'],
+      // iOS client ID (from GoogleService-Info.plist CLIENT_ID)
+      clientId: Platform.isIOS 
+          ? '884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv.apps.googleusercontent.com'
+          : null,
+      // Android server client ID (web client for backend auth)
+      serverClientId: Platform.isAndroid 
+          ? '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com'
+          : null,
+    );
+    return _googleSignInInstance!;
+  }
 
   // Google Sign In - FIXED: Updated nonce handling
   Future<AuthResponse> signInWithGoogle() async {
