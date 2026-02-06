@@ -155,10 +155,15 @@ class HouseholdRepository {
       }
 
       final userId = _client.auth.currentUser?.id;
+      debugLog('createHousehold: userId=$userId');
+      debugLog('createHousehold: currentUser=${_client.auth.currentUser}');
+      debugLog('createHousehold: session=${_client.auth.currentSession}');
       if (userId == null) throw Exception('User not authenticated');
 
       // Generate a unique code
       String code = _generateHouseholdCode();
+
+      debugLog('createHousehold: inserting with created_by=$userId, name=$trimmedName, code=$code');
 
       // Create household with the generated code
       final response =
