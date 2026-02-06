@@ -46,6 +46,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 
+	<!-- GOOGLE SIGN-IN CLIENT ID -->
+	<key>GIDClientID</key>
+	<string>884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv.apps.googleusercontent.com</string>
+
 	<!-- GOOGLE SIGN-IN URL SCHEME -->
 	<key>CFBundleURLTypes</key>
 	<array>
