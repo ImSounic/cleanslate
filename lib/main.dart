@@ -3,7 +3,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
@@ -17,6 +16,7 @@ import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/core/theme/app_theme.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
+import 'package:cleanslate/core/config/env_config.dart';
 import 'package:cleanslate/features/calendar/screens/calendar_connection_screen.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,71 +26,101 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 
+/// Global initialization error to show in UI if startup fails
+String? _initializationError;
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  debugPrint('📱 Background message: ${message.messageId}');
+  try {
+    await Firebase.initializeApp();
+    debugPrint('📱 Background message: ${message.messageId}');
+  } catch (e) {
+    debugPrint('📱 Background handler error: $e');
+  }
 }
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  await Firebase.initializeApp();
-  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  // Crashlytics: catch all uncaught Flutter errors
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
-
-  // Crashlytics: catch all uncaught async errors
-  PlatformDispatcher.instance.onError = (error, stack) {
-    FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
-    return true;
-  };
-
-  // Set status bar to be transparent
+  // Set status bar to be transparent (safe, can't fail)
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
   );
 
-  // Get configuration
-  late final String supabaseUrl;
-  late final String supabaseAnonKey;
-
-  if (kDebugMode) {
-    // Try to load from .env first in debug mode
-    try {
-      await dotenv.load();
-      supabaseUrl =
-          dotenv.env['SUPABASE_URL'] ??
-          const String.fromEnvironment('SUPABASE_URL');
-      supabaseAnonKey =
-          dotenv.env['SUPABASE_ANON_KEY'] ??
-          const String.fromEnvironment('SUPABASE_ANON_KEY');
-
-      debugLog('Debug mode: Supabase configuration loaded');
-    } catch (e) {
-      debugLog('Warning: Could not load .env file, using dart-define values');
-      // Fallback to dart-define values
-      supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
-      supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
-    }
-  } else {
-    // In release mode, only use dart-define values
-    supabaseUrl = const String.fromEnvironment('SUPABASE_URL');
-    supabaseAnonKey = const String.fromEnvironment('SUPABASE_ANON_KEY');
-  }
-
-  // Validate configuration
-  if (supabaseUrl.isEmpty || supabaseAnonKey.isEmpty) {
-    throw Exception(
-      'Supabase configuration missing! '
-      'Please provide SUPABASE_URL and SUPABASE_ANON_KEY via --dart-define',
+  // ================================================================
+  // STEP 1: Initialize Firebase (with timeout and error handling)
+  // ================================================================
+  try {
+    await Firebase.initializeApp().timeout(
+      const Duration(seconds: 15),
+      onTimeout: () {
+        debugPrint('⚠️ Firebase init timeout - continuing without Firebase');
+        throw TimeoutException('Firebase initialization timeout');
+      },
     );
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+    
+    // Crashlytics: catch all uncaught Flutter errors
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    
+    // Crashlytics: catch all uncaught async errors
+    PlatformDispatcher.instance.onError = (error, stack) {
+      FirebaseCrashlytics.instance.recordError(error, stack, fatal: true);
+      return true;
+    };
+    
+    debugLog('✅ Firebase initialized');
+  } catch (e) {
+    debugPrint('⚠️ Firebase init failed: $e');
+    // Continue without Firebase - app should still work for core features
   }
 
-  // Initialize Supabase
-  await Supabase.initialize(url: supabaseUrl, anonKey: supabaseAnonKey);
+  // ================================================================
+  // STEP 2: Load environment configuration
+  // ================================================================
+  try {
+    await EnvConfig.ensureLoaded();
+    if (kDebugMode) {
+      EnvConfig.debugPrintConfig();
+    }
+  } catch (e) {
+    debugPrint('⚠️ EnvConfig load error: $e');
+    // Continue - EnvConfig has fallbacks
+  }
 
+  // ================================================================
+  // STEP 3: Validate and initialize Supabase
+  // ================================================================
+  final supabaseUrl = EnvConfig.supabaseUrl;
+  final supabaseAnonKey = EnvConfig.supabaseAnonKey;
+  
+  if (!EnvConfig.isConfigured) {
+    debugPrint('❌ Supabase not configured properly');
+    debugPrint('   URL: $supabaseUrl');
+    debugPrint('   Key: ${supabaseAnonKey.substring(0, 20.clamp(0, supabaseAnonKey.length))}...');
+    _initializationError = 'App not configured. Please contact support.';
+    // Still run the app to show error UI
+  } else {
+    try {
+      await Supabase.initialize(
+        url: supabaseUrl,
+        anonKey: supabaseAnonKey,
+      ).timeout(
+        const Duration(seconds: 15),
+        onTimeout: () {
+          throw TimeoutException('Supabase initialization timeout');
+        },
+      );
+      debugLog('✅ Supabase initialized');
+    } catch (e) {
+      debugPrint('❌ Supabase init failed: $e');
+      _initializationError = 'Could not connect to server. Please check your internet connection.';
+    }
+  }
+
+  // ================================================================
+  // STEP 4: Run the app (always runs, even with errors)
+  // ================================================================
   runApp(
     MultiProvider(
       providers: [
@@ -114,20 +144,40 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
-  final SupabaseService _supabaseService = SupabaseService();
-  final HouseholdService _householdService = HouseholdService();
+  late final SupabaseService _supabaseService;
+  late final HouseholdService _householdService;
   final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
   bool _isLoading = true;
   bool _isLoggedIn = false;
   bool _onboardingComplete = true; // default true to avoid flash
   StreamSubscription<AuthState>? _authSubscription;
+  bool _servicesInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _listenToAuthStateChanges();
-    _initializeApp();
+    
+    // Only initialize services if Supabase is available
+    if (_initializationError == null) {
+      try {
+        _supabaseService = SupabaseService();
+        _householdService = HouseholdService();
+        _servicesInitialized = true;
+        _listenToAuthStateChanges();
+        _initializeApp();
+      } catch (e) {
+        debugPrint('❌ Service initialization failed: $e');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } else {
+      // Show error state immediately
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   @override
@@ -183,6 +233,13 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   Future<void> _initializeApp() async {
+    if (!_servicesInitialized) {
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+    
     setState(() {
       _isLoading = true;
     });
@@ -217,6 +274,48 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     });
   }
 
+  /// Build the appropriate home screen based on app state
+  Widget _buildHomeScreen() {
+    // Show loading spinner while initializing
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(
+            color: AppColors.primary,
+          ),
+        ),
+      );
+    }
+    
+    // Show error screen if initialization failed
+    if (_initializationError != null) {
+      return _ErrorScreen(
+        message: _initializationError!,
+        onRetry: () {
+          // Restart the app by popping to root and reinitializing
+          setState(() {
+            _isLoading = true;
+          });
+          // Give user feedback then restart
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) {
+              _initializeApp();
+            }
+          });
+        },
+      );
+    }
+    
+    // Normal flow
+    if (_isLoggedIn) {
+      return const AppShell();
+    } else if (!_onboardingComplete) {
+      return const OnboardingScreen();
+    } else {
+      return const LandingScreen();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ThemeProvider>(
@@ -245,20 +344,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           darkTheme: AppTheme.darkTheme,
           themeMode: themeProvider.themeMode,
           debugShowCheckedModeBanner: false, // Remove debug banner
-          home:
-              _isLoading
-                  ? Scaffold(
-                    body: Center(
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  )
-                  : _isLoggedIn
-                  ? const AppShell()
-                  : !_onboardingComplete
-                  ? const OnboardingScreen()
-                  : const LandingScreen(),
+          home: _buildHomeScreen(),
           routes: {
             '/login': (context) => const LoginScreen(),
             '/signup': (context) => const SignupScreen(),
@@ -268,6 +354,73 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
           },
         );
       },
+    );
+  }
+}
+
+/// Error screen shown when app initialization fails
+class _ErrorScreen extends StatelessWidget {
+  final String message;
+  final VoidCallback onRetry;
+  
+  const _ErrorScreen({
+    required this.message,
+    required this.onRetry,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 80,
+                color: Colors.red.shade400,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Oops!',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade800,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+              const SizedBox(height: 32),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Try Again'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
