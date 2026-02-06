@@ -222,21 +222,31 @@ class HouseholdRepository {
       final userId = _client.auth.currentUser?.id;
       if (userId == null) throw Exception('User not authenticated');
 
+      debugLog('joinHouseholdWithCode: searching for code=$trimmedCode');
+
       // Use the secure RPC function to find the household by code
       final householdResults = await _client.rpc(
         'find_household_by_code',
         params: {'search_code': trimmedCode},
       );
 
-      if (householdResults == null || householdResults.isEmpty) {
+      debugLog('joinHouseholdWithCode: RPC response=$householdResults');
+
+      if (householdResults == null || (householdResults as List).isEmpty) {
         throw Exception(
           'No household found with this code. Please check and try again.',
         );
       }
 
-      // Get the first matching household
-      final householdResponse = householdResults[0];
-      final householdId = householdResponse['id'] as String;
+      // Get the first matching household - extract ID safely
+      final householdResponse = householdResults[0] as Map<String, dynamic>;
+      final householdId = householdResponse['id']?.toString();
+      
+      if (householdId == null || householdId.isEmpty) {
+        throw Exception('Invalid household data received');
+      }
+
+      debugLog('joinHouseholdWithCode: found householdId=$householdId');
 
       // Check if user is already a member
       final existingMemberResults =
@@ -273,10 +283,19 @@ class HouseholdRepository {
       // Clear cache for this household
       _membersCache.remove(householdId);
 
-      return HouseholdModel.fromJson(householdResponse);
+      debugLog('joinHouseholdWithCode: fetching full household data');
+
+      // Fetch the full household data (RPC only returns partial data)
+      final household = await getHouseholdModel(householdId);
+      
+      debugLog('joinHouseholdWithCode: success, joined ${household.name}');
+      
+      return household;
     } on PostgrestException catch (e) {
+      debugLog('joinHouseholdWithCode: PostgrestException=${e.message}');
       throw Exception('Database error: ${e.message}');
     } catch (e) {
+      debugLog('joinHouseholdWithCode: ERROR=$e');
       if (e is Exception) rethrow;
       throw Exception('Failed to join household: $e');
     }
