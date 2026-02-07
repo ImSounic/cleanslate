@@ -36,6 +36,7 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   DateTime _dueDate = DateTime.now();
   TimeOfDay? _dueTime;
   String? _repeatPattern;
+  bool _isRecurringEnabled = false; // Toggle for recurring chores
 
   bool _isLoading = false;
   bool _showTodoInput = false; // To toggle todo input visibility
@@ -67,13 +68,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
 
   final List<String> _priorities = ['Low', 'Medium', 'High'];
   final List<Map<String, dynamic>> _members = [];
-  final List<String> _repeatOptions = [
-    'Daily',
-    'Weekly',
-    'Monthly',
-    'Weekdays',
-    'Weekends',
-    'Custom',
+  // Frequency options for recurring chores
+  final List<Map<String, String>> _frequencyOptions = [
+    {'value': 'daily', 'label': 'Daily', 'desc': 'Every day'},
+    {'value': 'weekly', 'label': 'Weekly', 'desc': 'Every 7 days'},
+    {'value': 'biweekly', 'label': 'Biweekly', 'desc': 'Every 14 days'},
+    {'value': 'monthly', 'label': 'Monthly', 'desc': 'Same date each month'},
   ];
 
   @override
@@ -1165,108 +1165,8 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
               ),
               const SizedBox(height: 20),
 
-              // Repeat
-              _buildSectionTitle('Repeat (Optional)', isDarkMode),
-              Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: isDarkMode ? AppColors.surfaceDark : Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String?>(
-                    isExpanded: true,
-                    dropdownColor:
-                        isDarkMode ? AppColors.surfaceDark : Colors.white,
-                    hint: Row(
-                      children: [
-                        Icon(
-                          Icons.repeat,
-                          color:
-                              isDarkMode
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondary,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 8),
-                        // Fixed hint text to avoid overflow
-                        Expanded(
-                          child: Text(
-                            'Set repeat schedule',
-                            style: TextStyle(
-                              color:
-                                  isDarkMode
-                                      ? AppColors.textSecondaryDark
-                                      : AppColors.textSecondary,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                    value: _repeatPattern,
-                    items:
-                        _repeatOptions.map((option) {
-                          return DropdownMenuItem<String>(
-                            value: option.toLowerCase(),
-                            child: Text(
-                              option,
-                              style: TextStyle(
-                                color:
-                                    isDarkMode
-                                        ? AppColors.textPrimaryDark
-                                        : AppColors.textPrimary,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _repeatPattern = value;
-                      });
-                    },
-                    icon: Icon(
-                      Icons.arrow_drop_down,
-                      color:
-                          isDarkMode
-                              ? AppColors.primaryDark
-                              : AppColors.primary,
-                    ),
-                  ),
-                ),
-              ),
-              // Recurring info hint
-              if (_repeatPattern != null &&
-                  RecurrenceService.isRecurring(_repeatPattern))
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.autorenew,
-                        size: 14,
-                        color: isDarkMode
-                            ? AppColors.primaryDark
-                            : AppColors.primary,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'This chore will repeat ${_repeatPattern!}. '
-                          'A new instance is created when you complete the current one.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontFamily: 'VarelaRound',
-                            color: isDarkMode
-                                ? AppColors.primaryDark
-                                : AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              // Recurring Chore Section
+              _buildRecurringSection(isDarkMode),
               const SizedBox(height: 40),
 
               // Add Chore Button
@@ -1400,6 +1300,169 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
           color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
         ),
       ),
+    );
+  }
+
+  // ── Recurring Chore Section ──────────────────────────────────────
+
+  Widget _buildRecurringSection(bool isDarkMode) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Toggle row: "Make this recurring" with switch
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: isDarkMode ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Icon(
+                Icons.autorenew,
+                color: _isRecurringEnabled
+                    ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                    : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                size: 22,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Make this recurring',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontFamily: 'VarelaRound',
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode
+                            ? AppColors.textPrimaryDark
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _isRecurringEnabled
+                          ? 'A new instance will be created when you complete this chore'
+                          : 'This is a one-time chore',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontFamily: 'VarelaRound',
+                        color: isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: _isRecurringEnabled,
+                onChanged: (value) {
+                  setState(() {
+                    _isRecurringEnabled = value;
+                    if (value) {
+                      // Default to weekly when enabling
+                      _repeatPattern ??= 'weekly';
+                    } else {
+                      // Clear pattern when disabling
+                      _repeatPattern = null;
+                    }
+                  });
+                },
+                activeTrackColor: (isDarkMode
+                        ? AppColors.primaryDark
+                        : AppColors.primary)
+                    .withValues(alpha: 0.5),
+                thumbColor: WidgetStatePropertyAll(
+                  _isRecurringEnabled
+                      ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                      : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Frequency selector (only visible when recurring is enabled)
+        if (_isRecurringEnabled) ...[
+          const SizedBox(height: 12),
+          Text(
+            'How often?',
+            style: TextStyle(
+              fontSize: 14,
+              fontFamily: 'VarelaRound',
+              fontWeight: FontWeight.w500,
+              color: isDarkMode
+                  ? AppColors.textSecondaryDark
+                  : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          // Frequency chips in a wrap
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _frequencyOptions.map((option) {
+              final isSelected = _repeatPattern == option['value'];
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _repeatPattern = option['value'];
+                  });
+                },
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                        : (isDarkMode ? AppColors.surfaceDark : Colors.white),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isSelected
+                          ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                          : (isDarkMode ? AppColors.borderDark : AppColors.border),
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        option['label']!,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontFamily: 'VarelaRound',
+                          fontWeight: FontWeight.w600,
+                          color: isSelected
+                              ? Colors.white
+                              : (isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary),
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        option['desc']!,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontFamily: 'VarelaRound',
+                          color: isSelected
+                              ? Colors.white.withValues(alpha: 0.8)
+                              : (isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
+      ],
     );
   }
 }
