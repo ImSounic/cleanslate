@@ -276,6 +276,7 @@ class ChoreRepository {
   }
 
   // Update a chore assignment
+  // Uses RPC for reassignment to bypass RLS and validate permissions
   Future<void> updateChoreAssignment({
     required String assignmentId,
     String? assignedTo,
@@ -283,16 +284,28 @@ class ChoreRepository {
     String? priority,
     String? status,
   }) async {
+    // If reassigning to a different user, use RPC function
+    if (assignedTo != null) {
+      debugLog('updateChoreAssignment: using RPC to reassign to $assignedTo');
+      await _client.rpc('reassign_chore', params: {
+        'p_assignment_id': assignmentId,
+        'p_new_assignee_id': assignedTo,
+      });
+      debugLog('updateChoreAssignment: RPC reassign completed');
+    }
+    
+    // Update other fields if any (non-reassignment updates)
     final updates = <String, dynamic>{};
-    if (assignedTo != null) updates['assigned_to'] = assignedTo;
     if (dueDate != null) updates['due_date'] = dueDate.toIso8601String();
     if (priority != null) updates['priority'] = priority;
     if (status != null) updates['status'] = status;
 
-    await _client
-        .from('chore_assignments')
-        .update(updates)
-        .eq('id', assignmentId);
+    if (updates.isNotEmpty) {
+      await _client
+          .from('chore_assignments')
+          .update(updates)
+          .eq('id', assignmentId);
+    }
   }
 
   // Test method to directly test calendar sync

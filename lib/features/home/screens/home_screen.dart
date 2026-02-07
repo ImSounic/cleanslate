@@ -16,7 +16,9 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:cleanslate/widgets/theme_toggle_button.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/data/services/recurrence_service.dart';
 import 'package:cleanslate/features/chores/screens/edit_chore_screen.dart';
 import 'package:intl/intl.dart';
@@ -39,14 +41,19 @@ class HomeScreenState extends State<HomeScreen>
     {
   final _supabaseService = SupabaseService();
   final _choreRepository = ChoreRepository();
+  final _householdRepository = HouseholdRepository();
   String _userName = '';
   String? _profileImageUrl; // Added property for profile image URL
   List<Map<String, dynamic>> _myChores = []; // pending
   List<Map<String, dynamic>> _inProgressChores = [];
-  List<Map<String, dynamic>> _allAssignedChores = []; // pending + in_progress
   List<Map<String, dynamic>> _completedChores = [];
+  List<Map<String, dynamic>> _householdChores = []; // All household chores for filter
   bool _isLoading = true;
   int _selectedTabIndex = 0;
+  
+  // User filter for "Assigned to" tab
+  List<HouseholdMemberModel> _householdMembers = [];
+  String? _selectedMemberFilter; // null = All, or user_id
 
   // Updated tab titles to include Completed
   final List<String> _tabTitles = [
@@ -61,7 +68,24 @@ class HomeScreenState extends State<HomeScreen>
     super.initState();
     _loadUserData();
     _loadChores();
+    _loadHouseholdMembers();
     _processRecurringChores();
+  }
+
+  Future<void> _loadHouseholdMembers() async {
+    try {
+      final household = HouseholdService().currentHousehold;
+      if (household == null) return;
+      
+      final members = await _householdRepository.getHouseholdMembers(household.id);
+      if (mounted) {
+        setState(() {
+          _householdMembers = members;
+        });
+      }
+    } catch (e) {
+      debugLog('Failed to load household members: $e');
+    }
   }
 
   Future<void> _loadUserData() async {
@@ -92,34 +116,61 @@ class HomeScreenState extends State<HomeScreen>
     });
 
     try {
+      final currentUserId = _supabaseService.currentUser?.id;
+      debugLog('📋 _loadChores: currentUserId=$currentUserId');
+      
       final chores = await _choreRepository.getMyChores();
+      debugLog('📋 _loadChores: fetched ${chores.length} chores');
 
       // Separate chores by status
       final completed = <Map<String, dynamic>>[];
       final pending = <Map<String, dynamic>>[];
       final inProgress = <Map<String, dynamic>>[];
-      final allAssigned = <Map<String, dynamic>>[];
 
       for (final chore in chores) {
         final status = chore['status'] ?? 'pending';
+        final assignedTo = chore['assigned_to'];
+        debugLog('📋 Chore: ${chore['chores']?['name']} | status=$status | assigned_to=$assignedTo');
+        
         if (status == 'completed') {
           completed.add(chore);
         } else if (status == 'in_progress') {
           inProgress.add(chore);
-          allAssigned.add(chore);
         } else {
           pending.add(chore);
-          allAssigned.add(chore);
+        }
+      }
+
+      debugLog('📋 Results: pending=${pending.length}, inProgress=${inProgress.length}, completed=${completed.length}');
+
+      // Also load all household chores for the filter view
+      final householdId = HouseholdService().currentHousehold?.id;
+      List<Map<String, dynamic>> householdChores = [];
+      if (householdId != null) {
+        try {
+          final allChores = await _choreRepository.getChoresForHousehold(householdId);
+          // Flatten to include assignments
+          for (final chore in allChores) {
+            final assignments = chore['chore_assignments'] as List? ?? [];
+            for (final assignment in assignments) {
+              if (assignment['status'] != 'completed') {
+                householdChores.add({...chore, ...assignment, 'chores': chore});
+              }
+            }
+          }
+        } catch (e) {
+          debugLog('Failed to load household chores: $e');
         }
       }
 
       setState(() {
         _myChores = pending;
         _inProgressChores = inProgress;
-        _allAssignedChores = allAssigned;
         _completedChores = completed;
+        _householdChores = householdChores;
       });
     } catch (e) {
+      debugLog('❌ _loadChores error: $e');
       // Handle error
       if (mounted) {
         ErrorService.showError(context, e, operation: 'loadChores');
@@ -871,14 +922,8 @@ class HomeScreenState extends State<HomeScreen>
               isDarkMode,
             )
             : _buildChoresList(_inProgressChores, isDarkMode);
-      case 2: // Assigned to me (pending + in_progress)
-        return _allAssignedChores.isEmpty
-            ? _buildEmptyStateWithMessage(
-              'No assigned chores',
-              'Chores assigned to you will appear here',
-              isDarkMode,
-            )
-            : _buildChoresList(_allAssignedChores, isDarkMode);
+      case 2: // Assigned to - with user filter
+        return _buildAssignedToWithFilter(isDarkMode);
       case 3: // Completed
         return _completedChores.isEmpty
             ? _buildEmptyStateWithMessage(
@@ -890,6 +935,112 @@ class HomeScreenState extends State<HomeScreen>
       default:
         return _buildEmptyState(isDarkMode);
     }
+  }
+
+  // Build "Assigned to" view with user filter chips
+  Widget _buildAssignedToWithFilter(bool isDarkMode) {
+    // Filter chores based on selected member
+    List<Map<String, dynamic>> filteredChores;
+    if (_selectedMemberFilter == null) {
+      // Show all household chores
+      filteredChores = _householdChores;
+    } else {
+      // Filter by selected member
+      filteredChores = _householdChores
+          .where((c) => c['assigned_to'] == _selectedMemberFilter)
+          .toList();
+    }
+
+    return Column(
+      children: [
+        // Filter chips
+        SizedBox(
+          height: 45,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              // "All" chip
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: Text('All'),
+                  selected: _selectedMemberFilter == null,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedMemberFilter = null;
+                    });
+                  },
+                  selectedColor: isDarkMode 
+                      ? AppColors.primaryDark.withValues(alpha: 0.3)
+                      : AppColors.primary.withValues(alpha: 0.2),
+                  checkmarkColor: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedMemberFilter == null
+                        ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                        : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                    fontFamily: 'VarelaRound',
+                  ),
+                ),
+              ),
+              // Member chips
+              ..._householdMembers.map((member) {
+                final isSelected = _selectedMemberFilter == member.userId;
+                final isMe = member.userId == _supabaseService.currentUser?.id;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    avatar: member.profileImageUrl != null
+                        ? CircleAvatar(
+                            backgroundImage: NetworkImage(member.profileImageUrl!),
+                            radius: 12,
+                          )
+                        : CircleAvatar(
+                            backgroundColor: AppColors.avatarColorFor(member.userId),
+                            radius: 12,
+                            child: Text(
+                              (member.fullName ?? 'U')[0].toUpperCase(),
+                              style: const TextStyle(fontSize: 10, color: Colors.white),
+                            ),
+                          ),
+                    label: Text(isMe ? 'Me' : (member.fullName?.split(' ').first ?? 'User')),
+                    selected: isSelected,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedMemberFilter = isSelected ? null : member.userId;
+                      });
+                    },
+                    selectedColor: isDarkMode 
+                        ? AppColors.primaryDark.withValues(alpha: 0.3)
+                        : AppColors.primary.withValues(alpha: 0.2),
+                    checkmarkColor: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                          : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                      fontFamily: 'VarelaRound',
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Chores list
+        Expanded(
+          child: filteredChores.isEmpty
+              ? _buildEmptyStateWithMessage(
+                  _selectedMemberFilter == null 
+                      ? 'No assigned chores'
+                      : 'No chores for this member',
+                  'Chores assigned to household members will appear here',
+                  isDarkMode,
+                )
+              : _buildChoresList(filteredChores, isDarkMode),
+        ),
+      ],
+    );
   }
 
   Widget _buildTabButton(int index, bool isDarkMode) {
