@@ -130,7 +130,22 @@ class HomeScreenState extends State<HomeScreen>
       for (final chore in chores) {
         final status = chore['status'] ?? 'pending';
         final assignedTo = chore['assigned_to'];
-        debugLog('📋 Chore: ${chore['chores']?['name']} | status=$status | assigned_to=$assignedTo');
+        final choreData = chore['chores'] as Map<String, dynamic>?;
+        
+        // Skip recurring TEMPLATES (only show generated instances)
+        // Templates have frequency != 'once' AND recurrence_parent_id is null
+        final frequency = choreData?['frequency'];
+        final recurrenceParentId = choreData?['recurrence_parent_id'];
+        final isRecurringTemplate = frequency != null && 
+            frequency != 'once' && 
+            recurrenceParentId == null;
+        
+        if (isRecurringTemplate) {
+          debugLog('📋 Skipping recurring template: ${choreData?['name']}');
+          continue; // Skip templates, they're managed through recurrence system
+        }
+        
+        debugLog('📋 Chore: ${choreData?['name']} | status=$status | assigned_to=$assignedTo');
         
         if (status == 'completed') {
           completed.add(chore);
@@ -151,6 +166,17 @@ class HomeScreenState extends State<HomeScreen>
           final allChores = await _choreRepository.getChoresForHousehold(householdId);
           // Flatten to include assignments
           for (final chore in allChores) {
+            // Skip recurring TEMPLATES (only show generated instances)
+            final frequency = chore['frequency'];
+            final recurrenceParentId = chore['recurrence_parent_id'];
+            final isRecurringTemplate = frequency != null && 
+                frequency != 'once' && 
+                recurrenceParentId == null;
+            
+            if (isRecurringTemplate) {
+              continue; // Skip templates
+            }
+            
             final assignments = chore['chore_assignments'] as List? ?? [];
             for (final assignment in assignments) {
               if (assignment['status'] != 'completed') {
