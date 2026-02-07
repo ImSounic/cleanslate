@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
+import 'package:cleanslate/features/auth/screens/login_screen.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
 import 'dart:io';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -625,28 +627,66 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     ),
                     const SizedBox(height: 32),
 
-                    // Delete Account button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _showDeleteAccountConfirmation(isDarkMode);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    // Danger Zone
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: Colors.red, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Danger Zone',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontFamily: 'Switzer',
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                        child: const Text(
-                          'Delete Account',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontFamily: 'VarelaRound',
+                          const SizedBox(height: 12),
+                          Text(
+                            'Permanently delete your account and all associated data. This action cannot be undone.',
+                            style: TextStyle(
+                              color: Colors.red.shade700,
+                              fontFamily: 'VarelaRound',
+                              fontSize: 13,
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 16),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () => _showDeleteAccountDialog(isDarkMode),
+                              icon: const Icon(Icons.delete_forever, color: Colors.white),
+                              label: const Text(
+                                'Delete Account',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontFamily: 'VarelaRound',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -711,89 +751,194 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
   }
 
-  void _showDeleteAccountConfirmation(bool isDarkMode) {
-    // Using listen: false to avoid the Provider error in dialog callbacks
-    final isDarkModeSafe =
-        Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+  Future<void> _showDeleteAccountDialog(bool isDarkMode) async {
+    final TextEditingController confirmController = TextEditingController();
+    bool isDeleting = false;
 
-    showDialog(
+    await showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(
-            'Delete Account',
-            style: TextStyle(
-              color:
-                  isDarkModeSafe
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
-            ),
-          ),
-          content: Text(
-            'Are you sure you want to delete your account? This action cannot be undone.',
-            style: TextStyle(
-              color:
-                  isDarkModeSafe
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimary,
-            ),
-          ),
-          backgroundColor:
-              isDarkModeSafe ? AppColors.surfaceDark : Colors.white,
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Cancel',
-                style: TextStyle(
-                  color:
-                      isDarkModeSafe
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondary,
+      barrierDismissible: false,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Delete Account?',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontFamily: 'Switzer',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'This action is permanent and cannot be undone.',
+                      style: TextStyle(
+                        fontFamily: 'VarelaRound',
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'The following will be permanently deleted:',
+                      style: TextStyle(
+                        fontFamily: 'VarelaRound',
+                        color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildDeleteItem('Your profile and personal information'),
+                    _buildDeleteItem('All your chore assignments'),
+                    _buildDeleteItem('Your chore preferences'),
+                    _buildDeleteItem('Households you own (if sole member)'),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Type DELETE to confirm:',
+                      style: TextStyle(
+                        fontFamily: 'VarelaRound',
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: confirmController,
+                      decoration: InputDecoration(
+                        hintText: 'DELETE',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: BorderSide(color: Colors.red, width: 2),
+                        ),
+                      ),
+                      style: TextStyle(
+                        fontFamily: 'VarelaRound',
+                        color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                      ),
+                      onChanged: (_) => setDialogState(() {}),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.of(context).pop();
-                await _deleteAccount();
-              },
-              style: TextButton.styleFrom(foregroundColor: AppColors.error),
-              child: const Text(
-                'Delete',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
+              actions: [
+                TextButton(
+                  onPressed: isDeleting ? null : () => Navigator.pop(dialogContext),
+                  child: Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: isDeleting || confirmController.text != 'DELETE'
+                      ? null
+                      : () async {
+                          setDialogState(() => isDeleting = true);
+                          await _deleteAccount(dialogContext);
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    disabledBackgroundColor: Colors.red.withValues(alpha: 0.3),
+                  ),
+                  child: isDeleting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          'Delete Account',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
 
-  Future<void> _deleteAccount() async {
-    setState(() {
-      _isLoading = true;
-    });
+  Widget _buildDeleteItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(Icons.remove_circle, color: Colors.red, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontFamily: 'VarelaRound',
+                fontSize: 13,
+                color: Colors.red.shade700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Future<void> _deleteAccount(BuildContext dialogContext) async {
+    // Capture context references before async gap
+    final navigator = Navigator.of(context);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final dialogNavigator = Navigator.of(dialogContext);
+    
     try {
-      await _supabaseService.deleteAccount();
+      final userId = _supabaseService.currentUser?.id;
+      if (userId == null) {
+        throw Exception('User not logged in');
+      }
 
+      // Call the Supabase RPC function to delete all user data
+      await _supabaseService.client.rpc('delete_user_account');
+
+      // Sign out the user
+      await _supabaseService.signOut();
+
+      // Close dialog and navigate to login
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Account successfully deleted')),
+        dialogNavigator.pop(); // Close dialog
+        navigator.pushAndRemoveUntil(
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
         );
 
-        // Navigate to login screen and clear all previous routes
-        Navigator.of(
-          context,
-        ).pushNamedAndRemoveUntil('/login', (Route<dynamic> route) => false);
+        // Show success message
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            content: Text('Account deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
       }
     } catch (e) {
+      debugLog('Error deleting account: $e');
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-
+        dialogNavigator.pop(); // Close dialog
         ErrorService.showError(context, e, operation: 'deleteAccount');
       }
     }
