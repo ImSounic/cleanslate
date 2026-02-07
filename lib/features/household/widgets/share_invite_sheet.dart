@@ -101,20 +101,16 @@ class _ShareInviteSheetState extends State<ShareInviteSheet> {
 
   void _shareCode() {
     final inviteLink = generateInviteLink(_code);
+    final box = context.findRenderObject() as RenderBox?;
+    final sharePositionOrigin = box != null 
+        ? box.localToGlobal(Offset.zero) & box.size 
+        : null;
+    
     Share.share(
       'Join my household "${widget.householdName}" on CleanSlate!\n\n'
       '📱 Tap to join: $inviteLink\n\n'
       'Or enter code manually: $_code',
-    );
-  }
-
-  // ignore: unused_element - Reserved for future QR image sharing
-  void _shareQRCode() {
-    final inviteLink = generateInviteLink(_code);
-    Share.share(
-      'Scan this QR code to join "${widget.householdName}" on CleanSlate!\n\n'
-      'Or use link: $inviteLink\n'
-      'Or code: $_code',
+      sharePositionOrigin: sharePositionOrigin,
     );
   }
 
