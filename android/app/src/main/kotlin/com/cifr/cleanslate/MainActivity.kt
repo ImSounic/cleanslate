@@ -1,4 +1,4 @@
-package com.imsounic.cleanslate
+package com.cifr.cleanslate
 
 import io.flutter.embedding.android.FlutterActivity
 

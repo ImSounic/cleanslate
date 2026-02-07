@@ -18,7 +18,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.imsounic.cleanslate"
+    namespace = "com.cifr.cleanslate"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
     
@@ -34,7 +34,7 @@ android {
     }
     
     defaultConfig {
-        applicationId = "com.imsounic.cleanslate"
+        applicationId = "com.cifr.cleanslate"
         minSdk = flutter.minSdkVersion
         targetSdk = 36
         versionCode = flutter.versionCode
