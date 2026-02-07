@@ -39,6 +39,9 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
     private let channel: FlutterMethodChannel
     private var selectedIndex: Int = 0
     private var tabs: [TabItem] = []
+    private var isDarkMode: Bool = false
+    private var selectedColorHex: String = "586AAF" // AppColors.primary
+    private var unselectedColorHex: String = "7896B6" // AppColors.textSecondary
     
     init(
         frame: CGRect,
@@ -48,6 +51,7 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
     ) {
         containerView = UIView(frame: frame)
         containerView.backgroundColor = .clear
+        containerView.isOpaque = false
         
         channel = FlutterMethodChannel(
             name: "com.cleanslate/liquid_glass_tab_bar_\(viewId)",
@@ -83,6 +87,18 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
         
         if let index = args["selectedIndex"] as? Int {
             selectedIndex = index
+        }
+        
+        if let darkMode = args["isDarkMode"] as? Bool {
+            isDarkMode = darkMode
+        }
+        
+        if let selectedHex = args["selectedColorHex"] as? String {
+            selectedColorHex = selectedHex
+        }
+        
+        if let unselectedHex = args["unselectedColorHex"] as? String {
+            unselectedColorHex = unselectedHex
         }
     }
     
@@ -146,6 +162,10 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
         hostingController?.view.removeFromSuperview()
         hostingController?.removeFromParent()
         
+        // Create colors from hex
+        let selectedColor = Color(hex: selectedColorHex)
+        let unselectedColor = Color(hex: unselectedColorHex)
+        
         // Create SwiftUI view based on iOS version
         let swiftUIView: AnyView
         
@@ -157,6 +177,9 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
                         set: { self.selectedIndex = $0 }
                     ),
                     tabs: tabs,
+                    isDarkMode: isDarkMode,
+                    selectedColor: selectedColor,
+                    unselectedColor: unselectedColor,
                     onTabSelected: { [weak self] index in
                         self?.notifyFlutter(tabIndex: index)
                     }
@@ -170,6 +193,9 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
                         set: { self.selectedIndex = $0 }
                     ),
                     tabs: tabs,
+                    isDarkMode: isDarkMode,
+                    selectedColor: selectedColor,
+                    unselectedColor: unselectedColor,
                     onTabSelected: { [weak self] index in
                         self?.notifyFlutter(tabIndex: index)
                     }
@@ -180,6 +206,7 @@ class LiquidGlassTabBarPlatformView: NSObject, FlutterPlatformView {
         // Create and add hosting controller
         hostingController = UIHostingController(rootView: swiftUIView)
         hostingController?.view.backgroundColor = .clear
+        hostingController?.view.isOpaque = false
         
         if let hostingView = hostingController?.view {
             hostingView.translatesAutoresizingMaskIntoConstraints = false

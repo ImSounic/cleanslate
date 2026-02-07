@@ -62,6 +62,16 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar> {
     // The native code handles version checking internally
     return true;
   }
+  
+  /// Convert a Color to hex string for passing to native
+  String _colorToHex(Color color) {
+    final r = (color.r * 255.0).round().clamp(0, 255);
+    final g = (color.g * 255.0).round().clamp(0, 255);
+    final b = (color.b * 255.0).round().clamp(0, 255);
+    return '${r.toRadixString(16).padLeft(2, '0')}'
+           '${g.toRadixString(16).padLeft(2, '0')}'
+           '${b.toRadixString(16).padLeft(2, '0')}';
+  }
 
   @override
   void didUpdateWidget(LiquidGlassNavBar oldWidget) {
@@ -102,8 +112,14 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar> {
 
   @override
   Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
     // Use native platform view on iOS, Flutter widget on Android
     if (Platform.isIOS && supportsLiquidGlass) {
+      // Get the actual colors to pass to native
+      final selectedColor = widget.selectedColor ?? AppColors.primary;
+      final unselectedColor = widget.unselectedColor ?? AppColors.textSecondary;
+      
       return SizedBox(
         height: 80,
         child: UiKitView(
@@ -111,6 +127,9 @@ class _LiquidGlassNavBarState extends State<LiquidGlassNavBar> {
           creationParams: {
             'tabs': widget.items.map((e) => e.toMap()).toList(),
             'selectedIndex': widget.selectedIndex,
+            'isDarkMode': isDarkMode,
+            'selectedColorHex': _colorToHex(selectedColor),
+            'unselectedColorHex': _colorToHex(unselectedColor),
           },
           creationParamsCodec: const StandardMessageCodec(),
           onPlatformViewCreated: _onPlatformViewCreated,

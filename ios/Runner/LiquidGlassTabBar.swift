@@ -17,6 +17,9 @@ struct TabItem: Identifiable {
 struct LiquidGlassTabBarView: View {
     @Binding var selectedIndex: Int
     let tabs: [TabItem]
+    let isDarkMode: Bool
+    let selectedColor: Color
+    let unselectedColor: Color
     let onTabSelected: (Int) -> Void
     
     var body: some View {
@@ -25,6 +28,8 @@ struct LiquidGlassTabBarView: View {
                 TabButton(
                     tab: tab,
                     isSelected: selectedIndex == tab.id,
+                    selectedColor: selectedColor,
+                    unselectedColor: unselectedColor,
                     action: {
                         selectedIndex = tab.id
                         onTabSelected(tab.id)
@@ -46,6 +51,8 @@ struct LiquidGlassTabBarView: View {
 struct TabButton: View {
     let tab: TabItem
     let isSelected: Bool
+    let selectedColor: Color
+    let unselectedColor: Color
     let action: () -> Void
     
     var body: some View {
@@ -54,7 +61,7 @@ struct TabButton: View {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: tab.icon)
                         .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
-                        .foregroundColor(isSelected ? .accentColor : .secondary)
+                        .foregroundColor(isSelected ? selectedColor : unselectedColor)
                     
                     // Badge
                     if tab.badgeCount > 0 {
@@ -71,7 +78,7 @@ struct TabButton: View {
                 
                 Text(tab.label)
                     .font(.system(size: 10, weight: isSelected ? .medium : .regular))
-                    .foregroundColor(isSelected ? .accentColor : .secondary)
+                    .foregroundColor(isSelected ? selectedColor : unselectedColor)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
@@ -85,6 +92,9 @@ struct TabButton: View {
 struct FallbackTabBarView: View {
     @Binding var selectedIndex: Int
     let tabs: [TabItem]
+    let isDarkMode: Bool
+    let selectedColor: Color
+    let unselectedColor: Color
     let onTabSelected: (Int) -> Void
     
     var body: some View {
@@ -95,13 +105,27 @@ struct FallbackTabBarView: View {
                     onTabSelected(tab.id)
                 }) {
                     VStack(spacing: 4) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 22))
-                            .foregroundColor(selectedIndex == tab.id ? Color(hex: "463C33") : .gray)
+                        ZStack(alignment: .topTrailing) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 22, weight: selectedIndex == tab.id ? .semibold : .regular))
+                                .foregroundColor(selectedIndex == tab.id ? selectedColor : unselectedColor)
+                            
+                            // Badge
+                            if tab.badgeCount > 0 {
+                                Text(tab.badgeCount > 99 ? "99+" : "\(tab.badgeCount)")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red)
+                                    .clipShape(Capsule())
+                                    .offset(x: 10, y: -5)
+                            }
+                        }
                         
                         Text(tab.label)
-                            .font(.system(size: 10))
-                            .foregroundColor(selectedIndex == tab.id ? Color(hex: "463C33") : .gray)
+                            .font(.system(size: 10, weight: selectedIndex == tab.id ? .medium : .regular))
+                            .foregroundColor(selectedIndex == tab.id ? selectedColor : unselectedColor)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -111,7 +135,7 @@ struct FallbackTabBarView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
+        .background(isDarkMode ? .ultraThinMaterial : .regularMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 24))
         .padding(.horizontal, 24)
         .padding(.bottom, 8)
