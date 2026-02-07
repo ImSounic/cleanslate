@@ -1275,23 +1275,37 @@ class HomeScreenState extends State<HomeScreen>
     final isCompleted = status == 'completed';
     final isInProgress = status == 'in_progress';
 
-    // Get assignee info from fetched profile data
-    final assigneeProfile = assignment['assignee'] as Map<String, dynamic>?;
-    final assigneeFullName = assigneeProfile?['full_name'] as String? ?? 
-        assigneeProfile?['email']?.toString().split('@').first ?? 
-        _userName;
+    // Get assignee info from household members
+    final assignedToId = assignment['assigned_to'] as String?;
+    final assigneeMember = _householdMembers.firstWhere(
+      (m) => m.userId == assignedToId,
+      orElse: () => HouseholdMemberModel(
+        id: '', householdId: '', userId: assignedToId ?? '', 
+        role: '', joinedAt: DateTime.now(), isActive: true,
+        fullName: _userName,
+      ),
+    );
+    final assigneeFullName = assigneeMember.fullName ?? _userName;
     final assigneeFirstName = assigneeFullName.split(' ').first;
-    final assigneeImageUrl = assigneeProfile?['profile_image_url'] as String?;
-    final assigneeId = assigneeProfile?['id'] as String? ?? 
-        _supabaseService.currentUser?.id ?? '';
+    final assigneeImageUrl = assigneeMember.profileImageUrl;
+    final assigneeId = assigneeMember.userId;
 
-    // Get assigner info from fetched profile data (who assigned the chore)
-    final assignerProfile = assignment['assigner'] as Map<String, dynamic>?;
-    final assignerFullName = assignerProfile?['full_name'] as String? ?? 
-        assignerProfile?['email']?.toString().split('@').first;
+    // Get assigner info from household members (who assigned the chore)
+    final assignedById = assignment['assigned_by'] as String?;
+    HouseholdMemberModel? assignerMember;
+    if (assignedById != null) {
+      try {
+        assignerMember = _householdMembers.firstWhere(
+          (m) => m.userId == assignedById,
+        );
+      } catch (_) {
+        assignerMember = null;
+      }
+    }
+    final assignerFullName = assignerMember?.fullName;
     final assignerFirstName = assignerFullName?.split(' ').first;
-    final assignerImageUrl = assignerProfile?['profile_image_url'] as String?;
-    final assignerId = assignerProfile?['id'] as String?;
+    final assignerImageUrl = assignerMember?.profileImageUrl;
+    final assignerId = assignerMember?.userId;
 
     // Check if chore has description
     final hasDescription =

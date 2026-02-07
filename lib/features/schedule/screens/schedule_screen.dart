@@ -5,11 +5,14 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/constants/app_text_styles.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/chore_repository.dart';
+import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/chores/screens/add_chore_screen.dart';
 import 'package:cleanslate/core/utils/string_extensions.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/core/utils/debug_logger.dart';
 
 class ScheduleScreen extends StatefulWidget {
   const ScheduleScreen({super.key});
@@ -22,6 +25,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
     with SingleTickerProviderStateMixin {
   final _choreRepository = ChoreRepository();
   final _householdService = HouseholdService();
+  final _householdRepository = HouseholdRepository();
   final _supabaseService = SupabaseService();
 
   // View mode: 0 for week, 1 for month
@@ -34,6 +38,9 @@ class ScheduleScreenState extends State<ScheduleScreen>
   List<Map<String, dynamic>> _chores = []; // All household chores
   List<Map<String, dynamic>> _myChores = []; // Only current user's chores
   List<Map<String, dynamic>> _recurringChores = [];
+  
+  // Household members for looking up names
+  List<HouseholdMemberModel> _householdMembers = [];
 
   // Selected date related variables
   DateTime _selectedDate = DateTime.now();
@@ -55,6 +62,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
   void initState() {
     super.initState();
     _loadUserData();
+    _loadHouseholdMembers();
     _loadChores();
 
     // Initialize animation controller for bottom sheet
@@ -66,6 +74,22 @@ class ScheduleScreenState extends State<ScheduleScreen>
     _animation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOut),
     );
+  }
+
+  Future<void> _loadHouseholdMembers() async {
+    try {
+      final household = _householdService.currentHousehold;
+      if (household == null) return;
+      
+      final members = await _householdRepository.getHouseholdMembers(household.id);
+      if (mounted) {
+        setState(() {
+          _householdMembers = members;
+        });
+      }
+    } catch (e) {
+      debugLog('Failed to load household members: $e');
+    }
   }
 
   @override
@@ -321,43 +345,45 @@ class ScheduleScreenState extends State<ScheduleScreen>
     return assignment['assigned_to'] == _currentUserId;
   }
 
-  // Get assignee name from assignment
+  // Get assignee name from assignment using household members
   String _getAssigneeName(Map<String, dynamic>? assignment) {
     if (assignment == null) return 'Unassigned';
     
-    // Check if assignee profile data is included (new structure)
-    final assignee = assignment['assignee'] as Map<String, dynamic>?;
-    if (assignee != null) {
-      final name = assignee['full_name'] ?? assignee['email']?.toString().split('@').first;
-      if (name != null) return name.toString().split(' ').first;
-    }
+    final assignedToId = assignment['assigned_to'] as String?;
+    if (assignedToId == null) return 'Unassigned';
     
-    // Fallback: check old profiles structure
-    final profiles = assignment['profiles'];
-    if (profiles != null) {
-      return profiles['full_name'] ?? profiles['email']?.split('@').first ?? 'Unknown';
-    }
-    
-    // Fallback: if it's assigned to current user, show "You"
-    if (assignment['assigned_to'] == _currentUserId) {
+    // If it's the current user, show "You"
+    if (assignedToId == _currentUserId) {
       return 'You';
     }
     
-    return 'Team member';
+    // Look up from household members
+    try {
+      final member = _householdMembers.firstWhere(
+        (m) => m.userId == assignedToId,
+      );
+      return member.fullName?.split(' ').first ?? 'Team member';
+    } catch (_) {
+      return 'Team member';
+    }
   }
 
   // Get assigner name from assignment (who assigned the chore)
   String? _getAssignerName(Map<String, dynamic>? assignment) {
     if (assignment == null) return null;
     
-    // Check if assigner profile data is included
-    final assigner = assignment['assigner'] as Map<String, dynamic>?;
-    if (assigner != null) {
-      final name = assigner['full_name'] ?? assigner['email']?.toString().split('@').first;
-      if (name != null) return name.toString().split(' ').first;
-    }
+    final assignedById = assignment['assigned_by'] as String?;
+    if (assignedById == null) return null;
     
-    return null;
+    // Look up from household members
+    try {
+      final member = _householdMembers.firstWhere(
+        (m) => m.userId == assignedById,
+      );
+      return member.fullName?.split(' ').first;
+    } catch (_) {
+      return null;
+    }
   }
 
   // Toggle recurring chores section
