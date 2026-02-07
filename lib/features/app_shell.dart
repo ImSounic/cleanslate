@@ -48,6 +48,7 @@ class _AppShellState extends State<AppShell> {
     // Show Add Chore FAB on Home (0) and Schedule (2) tabs
     if (_currentIndex == 0 || _currentIndex == 2) {
       return FloatingActionButton(
+        heroTag: 'add_chore_fab',
         backgroundColor: AppColors.primary,
         shape: const CircleBorder(),
         child: Icon(Icons.add, color: AppColors.textLight),

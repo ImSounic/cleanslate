@@ -124,6 +124,7 @@ class RecurrenceService {
           (chore['recurrence_parent_id'] as String?) ?? choreId;
 
       // 4. Create the new chore instance
+      // Note: created_by must be current user to satisfy RLS policy
       final newChore = await _client
           .from('chores')
           .insert({
@@ -134,7 +135,7 @@ class RecurrenceService {
             'frequency': frequency,
             'is_recurring': true,
             'recurrence_parent_id': parentId,
-            'created_by': chore['created_by'],
+            'created_by': _client.auth.currentUser!.id,
           })
           .select()
           .single();

@@ -636,6 +636,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       floatingActionButton:
           kDebugMode
               ? FloatingActionButton(
+                heroTag: 'notification_test_fab',
                 mini: true,
                 backgroundColor: AppColors.primary,
                 onPressed:

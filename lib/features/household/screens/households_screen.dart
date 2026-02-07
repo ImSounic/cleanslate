@@ -55,6 +55,7 @@ class _HouseholdsScreenState extends State<HouseholdsScreen> {
               ? _buildEmptyState()
               : _buildHouseholdsList(),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'households_add_fab',
         onPressed: () {
           _showCreateHouseholdDialog();
         },

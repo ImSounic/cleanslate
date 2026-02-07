@@ -127,6 +127,7 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       floatingActionButton:
           _isCurrentUserAdmin
               ? FloatingActionButton(
+                heroTag: 'household_detail_fab',
                 onPressed: () {
                   // Show dialog to create a new chore
                   _showAddChoreDialog();

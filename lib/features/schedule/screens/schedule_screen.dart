@@ -713,6 +713,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
                 right: 0,
                 child: Center(
                   child: FloatingActionButton(
+                    heroTag: 'schedule_recurring_fab',
                     onPressed: _toggleRecurringChores,
                     backgroundColor:
                         isDarkMode ? AppColors.primaryDark : AppColors.primary,
