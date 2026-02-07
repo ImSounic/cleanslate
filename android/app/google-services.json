@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:881682204755:android:39e81f4ae30abd00b89ea6",
+        "mobilesdk_app_id": "1:881682204755:android:513071bd00853b3bb89ea6",
         "android_client_info": {
-          "package_name": "com.imsounic.cleanslate"
+          "package_name": "com.cifr.cleanslate"
         }
       },
       "oauth_client": [],
