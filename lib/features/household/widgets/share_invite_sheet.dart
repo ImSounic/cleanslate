@@ -21,12 +21,14 @@ class ShareInviteSheet extends StatefulWidget {
   final String householdId;
   final String householdName;
   final String initialCode;
+  final bool isAdmin;
 
   const ShareInviteSheet({
     super.key,
     required this.householdId,
     required this.householdName,
     required this.initialCode,
+    this.isAdmin = false,
   });
 
   /// Show the share invite bottom sheet. Returns the new code if regenerated.
@@ -35,6 +37,7 @@ class ShareInviteSheet extends StatefulWidget {
     required String householdId,
     required String householdName,
     required String code,
+    bool isAdmin = false,
   }) {
     return showModalBottomSheet<String>(
       context: context,
@@ -46,6 +49,7 @@ class ShareInviteSheet extends StatefulWidget {
         householdId: householdId,
         householdName: householdName,
         initialCode: code,
+        isAdmin: isAdmin,
       ),
     );
   }
@@ -267,29 +271,30 @@ class _ShareInviteSheetState extends State<ShareInviteSheet> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-
-            // Regenerate button
-            TextButton.icon(
-              onPressed: _isRegenerating ? null : _regenerateCode,
-              icon: _isRegenerating
-                  ? SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
-                      ),
-                    )
-                  : Icon(Icons.refresh_rounded, size: 18, color: AppColors.textSecondary),
-              label: Text(
-                'Regenerate Code',
-                style: TextStyle(
-                  fontFamily: 'VarelaRound',
-                  color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+            // Regenerate button - admin only
+            if (widget.isAdmin) ...[
+              const SizedBox(height: 12),
+              TextButton.icon(
+                onPressed: _isRegenerating ? null : _regenerateCode,
+                icon: _isRegenerating
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : Icon(Icons.refresh_rounded, size: 18, color: AppColors.textSecondary),
+                label: Text(
+                  'Regenerate Code',
+                  style: TextStyle(
+                    fontFamily: 'VarelaRound',
+                    color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
         ),
       ),

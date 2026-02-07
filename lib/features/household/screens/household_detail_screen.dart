@@ -88,7 +88,8 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
       appBar: AppBar(
         title: Text(_household?['name'] ?? 'Household'),
         actions: [
-          if (_isCurrentUserAdmin && _householdModel != null)
+          // Share button available to ALL members (not just admins)
+          if (_householdModel != null)
             IconButton(
               icon: const Icon(Icons.share_rounded),
               tooltip: 'Share Invite Code',
@@ -98,10 +99,12 @@ class _HouseholdDetailScreenState extends State<HouseholdDetailScreen> {
                   householdId: _householdModel!.id,
                   householdName: _householdModel!.name,
                   code: _householdModel!.code,
+                  isAdmin: _isCurrentUserAdmin,
                 );
                 if (newCode != null) _loadHouseholdData();
               },
             ),
+          // Room configuration remains admin-only
           if (_isCurrentUserAdmin && _householdModel != null)
             IconButton(
               icon: const Icon(Icons.meeting_room_outlined),
