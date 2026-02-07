@@ -35,14 +35,15 @@ class MainScaffold extends StatelessWidget {
   });
 
   /// Tab items for Liquid Glass nav bar
+  /// Icons use SF Symbols - outline version (Swift adds .fill automatically for selected state)
   static const List<NavBarItem> _navItems = [
     NavBarItem(
-      icon: 'house.fill',
+      icon: 'house',
       flutterIcon: Icons.home_rounded,
       label: 'Home',
     ),
     NavBarItem(
-      icon: 'person.2.fill',
+      icon: 'person.2',
       flutterIcon: Icons.people_rounded,
       label: 'Members',
     ),
@@ -52,7 +53,7 @@ class MainScaffold extends StatelessWidget {
       label: 'Calendar',
     ),
     NavBarItem(
-      icon: 'gearshape.fill',
+      icon: 'gearshape',
       flutterIcon: Icons.settings_rounded,
       label: 'Settings',
     ),

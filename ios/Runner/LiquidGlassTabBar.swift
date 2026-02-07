@@ -1,6 +1,5 @@
 // ios/Runner/LiquidGlassTabBar.swift
-// Native SwiftUI Liquid Glass Tab Bar for iOS 26+
-// With sliding bubble animation and icon animations
+// Native SwiftUI Tab Bar with Telegram-style sliding bubble animation
 
 import SwiftUI
 import Flutter
@@ -8,12 +7,23 @@ import Flutter
 // MARK: - Tab Item Model
 struct TabItem: Identifiable {
     let id: Int
-    let icon: String
+    let icon: String           // SF Symbol name (outline version)
+    let iconFilled: String     // SF Symbol name (filled version)
     let label: String
     var badgeCount: Int = 0
+    
+    // Convenience initializer that auto-generates filled icon name
+    init(id: Int, icon: String, label: String, badgeCount: Int = 0) {
+        self.id = id
+        self.icon = icon
+        // Most SF Symbols have .fill variant
+        self.iconFilled = icon.contains(".fill") ? icon : icon + ".fill"
+        self.label = label
+        self.badgeCount = badgeCount
+    }
 }
 
-// MARK: - Liquid Glass Tab Bar View
+// MARK: - Telegram-Style Tab Bar View (iOS 26+)
 @available(iOS 26.0, *)
 struct LiquidGlassTabBarView: View {
     @Binding var selectedIndex: Int
@@ -27,34 +37,33 @@ struct LiquidGlassTabBarView: View {
         GeometryReader { geometry in
             let totalWidth = geometry.size.width
             let tabWidth = totalWidth / CGFloat(tabs.count)
+            let bubbleSize: CGFloat = 56
             
             ZStack {
-                // Sliding bubble indicator
+                // Sliding white bubble indicator
                 HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(width: tabWidth * CGFloat(selectedIndex))
+                    Spacer()
+                        .frame(width: (tabWidth * CGFloat(selectedIndex)) + (tabWidth - bubbleSize) / 2)
                     
-                    Capsule()
-                        .fill(isDarkMode ? Color.white.opacity(0.2) : Color.white.opacity(0.9))
-                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
-                        .frame(width: tabWidth - 16, height: 50)
+                    Circle()
+                        .fill(Color.white)
+                        .frame(width: bubbleSize, height: bubbleSize)
+                        .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
                     
-                    Spacer(minLength: 0)
+                    Spacer()
                 }
-                .padding(.horizontal, 8)
-                .animation(.spring(response: 0.35, dampingFraction: 0.75), value: selectedIndex)
+                .animation(.spring(response: 0.4, dampingFraction: 0.75), value: selectedIndex)
                 
                 // Tab buttons
                 HStack(spacing: 0) {
                     ForEach(tabs) { tab in
-                        AnimatedTabButton(
+                        TelegramTabButton(
                             tab: tab,
                             isSelected: selectedIndex == tab.id,
                             selectedColor: selectedColor,
                             unselectedColor: unselectedColor,
                             action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                     selectedIndex = tab.id
                                 }
                                 onTabSelected(tab.id)
@@ -65,48 +74,36 @@ struct LiquidGlassTabBarView: View {
                 }
             }
         }
-        .frame(height: 64)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .glassEffect() // iOS 26 Liquid Glass modifier
-        .clipShape(RoundedRectangle(cornerRadius: 32))
-        .padding(.horizontal, 16)
+        .frame(height: 70)
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 35)
+                .fill(.ultraThinMaterial)
+                .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+        )
+        .padding(.horizontal, 12)
         .padding(.bottom, 8)
     }
 }
 
-// MARK: - Animated Tab Button
+// MARK: - Telegram Tab Button (iOS 26+)
 @available(iOS 26.0, *)
-struct AnimatedTabButton: View {
+struct TelegramTabButton: View {
     let tab: TabItem
     let isSelected: Bool
     let selectedColor: Color
     let unselectedColor: Color
     let action: () -> Void
     
-    @State private var isPressed = false
-    
     var body: some View {
-        Button(action: {
-            // Trigger press animation
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                    isPressed = false
-                }
-            }
-            action()
-        }) {
-            VStack(spacing: 3) {
+        Button(action: action) {
+            VStack(spacing: 2) {
                 ZStack(alignment: .topTrailing) {
-                    Image(systemName: tab.icon)
-                        .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
+                    Image(systemName: isSelected ? tab.iconFilled : tab.icon)
+                        .font(.system(size: 22, weight: .medium))
                         .foregroundColor(isSelected ? selectedColor : unselectedColor)
-                        .scaleEffect(isSelected ? 1.1 : (isPressed ? 0.85 : 1.0))
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
-                        .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isPressed)
+                        .scaleEffect(isSelected ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
                     
                     // Badge
                     if tab.badgeCount > 0 {
@@ -117,15 +114,13 @@ struct AnimatedTabButton: View {
                             .padding(.vertical, 2)
                             .background(Color.red)
                             .clipShape(Capsule())
-                            .offset(x: 10, y: -5)
+                            .offset(x: 12, y: -6)
                     }
                 }
                 
                 Text(tab.label)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .foregroundColor(isSelected ? selectedColor : unselectedColor)
-                    .scaleEffect(isSelected ? 1.02 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
@@ -134,7 +129,7 @@ struct AnimatedTabButton: View {
     }
 }
 
-// MARK: - Fallback for older iOS versions (with animations)
+// MARK: - Fallback Tab Bar (pre-iOS 26)
 struct FallbackTabBarView: View {
     @Binding var selectedIndex: Int
     let tabs: [TabItem]
@@ -147,34 +142,33 @@ struct FallbackTabBarView: View {
         GeometryReader { geometry in
             let totalWidth = geometry.size.width
             let tabWidth = totalWidth / CGFloat(tabs.count)
+            let bubbleSize: CGFloat = 56
             
             ZStack {
-                // Sliding bubble indicator
+                // Sliding white bubble indicator
                 HStack(spacing: 0) {
-                    Rectangle()
-                        .fill(Color.clear)
-                        .frame(width: tabWidth * CGFloat(selectedIndex))
+                    Spacer()
+                        .frame(width: (tabWidth * CGFloat(selectedIndex)) + (tabWidth - bubbleSize) / 2)
                     
-                    Capsule()
-                        .fill(isDarkMode ? Color.white.opacity(0.15) : Color.white.opacity(0.95))
-                        .shadow(color: Color.black.opacity(isDarkMode ? 0.2 : 0.08), radius: 6, x: 0, y: 2)
-                        .frame(width: tabWidth - 16, height: 50)
+                    Circle()
+                        .fill(isDarkMode ? Color.white.opacity(0.15) : Color.white)
+                        .frame(width: bubbleSize, height: bubbleSize)
+                        .shadow(color: Color.black.opacity(isDarkMode ? 0.2 : 0.08), radius: 8, x: 0, y: 2)
                     
-                    Spacer(minLength: 0)
+                    Spacer()
                 }
-                .padding(.horizontal, 8)
-                .animation(.spring(response: 0.35, dampingFraction: 0.75), value: selectedIndex)
+                .animation(.spring(response: 0.4, dampingFraction: 0.75), value: selectedIndex)
                 
                 // Tab buttons
                 HStack(spacing: 0) {
                     ForEach(tabs) { tab in
-                        FallbackAnimatedTabButton(
+                        FallbackTelegramTabButton(
                             tab: tab,
                             isSelected: selectedIndex == tab.id,
                             selectedColor: selectedColor,
                             unselectedColor: unselectedColor,
                             action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                withAnimation(.spring(response: 0.4, dampingFraction: 0.75)) {
                                     selectedIndex = tab.id
                                 }
                                 onTabSelected(tab.id)
@@ -185,55 +179,42 @@ struct FallbackTabBarView: View {
                 }
             }
         }
-        .frame(height: 64)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .frame(height: 70)
+        .padding(.horizontal, 4)
         .background(
-            Group {
-                if isDarkMode {
-                    Color(red: 0.15, green: 0.15, blue: 0.18).opacity(0.85)
-                } else {
-                    Color(red: 0.96, green: 0.95, blue: 0.93).opacity(0.85)
-                }
-            }
+            RoundedRectangle(cornerRadius: 35)
+                .fill(isDarkMode 
+                    ? Color(red: 0.12, green: 0.12, blue: 0.14).opacity(0.9)
+                    : Color(red: 0.97, green: 0.97, blue: 0.97).opacity(0.9)
+                )
         )
-        .background(.ultraThinMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 32))
-        .padding(.horizontal, 16)
+        .background(
+            RoundedRectangle(cornerRadius: 35)
+                .fill(.ultraThinMaterial)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 12, x: 0, y: 4)
+        .padding(.horizontal, 12)
         .padding(.bottom, 8)
     }
 }
 
-// MARK: - Fallback Animated Tab Button
-struct FallbackAnimatedTabButton: View {
+// MARK: - Fallback Telegram Tab Button
+struct FallbackTelegramTabButton: View {
     let tab: TabItem
     let isSelected: Bool
     let selectedColor: Color
     let unselectedColor: Color
     let action: () -> Void
     
-    @State private var isPressed = false
-    
     var body: some View {
-        Button(action: {
-            withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                isPressed = true
-            }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.spring(response: 0.2, dampingFraction: 0.5)) {
-                    isPressed = false
-                }
-            }
-            action()
-        }) {
-            VStack(spacing: 3) {
+        Button(action: action) {
+            VStack(spacing: 2) {
                 ZStack(alignment: .topTrailing) {
-                    Image(systemName: tab.icon)
-                        .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
+                    Image(systemName: isSelected ? tab.iconFilled : tab.icon)
+                        .font(.system(size: 22, weight: .medium))
                         .foregroundColor(isSelected ? selectedColor : unselectedColor)
-                        .scaleEffect(isSelected ? 1.1 : (isPressed ? 0.85 : 1.0))
-                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
-                        .animation(.spring(response: 0.2, dampingFraction: 0.5), value: isPressed)
+                        .scaleEffect(isSelected ? 1.05 : 1.0)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
                     
                     // Badge
                     if tab.badgeCount > 0 {
@@ -244,15 +225,13 @@ struct FallbackAnimatedTabButton: View {
                             .padding(.vertical, 2)
                             .background(Color.red)
                             .clipShape(Capsule())
-                            .offset(x: 10, y: -5)
+                            .offset(x: 12, y: -6)
                     }
                 }
                 
                 Text(tab.label)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .foregroundColor(isSelected ? selectedColor : unselectedColor)
-                    .scaleEffect(isSelected ? 1.02 : 1.0)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
