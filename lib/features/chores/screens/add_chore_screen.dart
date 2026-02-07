@@ -1378,11 +1378,9 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
       _descriptionController.text = template.description;
       _selectedChoreType = template.choreType;
 
-      // Set repeat pattern from template (null = once / no repeat)
-      // Dropdown items use lowercase values
-      if (template.defaultFrequency != 'once') {
-        _repeatPattern = template.defaultFrequency.toLowerCase();
-      }
+      // DO NOT auto-set repeat pattern from template
+      // User should explicitly choose if they want recurring
+      // _repeatPattern stays null (one-time chore)
     });
 
     // Trigger auto-assign recalculation with the new chore type

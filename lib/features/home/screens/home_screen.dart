@@ -54,6 +54,9 @@ class HomeScreenState extends State<HomeScreen>
   // User filter for "Assigned to" tab
   List<HouseholdMemberModel> _householdMembers = [];
   String? _selectedMemberFilter; // null = All, or user_id
+  
+  // User filter for "Completed" tab
+  String? _selectedCompletedMemberFilter; // null = All, or user_id
 
   // Updated tab titles to include Completed
   final List<String> _tabTitles = [
@@ -950,14 +953,8 @@ class HomeScreenState extends State<HomeScreen>
             : _buildChoresList(_inProgressChores, isDarkMode);
       case 2: // Assigned to - with user filter
         return _buildAssignedToWithFilter(isDarkMode);
-      case 3: // Completed
-        return _completedChores.isEmpty
-            ? _buildEmptyStateWithMessage(
-              'No completed chores',
-              'Complete your tasks to see them here',
-              isDarkMode,
-            )
-            : _buildChoresList(_completedChores, isDarkMode);
+      case 3: // Completed - with user filter
+        return _buildCompletedWithFilter(isDarkMode);
       default:
         return _buildEmptyState(isDarkMode);
     }
@@ -1061,6 +1058,104 @@ class HomeScreenState extends State<HomeScreen>
                       ? 'No assigned chores'
                       : 'No chores for this member',
                   'Chores assigned to household members will appear here',
+                  isDarkMode,
+                )
+              : _buildChoresList(filteredChores, isDarkMode),
+        ),
+      ],
+    );
+  }
+
+  // Build "Completed" view with user filter chips
+  Widget _buildCompletedWithFilter(bool isDarkMode) {
+    // Filter completed chores based on selected member
+    List<Map<String, dynamic>> filteredChores;
+    if (_selectedCompletedMemberFilter == null) {
+      // Show all completed chores
+      filteredChores = _completedChores;
+    } else {
+      // Filter by selected member (who was assigned when completed)
+      filteredChores = _completedChores
+          .where((c) => c['assigned_to'] == _selectedCompletedMemberFilter)
+          .toList();
+    }
+
+    return Column(
+      children: [
+        // Filter chips
+        SizedBox(
+          height: 45,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            children: [
+              // "All" chip
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: FilterChip(
+                  label: const Text('All'),
+                  selected: _selectedCompletedMemberFilter == null,
+                  onSelected: (_) {
+                    setState(() {
+                      _selectedCompletedMemberFilter = null;
+                    });
+                  },
+                  selectedColor: isDarkMode 
+                      ? AppColors.primaryDark.withValues(alpha: 0.3)
+                      : AppColors.primary.withValues(alpha: 0.2),
+                  checkmarkColor: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  labelStyle: TextStyle(
+                    color: _selectedCompletedMemberFilter == null
+                        ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                        : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                    fontFamily: 'VarelaRound',
+                  ),
+                ),
+              ),
+              // Member chips
+              ..._householdMembers.map((member) {
+                final isSelected = _selectedCompletedMemberFilter == member.userId;
+                final isMe = member.userId == _supabaseService.currentUser?.id;
+                return Padding(
+                  padding: const EdgeInsets.only(right: 8),
+                  child: FilterChip(
+                    avatar: member.profileImageUrl != null
+                        ? CircleAvatar(
+                            backgroundImage: NetworkImage(member.profileImageUrl!),
+                          )
+                        : null,
+                    label: Text(isMe ? 'Me' : (member.fullName ?? member.email ?? 'User')),
+                    selected: isSelected,
+                    onSelected: (_) {
+                      setState(() {
+                        _selectedCompletedMemberFilter = member.userId;
+                      });
+                    },
+                    selectedColor: isDarkMode 
+                        ? AppColors.primaryDark.withValues(alpha: 0.3)
+                        : AppColors.primary.withValues(alpha: 0.2),
+                    checkmarkColor: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                    labelStyle: TextStyle(
+                      color: isSelected
+                          ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                          : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
+                      fontFamily: 'VarelaRound',
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Chores list
+        Expanded(
+          child: filteredChores.isEmpty
+              ? _buildEmptyStateWithMessage(
+                  _selectedCompletedMemberFilter == null
+                      ? 'No completed chores'
+                      : 'No completed chores for this member',
+                  'Complete your tasks to see them here',
                   isDarkMode,
                 )
               : _buildChoresList(filteredChores, isDarkMode),
