@@ -23,27 +23,27 @@ struct LiquidGlassTabBarView: View {
     let unselectedColor: Color
     let onTabSelected: (Int) -> Void
     
-    // Namespace for matched geometry effect
-    @Namespace private var animation
-    
     var body: some View {
         GeometryReader { geometry in
-            let tabWidth = (geometry.size.width - 32) / CGFloat(tabs.count)
+            let totalWidth = geometry.size.width
+            let tabWidth = totalWidth / CGFloat(tabs.count)
             
             ZStack {
                 // Sliding bubble indicator
                 HStack(spacing: 0) {
-                    Spacer()
+                    Rectangle()
+                        .fill(Color.clear)
                         .frame(width: tabWidth * CGFloat(selectedIndex))
                     
                     Capsule()
-                        .fill(.white.opacity(0.3))
-                        .frame(width: tabWidth - 8, height: 52)
-                        .glassEffect()
+                        .fill(isDarkMode ? Color.white.opacity(0.2) : Color.white.opacity(0.9))
+                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        .frame(width: tabWidth - 16, height: 50)
                     
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
-                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: selectedIndex)
+                .padding(.horizontal, 8)
+                .animation(.spring(response: 0.35, dampingFraction: 0.75), value: selectedIndex)
                 
                 // Tab buttons
                 HStack(spacing: 0) {
@@ -54,7 +54,7 @@ struct LiquidGlassTabBarView: View {
                             selectedColor: selectedColor,
                             unselectedColor: unselectedColor,
                             action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                                     selectedIndex = tab.id
                                 }
                                 onTabSelected(tab.id)
@@ -65,12 +65,12 @@ struct LiquidGlassTabBarView: View {
                 }
             }
         }
-        .frame(height: 60)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .frame(height: 64)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
         .glassEffect() // iOS 26 Liquid Glass modifier
-        .clipShape(RoundedRectangle(cornerRadius: 28))
-        .padding(.horizontal, 20)
+        .clipShape(RoundedRectangle(cornerRadius: 32))
+        .padding(.horizontal, 16)
         .padding(.bottom, 8)
     }
 }
@@ -99,7 +99,7 @@ struct AnimatedTabButton: View {
             }
             action()
         }) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: tab.icon)
                         .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
@@ -124,11 +124,10 @@ struct AnimatedTabButton: View {
                 Text(tab.label)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .foregroundColor(isSelected ? selectedColor : unselectedColor)
-                    .scaleEffect(isSelected ? 1.05 : 1.0)
+                    .scaleEffect(isSelected ? 1.02 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
@@ -146,22 +145,25 @@ struct FallbackTabBarView: View {
     
     var body: some View {
         GeometryReader { geometry in
-            let tabWidth = (geometry.size.width - 32) / CGFloat(tabs.count)
+            let totalWidth = geometry.size.width
+            let tabWidth = totalWidth / CGFloat(tabs.count)
             
             ZStack {
                 // Sliding bubble indicator
                 HStack(spacing: 0) {
-                    Spacer()
+                    Rectangle()
+                        .fill(Color.clear)
                         .frame(width: tabWidth * CGFloat(selectedIndex))
                     
                     Capsule()
-                        .fill(isDarkMode ? Color.white.opacity(0.15) : Color.white.opacity(0.8))
-                        .frame(width: tabWidth - 8, height: 52)
-                        .shadow(color: Color.black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        .fill(isDarkMode ? Color.white.opacity(0.15) : Color.white.opacity(0.95))
+                        .shadow(color: Color.black.opacity(isDarkMode ? 0.2 : 0.08), radius: 6, x: 0, y: 2)
+                        .frame(width: tabWidth - 16, height: 50)
                     
-                    Spacer()
+                    Spacer(minLength: 0)
                 }
-                .animation(.spring(response: 0.35, dampingFraction: 0.7), value: selectedIndex)
+                .padding(.horizontal, 8)
+                .animation(.spring(response: 0.35, dampingFraction: 0.75), value: selectedIndex)
                 
                 // Tab buttons
                 HStack(spacing: 0) {
@@ -172,7 +174,7 @@ struct FallbackTabBarView: View {
                             selectedColor: selectedColor,
                             unselectedColor: unselectedColor,
                             action: {
-                                withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
                                     selectedIndex = tab.id
                                 }
                                 onTabSelected(tab.id)
@@ -183,12 +185,21 @@ struct FallbackTabBarView: View {
                 }
             }
         }
-        .frame(height: 60)
+        .frame(height: 64)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(
+            Group {
+                if isDarkMode {
+                    Color(red: 0.15, green: 0.15, blue: 0.18).opacity(0.85)
+                } else {
+                    Color(red: 0.96, green: 0.95, blue: 0.93).opacity(0.85)
+                }
+            }
+        )
+        .background(.ultraThinMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: 32))
         .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(isDarkMode ? .ultraThinMaterial : .regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 28))
-        .padding(.horizontal, 20)
         .padding(.bottom, 8)
     }
 }
@@ -215,7 +226,7 @@ struct FallbackAnimatedTabButton: View {
             }
             action()
         }) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 ZStack(alignment: .topTrailing) {
                     Image(systemName: tab.icon)
                         .font(.system(size: 22, weight: isSelected ? .semibold : .regular))
@@ -240,11 +251,10 @@ struct FallbackAnimatedTabButton: View {
                 Text(tab.label)
                     .font(.system(size: 10, weight: isSelected ? .semibold : .regular))
                     .foregroundColor(isSelected ? selectedColor : unselectedColor)
-                    .scaleEffect(isSelected ? 1.05 : 1.0)
+                    .scaleEffect(isSelected ? 1.02 : 1.0)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isSelected)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(PlainButtonStyle())
