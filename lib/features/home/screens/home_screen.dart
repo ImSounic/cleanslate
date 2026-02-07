@@ -1210,7 +1210,7 @@ class HomeScreenState extends State<HomeScreen>
       onRefresh: _loadChores,
       color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100), // Extra bottom for navbar
         itemCount: chores.length,
         // Add cacheExtent for smoother scrolling
         cacheExtent: 200,

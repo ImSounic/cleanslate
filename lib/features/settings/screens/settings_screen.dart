@@ -146,7 +146,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _isLoading
                     ? const Center(child: CircularProgressIndicator())
                     : SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      padding: const EdgeInsets.only(top: 16, bottom: 100),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

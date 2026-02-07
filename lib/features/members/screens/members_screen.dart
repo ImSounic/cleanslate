@@ -1226,8 +1226,8 @@ class _MembersScreenState extends State<MembersScreen> {
         // Add the "Add your flatmates" section if admin is the only member
         if (_members.length <= 1 && _searchController.text.isEmpty) _buildAddFlatmatesSection(isDarkMode),
 
-        // Add some space at the bottom for the Admin Mode button
-        const SizedBox(height: 60),
+        // Add some space at the bottom for the navbar
+        const SizedBox(height: 100),
       ],
     );
   }
