@@ -210,6 +210,74 @@ class ScheduleScreenState extends State<ScheduleScreen>
     });
   }
 
+  // Check if a date has any tasks (for calendar indicators)
+  Map<String, int> _getTaskCountForDate(DateTime date) {
+    final dateOnly = DateTime(date.year, date.month, date.day);
+    int myTasks = 0;
+    int otherTasks = 0;
+    
+    for (final chore in _chores) {
+      final assignment = chore['assignment'];
+      if (assignment != null && assignment['due_date'] != null) {
+        final dueDate = DateTime.parse(assignment['due_date']);
+        final dueDateOnly = DateTime(dueDate.year, dueDate.month, dueDate.day);
+        if (dueDateOnly.isAtSameMomentAs(dateOnly)) {
+          if (assignment['assigned_to'] == _currentUserId) {
+            myTasks++;
+          } else {
+            otherTasks++;
+          }
+        }
+      }
+    }
+    
+    return {'my': myTasks, 'other': otherTasks};
+  }
+
+  // Build task indicator dots for calendar
+  Widget _buildTaskIndicators(DateTime date, bool isSelected, bool isDarkMode) {
+    final counts = _getTaskCountForDate(date);
+    final myTasks = counts['my'] ?? 0;
+    final otherTasks = counts['other'] ?? 0;
+    
+    if (myTasks == 0 && otherTasks == 0) {
+      return const SizedBox(height: 6); // Placeholder for alignment
+    }
+    
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // My tasks - primary color dot
+        if (myTasks > 0)
+          Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: isSelected 
+                  ? Colors.white 
+                  : (isDarkMode ? AppColors.primaryDark : AppColors.primary),
+              shape: BoxShape.circle,
+            ),
+          ),
+        // Other tasks - grey dot
+        if (otherTasks > 0)
+          Container(
+            width: 5,
+            height: 5,
+            margin: const EdgeInsets.symmetric(horizontal: 1),
+            decoration: BoxDecoration(
+              color: isSelected 
+                  ? Colors.white.withValues(alpha: 0.6) 
+                  : (isDarkMode ? Colors.grey[500] : Colors.grey[400]),
+              shape: BoxShape.circle,
+            ),
+          ),
+      ],
+    );
+  }
+
   // Format date to "Today" or "Tomorrow" or date string
   String _formatDate(DateTime date) {
     final now = DateTime.now();
@@ -673,7 +741,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
                 onTap: () => _selectDate(day),
                 child: Container(
                   width: 40,
-                  height: 56,
+                  height: 64, // Increased height for task indicators
                   decoration: BoxDecoration(
                     color:
                         isSelected
@@ -699,7 +767,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
                           fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 2),
                       Text(
                         day.day.toString(),
                         style: TextStyle(
@@ -721,6 +789,9 @@ class ScheduleScreenState extends State<ScheduleScreen>
                           fontSize: 16,
                         ),
                       ),
+                      const SizedBox(height: 2),
+                      // Task indicator dots
+                      _buildTaskIndicators(day, isSelected, isDarkMode),
                     ],
                   ),
                 ),
@@ -855,43 +926,58 @@ class ScheduleScreenState extends State<ScheduleScreen>
 
                   return GestureDetector(
                     onTap: () => _selectDate(day),
-                    child: Container(
+                    child: SizedBox(
                       width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color:
-                            isSelected
-                                ? (isDarkMode
-                                    ? AppColors.primaryDark
-                                    : AppColors.primary)
-                                : Colors.transparent,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Center(
-                        child: Text(
-                          day.day.toString(),
-                          style: TextStyle(
-                            color:
-                                !isCurrentMonth
-                                    ? (isDarkMode
-                                        ? Colors.grey[700]
-                                        : Colors.grey[400])
-                                    : (isSelected
-                                        ? Colors.white
-                                        : (isToday
-                                            ? (isDarkMode
-                                                ? AppColors.primaryDark
-                                                : AppColors.primary)
-                                            : (isDarkMode
-                                                ? AppColors.textPrimaryDark
-                                                : AppColors.textPrimary))),
-                            fontWeight:
-                                isToday || isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.normal,
-                            fontSize: 16,
+                      height: 40, // Increased for task indicators
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Container(
+                            width: 28,
+                            height: 28,
+                            decoration: BoxDecoration(
+                              color:
+                                  isSelected
+                                      ? (isDarkMode
+                                          ? AppColors.primaryDark
+                                          : AppColors.primary)
+                                      : Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Center(
+                              child: Text(
+                                day.day.toString(),
+                                style: TextStyle(
+                                  color:
+                                      !isCurrentMonth
+                                          ? (isDarkMode
+                                              ? Colors.grey[700]
+                                              : Colors.grey[400])
+                                          : (isSelected
+                                              ? Colors.white
+                                              : (isToday
+                                                  ? (isDarkMode
+                                                      ? AppColors.primaryDark
+                                                      : AppColors.primary)
+                                                  : (isDarkMode
+                                                      ? AppColors.textPrimaryDark
+                                                      : AppColors.textPrimary))),
+                                  fontWeight:
+                                      isToday || isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.normal,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 2),
+                          // Task indicator dots (only for current month)
+                          if (isCurrentMonth)
+                            _buildTaskIndicators(day, isSelected, isDarkMode)
+                          else
+                            const SizedBox(height: 5),
+                        ],
                       ),
                     ),
                   );
@@ -976,7 +1062,9 @@ class ScheduleScreenState extends State<ScheduleScreen>
           ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
           : (isDarkMode ? Colors.grey[600]! : Colors.grey[400]!);
 
-      return Padding(
+      // Wrap in RepaintBoundary for better performance
+      return RepaintBoundary(
+        child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
         child: Container(
           decoration: BoxDecoration(
@@ -1142,6 +1230,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
             ), // Close Container with left border
           ), // Close ClipRRect
         ),
+      ), // Close RepaintBoundary
       );
     }).toList();
   }

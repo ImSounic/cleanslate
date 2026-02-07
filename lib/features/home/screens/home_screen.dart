@@ -1061,12 +1061,17 @@ class HomeScreenState extends State<HomeScreen>
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: chores.length,
+        // Add cacheExtent for smoother scrolling
+        cacheExtent: 200,
         itemBuilder: (context, index) {
           final choreAssignment = chores[index];
           final chore = choreAssignment['chores'] as Map<String, dynamic>;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: _buildChoreCard(choreAssignment, chore, isDarkMode),
+          // Wrap each card in RepaintBoundary to prevent unnecessary repaints
+          return RepaintBoundary(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildChoreCard(choreAssignment, chore, isDarkMode),
+            ),
           );
         },
       ),
