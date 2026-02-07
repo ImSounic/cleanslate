@@ -35,6 +35,9 @@ class SupabaseService {
   Future<AuthResponse> signInWithGoogle() async {
     try {
       debugLog('Starting Google Sign-In...');
+      debugLog('Platform: ${Platform.isIOS ? "iOS" : "Android"}');
+      debugLog('iOS Client ID: $_iosClientId');
+      debugLog('Web/Server Client ID: $_webClientId');
       
       // Sign out from any previous Google session to ensure account picker shows
       await _googleSignIn.signOut();
@@ -46,26 +49,52 @@ class SupabaseService {
         throw Exception('Google sign in was cancelled');
       }
 
-      debugLog('Google user obtained successfully');
+      debugLog('Google user obtained: ${googleUser.email}');
+      debugLog('Google user ID: ${googleUser.id}');
 
       // Obtain the auth details from the request
       final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
 
-      if (googleAuth.idToken == null) {
-        throw Exception('No ID token found');
+      // Detailed token logging
+      final idToken = googleAuth.idToken;
+      final accessToken = googleAuth.accessToken;
+      
+      debugLog('=== TOKEN DEBUG ===');
+      debugLog('idToken is null: ${idToken == null}');
+      debugLog('accessToken is null: ${accessToken == null}');
+      
+      if (idToken != null) {
+        debugLog('idToken length: ${idToken.length}');
+        debugLog('idToken preview: ${idToken.substring(0, idToken.length > 50 ? 50 : idToken.length)}...');
+      } else {
+        debugLog('❌ idToken is NULL - serverClientId may not be configured correctly!');
+      }
+      
+      if (accessToken != null) {
+        debugLog('accessToken length: ${accessToken.length}');
+        debugLog('accessToken preview: ${accessToken.substring(0, accessToken.length > 50 ? 50 : accessToken.length)}...');
       }
 
-      debugLog('Google auth tokens obtained');
+      if (idToken == null) {
+        throw Exception('No ID token found - check serverClientId configuration');
+      }
 
+      debugLog('=== SUPABASE DEBUG ===');
+      // Note: Can't easily access URL/key from client, but they come from .env
+      debugLog('Supabase client initialized: ${client.auth.currentSession != null ? "with session" : "no session"}');
+
+      debugLog('Calling signInWithIdToken...');
+      
       // FIXED: Use signInWithIdToken without nonce parameter
       final response = await client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
-        idToken: googleAuth.idToken!,
-        accessToken: googleAuth.accessToken,
+        idToken: idToken,
+        accessToken: accessToken,
         // Remove nonce parameter to avoid mismatch
       );
 
-      debugLog('Supabase sign-in successful');
+      debugLog('✅ Supabase sign-in successful!');
+      debugLog('User ID: ${response.user?.id}');
 
       // Update or create profile with Google data
       if (response.user != null) {
@@ -74,7 +103,8 @@ class SupabaseService {
 
       return response;
     } catch (e) {
-      debugLog('Google sign in error: $e');
+      debugLog('❌ Google sign in error: $e');
+      debugLog('Error type: ${e.runtimeType}');
       rethrow;
     }
   }
