@@ -1,9 +1,10 @@
 // lib/data/services/supabase_service.dart
 // Updated with fixed Google Sign-In nonce handling
 
+import 'dart:convert';
+import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'dart:io';
 import 'package:path/path.dart' as path;
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:uuid/uuid.dart';
@@ -66,6 +67,23 @@ class SupabaseService {
       if (idToken != null) {
         debugLog('idToken length: ${idToken.length}');
         debugLog('idToken preview: ${idToken.substring(0, idToken.length > 50 ? 50 : idToken.length)}...');
+        
+        // Decode JWT to check audience
+        try {
+          final parts = idToken.split('.');
+          if (parts.length == 3) {
+            // Decode the payload (second part)
+            String payload = parts[1];
+            // Add padding if needed
+            while (payload.length % 4 != 0) {
+              payload += '=';
+            }
+            final decoded = String.fromCharCodes(base64Decode(payload));
+            debugLog('idToken payload: $decoded');
+          }
+        } catch (e) {
+          debugLog('Could not decode idToken: $e');
+        }
       } else {
         debugLog('❌ idToken is NULL - serverClientId may not be configured correctly!');
       }
@@ -84,13 +102,13 @@ class SupabaseService {
       debugLog('Supabase client initialized: ${client.auth.currentSession != null ? "with session" : "no session"}');
 
       debugLog('Calling signInWithIdToken...');
+      debugLog('Using provider: google');
       
-      // FIXED: Use signInWithIdToken without nonce parameter
+      // Call Supabase signInWithIdToken
       final response = await client.auth.signInWithIdToken(
         provider: OAuthProvider.google,
         idToken: idToken,
         accessToken: accessToken,
-        // Remove nonce parameter to avoid mismatch
       );
 
       debugLog('✅ Supabase sign-in successful!');
