@@ -153,11 +153,17 @@ class ScheduleScreenState extends State<ScheduleScreen>
       final recurring = <Map<String, dynamic>>[];
 
       for (final chore in allChores) {
-        if (chore['frequency'] != null && chore['frequency'] != 'once') {
-          // This is a recurring chore
+        final frequency = chore['frequency'];
+        final isRecurringFrequency = frequency != null && frequency != 'once';
+        final recurrenceParentId = chore['recurrence_parent_id'];
+        
+        // Only show as recurring template if it has a recurring frequency
+        // AND it's NOT a generated instance (no parent ID)
+        if (isRecurringFrequency && recurrenceParentId == null) {
+          // This is a recurring chore template
           recurring.add(chore);
         } else {
-          // Regular chore - check if it has an assignment
+          // Regular chore or generated recurring instance - check if it has an assignment
           final assignments = chore['chore_assignments'] as List? ?? [];
           if (assignments.isNotEmpty) {
             for (final assignment in assignments) {
