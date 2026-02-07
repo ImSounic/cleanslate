@@ -2,7 +2,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/constants/app_text_styles.dart';
@@ -15,6 +14,7 @@ import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/features/household/widgets/share_invite_sheet.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({super.key});
@@ -225,133 +225,6 @@ class _MembersScreenState extends State<MembersScreen> {
       // ignore: use_build_context_synchronously
       ErrorService.showError(currentContext, e, operation: 'joinHousehold');
     }
-  }
-
-  void _showHouseholdCode(String code) {
-    // IMPORTANT: Access theme provider with listen: false to avoid the error
-    // Get the current theme state before going into the dialog builder
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDarkMode = themeProvider.isDarkMode;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Text(
-            'Household Code',
-            style: TextStyle(
-              fontFamily: 'Switzer',
-              fontWeight: FontWeight.bold,
-              color: isDarkMode ? AppColors.textPrimaryDark : AppColors.primary,
-            ),
-          ),
-          backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
-          content: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Share this code with others to invite them to your household:',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                    fontFamily: 'VarelaRound',
-                  ),
-                ),
-                const SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () {
-                    // Copy to clipboard when tapped
-                    Clipboard.setData(ClipboardData(text: code));
-
-                    // Show a snackbar to confirm copy action
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Code copied to clipboard!'),
-                        duration: Duration(seconds: 2),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16, // Reduced padding
-                      vertical: 12, // Reduced padding
-                    ),
-                    decoration: BoxDecoration(
-                      color:
-                          isDarkMode
-                              ? AppColors.backgroundDark
-                              : AppColors.background,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.primary),
-                    ),
-                    child: Row(
-                      mainAxisSize:
-                          MainAxisSize.min, // Make row take minimum space
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            code,
-                            style: TextStyle(
-                              fontSize: 20, // Slightly smaller font
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1, // Reduced letter spacing
-                              color: AppColors.primary,
-                              fontFamily: 'Switzer',
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8), // Reduced space
-                        Icon(
-                          Icons.copy,
-                          color: AppColors.primary,
-                          size: 20,
-                        ), // Smaller icon
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tap to copy',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color:
-                        isDarkMode
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
-                    fontStyle: FontStyle.italic,
-                    fontFamily: 'VarelaRound',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: Text(
-                'Close',
-                style: TextStyle(
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                  fontFamily: 'VarelaRound',
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _showCreateHouseholdDialog() {
@@ -935,13 +808,17 @@ class _MembersScreenState extends State<MembersScreen> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      // Code button
+                      // Code button - opens share sheet with QR code
                       ElevatedButton(
                         onPressed: () {
-                          // Show household code
-                          if (_householdService.currentHousehold != null) {
-                            _showHouseholdCode(
-                              _householdService.currentHousehold!.code,
+                          final household = _householdService.currentHousehold;
+                          if (household != null) {
+                            ShareInviteSheet.show(
+                              context,
+                              householdId: household.id,
+                              householdName: household.name,
+                              code: household.code,
+                              isAdmin: _isCurrentUserAdmin,
                             );
                           } else {
                             // Show options if no household is selected
