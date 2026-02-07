@@ -2,10 +2,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+
+/// Deep link scheme for CleanSlate app
+const String kDeepLinkScheme = 'cleanslate';
+const String kDeepLinkHost = 'join';
+
+/// Generates a deep link URL for joining a household
+String generateInviteLink(String code) {
+  return '$kDeepLinkScheme://$kDeepLinkHost/$code';
+}
 
 class ShareInviteSheet extends StatefulWidget {
   final String householdId;
@@ -86,8 +96,21 @@ class _ShareInviteSheetState extends State<ShareInviteSheet> {
   }
 
   void _shareCode() {
+    final inviteLink = generateInviteLink(_code);
     Share.share(
-      'Join my household "${widget.householdName}" on CleanSlate!\n\nInvite code: $_code',
+      'Join my household "${widget.householdName}" on CleanSlate!\n\n'
+      '📱 Tap to join: $inviteLink\n\n'
+      'Or enter code manually: $_code',
+    );
+  }
+
+  // ignore: unused_element - Reserved for future QR image sharing
+  void _shareQRCode() {
+    final inviteLink = generateInviteLink(_code);
+    Share.share(
+      'Scan this QR code to join "${widget.householdName}" on CleanSlate!\n\n'
+      'Or use link: $inviteLink\n'
+      'Or code: $_code',
     );
   }
 
@@ -141,47 +164,69 @@ class _ShareInviteSheetState extends State<ShareInviteSheet> {
             ),
             const SizedBox(height: 24),
 
-            // Code display
-            GestureDetector(
-              onTap: _copyCode,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: isDarkMode
-                      ? AppColors.backgroundDark
-                      : const Color(0xFFF4F3EE),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.3),
-                    width: 1.5,
+            // QR Code display
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3),
+                  width: 1.5,
+                ),
+              ),
+              child: Column(
+                children: [
+                  QrImageView(
+                    data: generateInviteLink(_code),
+                    version: QrVersions.auto,
+                    size: 180,
+                    backgroundColor: Colors.white,
+                    eyeStyle: QrEyeStyle(
+                      eyeShape: QrEyeShape.square,
+                      color: AppColors.primary,
+                    ),
+                    dataModuleStyle: QrDataModuleStyle(
+                      dataModuleShape: QrDataModuleShape.square,
+                      color: AppColors.primary,
+                    ),
                   ),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      _code,
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontFamily: 'Switzer',
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 6,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Tap to copy',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'VarelaRound',
+                  const SizedBox(height: 12),
+                  // Code display below QR
+                  GestureDetector(
+                    onTap: _copyCode,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      decoration: BoxDecoration(
                         color: isDarkMode
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondary,
+                            ? AppColors.backgroundDark
+                            : const Color(0xFFF4F3EE),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _code,
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontFamily: 'Switzer',
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 4,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            Icons.copy_rounded,
+                            size: 16,
+                            color: AppColors.primary,
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 20),

@@ -25,6 +25,8 @@ import 'package:cleanslate/features/onboarding/screens/onboarding_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:cleanslate/core/services/deep_link_service.dart';
+import 'package:cleanslate/data/repositories/household_repository.dart';
 
 /// Global initialization error to show in UI if startup fails
 String? _initializationError;
@@ -152,11 +154,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _onboardingComplete = true; // default true to avoid flash
   StreamSubscription<AuthState>? _authSubscription;
   bool _servicesInitialized = false;
+  final DeepLinkService _deepLinkService = DeepLinkService();
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    
+    // Initialize deep link service
+    _initializeDeepLinks();
     
     // Only initialize services if Supabase is available
     if (_initializationError == null) {
@@ -179,10 +185,196 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
       });
     }
   }
+  
+  /// Initialize deep link handling
+  Future<void> _initializeDeepLinks() async {
+    try {
+      await _deepLinkService.initialize();
+      
+      // Set up callback for join codes
+      _deepLinkService.onJoinCodeReceived = (code) {
+        debugLog('🔗 Received join code from deep link: $code');
+        _handleJoinCode(code);
+      };
+      
+      // Check for pending code (app was launched via deep link)
+      final pendingCode = _deepLinkService.consumePendingJoinCode();
+      if (pendingCode != null) {
+        // Wait for app to be ready before handling
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _handleJoinCode(pendingCode);
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('⚠️ Deep link init error: $e');
+    }
+  }
+  
+  /// Handle a join code from deep link
+  Future<void> _handleJoinCode(String code) async {
+    // Wait until we know if user is logged in
+    while (_isLoading && mounted) {
+      await Future.delayed(const Duration(milliseconds: 100));
+    }
+    
+    if (!mounted) return;
+    
+    final context = _navigatorKey.currentContext;
+    if (context == null) return;
+    
+    if (!_isLoggedIn) {
+      // User not logged in - show dialog to login first
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Join Household'),
+          content: Text(
+            'You received an invite to join a household!\n\n'
+            'Code: $code\n\n'
+            'Please log in first to join.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                // Store the code for after login
+                _pendingJoinCodeAfterLogin = code;
+                _navigatorKey.currentState?.pushNamed('/login');
+              },
+              child: const Text('Log In'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      // User is logged in - show join confirmation dialog
+      _showJoinConfirmationDialog(context, code);
+    }
+  }
+  
+  String? _pendingJoinCodeAfterLogin;
+  
+  /// Show dialog to confirm joining a household
+  Future<void> _showJoinConfirmationDialog(BuildContext context, String code) async {
+    final householdRepo = HouseholdRepository();
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.home_rounded, color: AppColors.primary),
+            const SizedBox(width: 8),
+            const Text('Join Household'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('You\'ve been invited to join a household!'),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Code: ',
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  Text(
+                    code,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 2,
+                      color: AppColors.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () async {
+              Navigator.pop(ctx);
+              
+              // Show loading
+              showDialog(
+                context: context,
+                barrierDismissible: false,
+                builder: (_) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+              
+              try {
+                final household = await householdRepo.joinHouseholdWithCode(code);
+                _householdService.setCurrentHousehold(household);
+                
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close loading
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Welcome to ${household.name}!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                  
+                  // Navigate to home
+                  _navigatorKey.currentState?.pushNamedAndRemoveUntil(
+                    '/home',
+                    (_) => false,
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  Navigator.of(context).pop(); // Close loading
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to join: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: const Text('Join'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {
     _authSubscription?.cancel();
+    _deepLinkService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -213,6 +405,20 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
             setState(() {
               _isLoggedIn = true;
             });
+            
+            // Check for pending join code after login
+            if (_pendingJoinCodeAfterLogin != null) {
+              final code = _pendingJoinCodeAfterLogin!;
+              _pendingJoinCodeAfterLogin = null;
+              
+              // Wait a bit for navigation to complete
+              Future.delayed(const Duration(milliseconds: 500), () {
+                final ctx = _navigatorKey.currentContext;
+                if (ctx != null && mounted) {
+                  _showJoinConfirmationDialog(ctx, code);
+                }
+              });
+            }
           }
         }
       },

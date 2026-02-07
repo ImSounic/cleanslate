@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
+import 'package:cleanslate/core/services/deep_link_service.dart';
 
 class QRScannerScreen extends StatefulWidget {
   const QRScannerScreen({super.key});
@@ -37,22 +38,23 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
     final List<Barcode> barcodes = capture.barcodes;
     for (final barcode in barcodes) {
-      final String? code = barcode.rawValue;
-      if (code != null && !hasScanned) {
+      final String? rawValue = barcode.rawValue;
+      if (rawValue != null && !hasScanned) {
         setState(() {
           hasScanned = true;
         });
 
-        // Validate the code format (8 characters, alphanumeric, case-insensitive)
-        final normalizedCode = code.toUpperCase();
-        if (RegExp(r'^[A-Z0-9]{8}$').hasMatch(normalizedCode)) {
-          Navigator.pop(context, normalizedCode);
+        // Parse the code (supports both raw codes and deep links like cleanslate://join/CODE)
+        final code = DeepLinkService.parseJoinCode(rawValue);
+        
+        if (code != null) {
+          Navigator.pop(context, code);
         } else {
           // Invalid code format
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Invalid QR code. Please scan a valid household code.',
+                'Invalid QR code. Please scan a valid household invite code.',
               ),
               backgroundColor: AppColors.error,
             ),

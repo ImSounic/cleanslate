@@ -50,7 +50,7 @@
 	<key>GIDClientID</key>
 	<string>884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv.apps.googleusercontent.com</string>
 
-	<!-- GOOGLE SIGN-IN URL SCHEME -->
+	<!-- URL SCHEMES FOR GOOGLE SIGN-IN AND DEEP LINKS -->
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -61,6 +61,20 @@
 				<string>com.googleusercontent.apps.884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>cleanslate</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>cleanslate</string>
+			</array>
+		</dict>
+	</array>
+	
+	<!-- ASSOCIATED DOMAINS FOR UNIVERSAL LINKS -->
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<string>applinks:cleanslate.app</string>
 	</array>
 
 	<!-- NETWORK SECURITY CONFIGURATION -->
