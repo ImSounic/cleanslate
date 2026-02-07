@@ -325,7 +325,14 @@ class ScheduleScreenState extends State<ScheduleScreen>
   String _getAssigneeName(Map<String, dynamic>? assignment) {
     if (assignment == null) return 'Unassigned';
     
-    // Check if profiles data is included
+    // Check if assignee profile data is included (new structure)
+    final assignee = assignment['assignee'] as Map<String, dynamic>?;
+    if (assignee != null) {
+      final name = assignee['full_name'] ?? assignee['email']?.toString().split('@').first;
+      if (name != null) return name.toString().split(' ').first;
+    }
+    
+    // Fallback: check old profiles structure
     final profiles = assignment['profiles'];
     if (profiles != null) {
       return profiles['full_name'] ?? profiles['email']?.split('@').first ?? 'Unknown';
@@ -337,6 +344,20 @@ class ScheduleScreenState extends State<ScheduleScreen>
     }
     
     return 'Team member';
+  }
+
+  // Get assigner name from assignment (who assigned the chore)
+  String? _getAssignerName(Map<String, dynamic>? assignment) {
+    if (assignment == null) return null;
+    
+    // Check if assigner profile data is included
+    final assigner = assignment['assigner'] as Map<String, dynamic>?;
+    if (assigner != null) {
+      final name = assigner['full_name'] ?? assigner['email']?.toString().split('@').first;
+      if (name != null) return name.toString().split(' ').first;
+    }
+    
+    return null;
   }
 
   // Toggle recurring chores section
@@ -1138,18 +1159,35 @@ class ScheduleScreenState extends State<ScheduleScreen>
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
                 ),
-                subtitle: !isMyChore
-                    ? Text(
-                        _getAssigneeName(assignment),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Always show assigned to
+                    Text(
+                      'Assigned to: ${_getAssigneeName(assignment)}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontFamily: 'VarelaRound',
+                        color: isDarkMode
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    // Show assigned by if available
+                    if (_getAssignerName(assignment) != null)
+                      Text(
+                        'Assigned by: ${_getAssignerName(assignment)}',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontFamily: 'VarelaRound',
                           color: isDarkMode
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondary,
                         ),
-                      )
-                    : null,
+                      ),
+                  ],
+                ),
                 trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [

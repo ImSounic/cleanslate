@@ -45,12 +45,20 @@ class ChoreRepository {
   }
 
   // Get chores for a household
+  // Includes profiles for both assigned_to (assignee) and assigned_by (assigner)
   Future<List<Map<String, dynamic>>> getChoresForHousehold(
     String householdId,
   ) async {
     final response = await _client
         .from('chores')
-        .select('*, chore_assignments(*)')
+        .select('''
+          *,
+          chore_assignments(
+            *,
+            assignee:profiles!chore_assignments_assigned_to_fkey(id, full_name, email, profile_image_url),
+            assigner:profiles!chore_assignments_assigned_by_fkey(id, full_name, email, profile_image_url)
+          )
+        ''')
         .eq('household_id', householdId)
         .order('created_at', ascending: false);
 
@@ -58,6 +66,7 @@ class ChoreRepository {
   }
 
   // Get chores assigned to the current user
+  // Includes profiles for both assigned_to (assignee) and assigned_by (assigner)
   Future<List<Map<String, dynamic>>> getMyChores() async {
     final userId = _client.auth.currentUser!.id;
     debugLog('📋 getMyChores: fetching for user $userId');
@@ -65,7 +74,12 @@ class ChoreRepository {
     try {
       final response = await _client
           .from('chore_assignments')
-          .select('*, chores(*)')
+          .select('''
+            *,
+            chores(*),
+            assignee:profiles!chore_assignments_assigned_to_fkey(id, full_name, email, profile_image_url),
+            assigner:profiles!chore_assignments_assigned_by_fkey(id, full_name, email, profile_image_url)
+          ''')
           .eq('assigned_to', userId)
           .order('due_date', ascending: true);
 

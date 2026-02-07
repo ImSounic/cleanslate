@@ -1275,11 +1275,23 @@ class HomeScreenState extends State<HomeScreen>
     final isCompleted = status == 'completed';
     final isInProgress = status == 'in_progress';
 
-    // Get assignee first name only
-    final assigneeFullName = _userName;
+    // Get assignee info from fetched profile data
+    final assigneeProfile = assignment['assignee'] as Map<String, dynamic>?;
+    final assigneeFullName = assigneeProfile?['full_name'] as String? ?? 
+        assigneeProfile?['email']?.toString().split('@').first ?? 
+        _userName;
     final assigneeFirstName = assigneeFullName.split(' ').first;
-    final assigneeInitial =
-        assigneeFullName.isNotEmpty ? assigneeFullName[0].toUpperCase() : 'U';
+    final assigneeImageUrl = assigneeProfile?['profile_image_url'] as String?;
+    final assigneeId = assigneeProfile?['id'] as String? ?? 
+        _supabaseService.currentUser?.id ?? '';
+
+    // Get assigner info from fetched profile data (who assigned the chore)
+    final assignerProfile = assignment['assigner'] as Map<String, dynamic>?;
+    final assignerFullName = assignerProfile?['full_name'] as String? ?? 
+        assignerProfile?['email']?.toString().split('@').first;
+    final assignerFirstName = assignerFullName?.split(' ').first;
+    final assignerImageUrl = assignerProfile?['profile_image_url'] as String?;
+    final assignerId = assignerProfile?['id'] as String?;
 
     // Check if chore has description
     final hasDescription =
@@ -1295,8 +1307,8 @@ class HomeScreenState extends State<HomeScreen>
           color: isDarkMode ? AppColors.borderDark : AppColors.borderPrimary,
         ),
       ),
-      // Reduced height for the card
-      height: 110,
+      // Increased height to accommodate both Assigned to and Assigned by
+      height: 130,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1361,15 +1373,15 @@ class HomeScreenState extends State<HomeScreen>
                   overflow: TextOverflow.ellipsis,
                 ),
 
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
 
-                // ASSIGNEE ROW - Including first name and description icon
+                // ASSIGNED TO ROW
                 Row(
                   children: [
                     Text(
-                      'Assignee: ',
+                      'Assigned to: ',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontFamily: 'VarelaRound',
                         color:
                             isDarkMode
@@ -1377,40 +1389,42 @@ class HomeScreenState extends State<HomeScreen>
                                 : AppColors.textSecondary,
                       ),
                     ),
-                    _profileImageUrl != null
+                    assigneeImageUrl != null
                         ? CircleAvatar(
-                          radius: 10,
-                          backgroundImage: NetworkImage(_profileImageUrl!),
+                          radius: 8,
+                          backgroundImage: NetworkImage(assigneeImageUrl),
                         )
                         : CircleAvatar(
-                          radius: 10,
-                          backgroundColor: AppColors.avatarColorFor(
-                            _supabaseService.currentUser?.id ?? _userName,
-                          ),
+                          radius: 8,
+                          backgroundColor: AppColors.avatarColorFor(assigneeId),
                           child: Text(
-                            assigneeInitial,
+                            assigneeFirstName.isNotEmpty 
+                                ? assigneeFirstName[0].toUpperCase() 
+                                : 'U',
                             style: TextStyle(
-                              fontSize: 10,
+                              fontSize: 8,
                               color: AppColors.textLight,
                               fontFamily: 'VarelaRound',
                             ),
                           ),
                         ),
                     const SizedBox(width: 4),
-                    // Only show first name
-                    Text(
-                      assigneeFirstName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontFamily: 'VarelaRound',
-                        color:
-                            isDarkMode
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondary,
+                    Flexible(
+                      child: Text(
+                        assigneeFirstName,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'VarelaRound',
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
 
-                    // Description icon moved here after assignee first name
+                    // Description icon
                     if (hasDescription)
                       GestureDetector(
                         onTap: () {
@@ -1421,8 +1435,8 @@ class HomeScreenState extends State<HomeScreen>
                           padding: const EdgeInsets.only(left: 8),
                           child: SvgPicture.asset(
                             'assets/images/icons/scroll_description.svg',
-                            height: 14,
-                            width: 14,
+                            height: 12,
+                            width: 12,
                             colorFilter: ColorFilter.mode(
                               isDarkMode
                                   ? AppColors.textPrimaryDark
@@ -1434,6 +1448,60 @@ class HomeScreenState extends State<HomeScreen>
                       ),
                   ],
                 ),
+
+                const SizedBox(height: 4),
+
+                // ASSIGNED BY ROW (only show if different from assignee or if assigner exists)
+                if (assignerFirstName != null && assignerId != null)
+                  Row(
+                    children: [
+                      Text(
+                        'Assigned by: ',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontFamily: 'VarelaRound',
+                          color:
+                              isDarkMode
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondary,
+                        ),
+                      ),
+                      assignerImageUrl != null
+                          ? CircleAvatar(
+                            radius: 8,
+                            backgroundImage: NetworkImage(assignerImageUrl),
+                          )
+                          : CircleAvatar(
+                            radius: 8,
+                            backgroundColor: AppColors.avatarColorFor(assignerId),
+                            child: Text(
+                              assignerFirstName.isNotEmpty 
+                                  ? assignerFirstName[0].toUpperCase() 
+                                  : 'U',
+                              style: TextStyle(
+                                fontSize: 8,
+                                color: AppColors.textLight,
+                                fontFamily: 'VarelaRound',
+                              ),
+                            ),
+                          ),
+                      const SizedBox(width: 4),
+                      Flexible(
+                        child: Text(
+                          assignerFirstName,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontFamily: 'VarelaRound',
+                            color:
+                                isDarkMode
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
 
                 // Spacer to push elements to their positions
                 const Spacer(),
