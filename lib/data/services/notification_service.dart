@@ -220,6 +220,34 @@ class NotificationService extends ChangeNotifier {
     );
   }
 
+  // Notify all household members when a chore is completed
+  Future<void> notifyChoreCompleted({
+    required String completedByUserId,
+    required String choreId,
+    required String choreName,
+    required String householdId,
+  }) async {
+    await _repository.notifyChoreCompleted(
+      completedByUserId: completedByUserId,
+      choreId: choreId,
+      choreName: choreName,
+      householdId: householdId,
+    );
+  }
+
+  // Notify all existing members when a new member joins
+  Future<void> notifyMemberJoined({
+    required String newMemberUserId,
+    required String householdId,
+    required String householdName,
+  }) async {
+    await _repository.notifyMemberJoined(
+      newMemberUserId: newMemberUserId,
+      householdId: householdId,
+      householdName: householdName,
+    );
+  }
+
   // Add manual notification to list (for testing)
   void addNotificationManually(NotificationModel notification) {
     debugLog(

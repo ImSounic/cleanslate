@@ -208,8 +208,18 @@ class ChoreRepository {
     }
   }
 
-  // Mark a chore as complete
+  // Mark a chore as complete and notify household members
   Future<void> completeChore(String assignmentId) async {
+    final userId = _client.auth.currentUser?.id;
+    
+    // First, get the assignment details including chore info
+    final assignment = await _client
+        .from('chore_assignments')
+        .select('*, chores(id, name, household_id)')
+        .eq('id', assignmentId)
+        .single();
+
+    // Mark as completed
     await _client
         .from('chore_assignments')
         .update({
@@ -217,6 +227,17 @@ class ChoreRepository {
           'completed_at': DateTime.now().toIso8601String(),
         })
         .eq('id', assignmentId);
+
+    // Send notification to all household members (except completer)
+    if (userId != null && assignment['chores'] != null) {
+      final chore = assignment['chores'] as Map<String, dynamic>;
+      await _notificationService.notifyChoreCompleted(
+        completedByUserId: userId,
+        choreId: chore['id'],
+        choreName: chore['name'],
+        householdId: chore['household_id'],
+      );
+    }
   }
 
   // Unmark a chore as complete (set back to pending)

@@ -271,4 +271,110 @@ class NotificationRepository {
       debugLog('Failed to check deadline notifications: $e');
     }
   }
+
+  /// Notify all household members when a chore is completed.
+  /// Excludes the user who completed the chore.
+  Future<void> notifyChoreCompleted({
+    required String completedByUserId,
+    required String choreId,
+    required String choreName,
+    required String householdId,
+  }) async {
+    try {
+      // Get completer's name
+      final completerProfile =
+          await _client
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', completedByUserId)
+              .single();
+
+      final completerName =
+          completerProfile['full_name'] ?? completerProfile['email'] ?? 'Someone';
+
+      // Get all active household members except the completer
+      final members = await _client
+          .from('household_members')
+          .select('user_id')
+          .eq('household_id', householdId)
+          .eq('is_active', true)
+          .neq('user_id', completedByUserId);
+
+      debugLog('📢 notifyChoreCompleted: sending to ${members.length} members');
+
+      // Send notification to each member
+      for (final member in members) {
+        await createNotification(
+          userId: member['user_id'],
+          householdId: householdId,
+          type: 'chore_completed',
+          title: 'Chore Completed ✓',
+          message: '$completerName completed $choreName',
+          metadata: {
+            'chore_id': choreId,
+            'chore_name': choreName,
+            'completed_by': completedByUserId,
+            'completer_name': completerName,
+          },
+        );
+      }
+
+      debugLog('✅ notifyChoreCompleted: notifications sent successfully');
+    } catch (e) {
+      // Log error but don't throw to avoid disrupting chore completion
+      debugLog('❌ Failed to create chore completed notification: $e');
+    }
+  }
+
+  /// Notify all existing household members when a new member joins.
+  /// Excludes the new member themselves.
+  Future<void> notifyMemberJoined({
+    required String newMemberUserId,
+    required String householdId,
+    required String householdName,
+  }) async {
+    try {
+      // Get new member's name
+      final newMemberProfile =
+          await _client
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', newMemberUserId)
+              .single();
+
+      final newMemberName =
+          newMemberProfile['full_name'] ?? newMemberProfile['email'] ?? 'Someone';
+
+      // Get all active household members except the new member
+      final members = await _client
+          .from('household_members')
+          .select('user_id')
+          .eq('household_id', householdId)
+          .eq('is_active', true)
+          .neq('user_id', newMemberUserId);
+
+      debugLog('📢 notifyMemberJoined: sending to ${members.length} existing members');
+
+      // Send notification to each existing member
+      for (final member in members) {
+        await createNotification(
+          userId: member['user_id'],
+          householdId: householdId,
+          type: 'member_joined',
+          title: 'New Household Member',
+          message: '$newMemberName has joined $householdName!',
+          metadata: {
+            'new_member_id': newMemberUserId,
+            'new_member_name': newMemberName,
+            'household_name': householdName,
+          },
+        );
+      }
+
+      debugLog('✅ notifyMemberJoined: notifications sent successfully');
+    } catch (e) {
+      // Log error but don't throw to avoid disrupting the join process
+      debugLog('❌ Failed to create member joined notification: $e');
+    }
+  }
 }

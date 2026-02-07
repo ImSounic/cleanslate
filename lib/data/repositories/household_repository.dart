@@ -2,6 +2,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/models/household_member_model.dart';
+import 'package:cleanslate/data/repositories/notification_repository.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'dart:math';
 
@@ -289,6 +290,20 @@ class HouseholdRepository {
       final household = await getHouseholdModel(householdId);
       
       debugLog('joinHouseholdWithCode: success, joined ${household.name}');
+      
+      // Notify all existing members about the new member
+      try {
+        final notificationRepo = NotificationRepository();
+        await notificationRepo.notifyMemberJoined(
+          newMemberUserId: userId,
+          householdId: householdId,
+          householdName: household.name,
+        );
+        debugLog('joinHouseholdWithCode: notifications sent to existing members');
+      } catch (e) {
+        // Don't fail the join if notifications fail
+        debugLog('joinHouseholdWithCode: notification error (non-fatal): $e');
+      }
       
       return household;
     } on PostgrestException catch (e) {

@@ -107,5 +107,11 @@
 	<key>NSCameraUsageDescription</key>
 	<string>This app needs camera access to scan QR codes for joining households.</string>
 
+	<!-- BACKGROUND MODES FOR PUSH NOTIFICATIONS -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+
 </dict>
 </plist>
