@@ -15,17 +15,18 @@ class SupabaseService {
   // Google Sign In instance - created lazily to ensure Platform is available
   GoogleSignIn? _googleSignInInstance;
   
+  // Web Client ID - required for Supabase to verify id_token (used on both iOS & Android)
+  static const String _webClientId = '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com';
+  // iOS Client ID - required for iOS sign-in flow
+  static const String _iosClientId = '884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv.apps.googleusercontent.com';
+  
   GoogleSignIn get _googleSignIn {
     _googleSignInInstance ??= GoogleSignIn(
       scopes: ['email', 'profile'],
-      // iOS client ID (from GoogleService-Info.plist CLIENT_ID)
-      clientId: Platform.isIOS 
-          ? '884884596328-fflqf9k6j6ma4elbik1ap8kbtkinu1vv.apps.googleusercontent.com'
-          : null,
-      // Android server client ID (web client for backend auth)
-      serverClientId: Platform.isAndroid 
-          ? '884884596328-f3rijrb8ims7jfg3bin3f5tkfverjs4j.apps.googleusercontent.com'
-          : null,
+      // iOS needs clientId for the native sign-in flow
+      clientId: Platform.isIOS ? _iosClientId : null,
+      // serverClientId is required on BOTH platforms for Supabase to verify the id_token
+      serverClientId: _webClientId,
     );
     return _googleSignInInstance!;
   }
