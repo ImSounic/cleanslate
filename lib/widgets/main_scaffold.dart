@@ -1,13 +1,11 @@
 // lib/widgets/main_scaffold.dart
 // Shared scaffold with persistent bottom navigation bar using IndexedStack.
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:provider/provider.dart';
 import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/providers/theme_provider.dart';
-import 'package:cleanslate/core/widgets/liquid_glass_nav_bar.dart';
 
 class MainScaffold extends StatelessWidget {
   /// The current tab index (0=Home, 1=Members, 2=Schedule, 3=Settings).
@@ -34,38 +32,10 @@ class MainScaffold extends StatelessWidget {
     this.floatingActionButtonLocation,
   });
 
-  /// Tab items for Liquid Glass nav bar
-  /// Icons use SF Symbols - outline version (Swift adds .fill automatically for selected state)
-  static const List<NavBarItem> _navItems = [
-    NavBarItem(
-      icon: 'house',
-      flutterIcon: Icons.home_rounded,
-      label: 'Home',
-    ),
-    NavBarItem(
-      icon: 'person.2',
-      flutterIcon: Icons.people_rounded,
-      label: 'Members',
-    ),
-    NavBarItem(
-      icon: 'calendar',
-      flutterIcon: Icons.calendar_today_rounded,
-      label: 'Calendar',
-    ),
-    NavBarItem(
-      icon: 'gearshape',
-      flutterIcon: Icons.settings_rounded,
-      label: 'Settings',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.isDarkMode;
-
-    // Use Liquid Glass nav bar on iOS, standard nav bar on Android
-    final useNativeNavBar = Platform.isIOS;
 
     return Scaffold(
       backgroundColor:
@@ -73,17 +43,7 @@ class MainScaffold extends StatelessWidget {
       body: body,
       floatingActionButton: floatingActionButton,
       floatingActionButtonLocation: floatingActionButtonLocation,
-      // Use extendBody for iOS to allow nav bar to float over content
-      extendBody: useNativeNavBar,
-      bottomNavigationBar: useNativeNavBar
-          ? LiquidGlassNavBar(
-              items: _navItems,
-              selectedIndex: currentIndex,
-              onItemSelected: onTabSelected,
-              selectedColor: isDarkMode ? AppColors.navSelectedDark : AppColors.navSelected,
-              unselectedColor: isDarkMode ? AppColors.navUnselectedDark : AppColors.navUnselected,
-            )
-          : _buildBottomNav(isDarkMode),
+      bottomNavigationBar: _buildBottomNav(isDarkMode),
     );
   }
 

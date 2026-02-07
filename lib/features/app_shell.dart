@@ -47,25 +47,22 @@ class _AppShellState extends State<AppShell> {
   Widget? _buildFAB() {
     // Show Add Chore FAB on Home (0) and Schedule (2) tabs
     if (_currentIndex == 0 || _currentIndex == 2) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 72), // Account for bottom navbar
-        child: FloatingActionButton(
-          heroTag: 'add_chore_fab',
-          backgroundColor: AppColors.primary,
-          shape: const CircleBorder(),
-          child: Icon(Icons.add, color: AppColors.textLight),
-          onPressed: () async {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const AddChoreScreen()),
-            );
-            if (result == true) {
-              // Refresh both screens since chores may appear in both
-              _homeKey.currentState?.refreshChores();
-              _scheduleKey.currentState?.refreshChores();
-            }
-          },
-        ),
+      return FloatingActionButton(
+        heroTag: 'add_chore_fab',
+        backgroundColor: AppColors.primary,
+        shape: const CircleBorder(),
+        child: Icon(Icons.add, color: AppColors.textLight),
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AddChoreScreen()),
+          );
+          if (result == true) {
+            // Refresh both screens since chores may appear in both
+            _homeKey.currentState?.refreshChores();
+            _scheduleKey.currentState?.refreshChores();
+          }
+        },
       );
     }
     return null;

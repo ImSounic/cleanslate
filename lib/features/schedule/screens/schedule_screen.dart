@@ -708,7 +708,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
             // FAB for toggling recurring chores - only visible when not showing recurring chores
             if (!_showRecurringChores)
               Positioned(
-                bottom: 100, // Account for bottom navbar
+                bottom: 16,
                 left: 0,
                 right: 0,
                 child: Center(
