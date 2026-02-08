@@ -903,39 +903,44 @@ class ScheduleScreenState extends State<ScheduleScreen>
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Row(
-                  children: [
-                    Text(
-                      DateFormat('MMMM yyyy').format(_selectedDate),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color:
-                            isDarkMode
-                                ? AppColors.textPrimaryDark
-                                : AppColors.primary,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Selected date indicator
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
-                            .withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        DateFormat('d MMM').format(_selectedDate),
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                          fontFamily: 'VarelaRound',
+                Expanded(
+                  child: Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          DateFormat('MMMM yyyy').format(_selectedDate),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color:
+                                isDarkMode
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.primary,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      // Selected date indicator
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          DateFormat('d MMM').format(_selectedDate),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 Row(
                   children: [
