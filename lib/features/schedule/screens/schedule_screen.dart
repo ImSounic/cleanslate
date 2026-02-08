@@ -32,6 +32,7 @@ class ScheduleScreenState extends State<ScheduleScreen>
   int _viewMode = 0;
   bool _isLoading = true;
   bool _showRecurringChores = false;
+  bool _isCalendarExpanded = false; // For month view collapse/expand
   bool _hasLoadedInitialData = false;
   String? _currentUserId;
   // List to store regular and recurring chores
@@ -156,13 +157,19 @@ class ScheduleScreenState extends State<ScheduleScreen>
         final frequency = chore['frequency'];
         final isRecurringFrequency = frequency != null && frequency != 'once';
         final recurrenceParentId = chore['recurrence_parent_id'];
+        final choreId = chore['id'];
         
-        // Only show as recurring template if it has a recurring frequency
-        // AND it's NOT a generated instance (no parent ID)
-        if (isRecurringFrequency && recurrenceParentId == null) {
+        // Show as recurring template if it has a recurring frequency
+        // This includes:
+        // - Templates with no parent ID (legacy)
+        // - Initial instances where parent_id == self (created by initialization)
+        final isSelfReferencing = recurrenceParentId == choreId;
+        if (isRecurringFrequency && (recurrenceParentId == null || isSelfReferencing)) {
           // This is a recurring chore template
           recurring.add(chore);
-        } else {
+        }
+        
+        if (!isRecurringFrequency || isSelfReferencing) {
           // Regular chore or generated recurring instance - check if it has an assignment
           final assignments = chore['chore_assignments'] as List? ?? [];
           if (assignments.isNotEmpty) {
@@ -872,111 +879,151 @@ class ScheduleScreenState extends State<ScheduleScreen>
     final totalDays = firstDayIndex + daysInMonth;
     final totalWeeks = (totalDays / 7).ceil();
 
-    return Container(
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: isDarkMode ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDarkMode ? AppColors.borderDark : Colors.grey[300]!,
-        ),
-      ),
-      child: Column(
-        children: [
-          // Month and Year with navigation - removed ">" after the date
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                DateFormat('MMMM yyyy').format(_selectedDate),
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color:
-                      isDarkMode
-                          ? AppColors.textPrimaryDark
-                          : AppColors.primary,
-                ),
-              ),
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      Icons.chevron_left,
-                      color:
-                          isDarkMode
-                              ? AppColors.textPrimaryDark
-                              : AppColors.primary,
-                    ),
-                    onPressed: _navigatePrevious,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 20),
-                  IconButton(
-                    icon: Icon(
-                      Icons.chevron_right,
-                      color:
-                          isDarkMode
-                              ? AppColors.textPrimaryDark
-                              : AppColors.primary,
-                    ),
-                    onPressed: _navigateNext,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-            ],
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isCalendarExpanded = !_isCalendarExpanded;
+        });
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: BoxDecoration(
+          color: isDarkMode ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isDarkMode ? AppColors.borderDark : Colors.grey[300]!,
           ),
-
-          const SizedBox(height: 16),
-
-          // Day labels
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children:
-                ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) {
-                  return SizedBox(
-                    width: 32,
-                    child: Text(
-                      day,
+        ),
+        child: Column(
+          children: [
+            // Month and Year with navigation - always visible
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      DateFormat('MMMM yyyy').format(_selectedDate),
                       style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
                         color:
                             isDarkMode
-                                ? AppColors.primaryDark
+                                ? AppColors.textPrimaryDark
                                 : AppColors.primary,
-                        fontSize: 12,
-                        fontFamily: 'VarelaRound',
                       ),
-                      textAlign: TextAlign.center,
                     ),
-                  );
-                }).toList(),
-          ),
+                    const SizedBox(width: 8),
+                    // Selected date indicator
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                            .withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        DateFormat('d MMM').format(_selectedDate),
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                          fontFamily: 'VarelaRound',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                Row(
+                  children: [
+                    if (_isCalendarExpanded) ...[
+                      IconButton(
+                        icon: Icon(
+                          Icons.chevron_left,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
+                        ),
+                        onPressed: _navigatePrevious,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                      const SizedBox(width: 20),
+                      IconButton(
+                        icon: Icon(
+                          Icons.chevron_right,
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.primary,
+                        ),
+                        onPressed: _navigateNext,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                      ),
+                    ],
+                    const SizedBox(width: 8),
+                    Icon(
+                      _isCalendarExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
 
-          const SizedBox(height: 8),
+            // Expandable calendar section
+            if (_isCalendarExpanded) ...[
+              const SizedBox(height: 16),
 
-          // Calendar grid
-          ...List.generate(totalWeeks, (weekIndex) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
+              // Day labels
+              Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(7, (dayIndex) {
-                  final day = firstDay.add(
-                    Duration(days: weekIndex * 7 + dayIndex),
-                  );
-                  final isCurrentMonth = day.month == month;
-                  final isSelected =
-                      day.day == _selectedDate.day &&
-                      day.month == _selectedDate.month &&
-                      day.year == _selectedDate.year;
-                  final isToday =
-                      day.day == DateTime.now().day &&
-                      day.month == DateTime.now().month &&
-                      day.year == DateTime.now().year;
+                children:
+                    ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'].map((day) {
+                      return SizedBox(
+                        width: 32,
+                        child: Text(
+                          day,
+                          style: TextStyle(
+                            color:
+                                isDarkMode
+                                    ? AppColors.primaryDark
+                                    : AppColors.primary,
+                            fontSize: 12,
+                            fontFamily: 'VarelaRound',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }).toList(),
+              ),
+
+              const SizedBox(height: 8),
+
+              // Calendar grid
+              ...List.generate(totalWeeks, (weekIndex) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(7, (dayIndex) {
+                      final day = firstDay.add(
+                        Duration(days: weekIndex * 7 + dayIndex),
+                      );
+                      final isCurrentMonth = day.month == month;
+                      final isSelected =
+                          day.day == _selectedDate.day &&
+                          day.month == _selectedDate.month &&
+                          day.year == _selectedDate.year;
+                      final isToday =
+                          day.day == DateTime.now().day &&
+                          day.month == DateTime.now().month &&
+                          day.year == DateTime.now().year;
 
                   return GestureDetector(
                     onTap: () => _selectDate(day),
@@ -1039,7 +1086,9 @@ class ScheduleScreenState extends State<ScheduleScreen>
               ),
             );
           }),
-        ],
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1191,6 +1240,8 @@ class ScheduleScreenState extends State<ScheduleScreen>
                             : AppColors.textPrimary,
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1496,6 +1547,8 @@ class ScheduleScreenState extends State<ScheduleScreen>
                                         ? AppColors.textPrimaryDark
                                         : AppColors.textPrimary,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             trailing: Row(
                               mainAxisSize: MainAxisSize.min,
