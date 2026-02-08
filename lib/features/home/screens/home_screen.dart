@@ -297,12 +297,15 @@ class HomeScreenState extends State<HomeScreen>
                   color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  'Configure Your Home',
-                  style: TextStyle(
-                    fontFamily: 'Switzer',
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                Flexible(
+                  child: Text(
+                    'Configure Your Home',
+                    style: TextStyle(
+                      fontFamily: 'Switzer',
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                    ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],

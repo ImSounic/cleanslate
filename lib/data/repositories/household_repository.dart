@@ -564,15 +564,14 @@ class HouseholdRepository {
       if (numBedrooms != null) updates['num_bedrooms'] = numBedrooms;
       if (numLivingRooms != null) updates['num_living_rooms'] = numLivingRooms;
 
-      final response =
-          await _client
-              .from('households')
-              .update(updates)
-              .eq('id', householdId)
-              .select()
-              .single();
+      // Update without expecting a return (RLS may block select)
+      await _client
+          .from('households')
+          .update(updates)
+          .eq('id', householdId);
 
-      return HouseholdModel.fromJson(response);
+      // Fetch the updated household
+      return await getHouseholdModel(householdId);
     } catch (e) {
       throw Exception('Failed to update room configuration: $e');
     }
