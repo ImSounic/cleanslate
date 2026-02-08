@@ -2278,24 +2278,4 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   // capitalize helper moved to string_extensions.dart
-
-  /// Format frequency for display on chore card
-  String _formatFrequency(String? frequency) {
-    switch (frequency?.toLowerCase()) {
-      case 'daily':
-        return 'Daily';
-      case 'weekly':
-        return 'Weekly';
-      case 'biweekly':
-        return 'Biweekly';
-      case 'monthly':
-        return 'Monthly';
-      case 'weekdays':
-        return 'Weekdays';
-      case 'weekends':
-        return 'Weekends';
-      default:
-        return 'Recurring';
-    }
-  }
 }
