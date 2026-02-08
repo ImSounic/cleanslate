@@ -221,6 +221,32 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
   Future<void> _handleAddChore() async {
     if (!_formKey.currentState!.validate()) return;
 
+    // Warn if no member is assigned
+    if (_selectedMemberId == null) {
+      final shouldProceed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('No assignee selected'),
+          content: const Text(
+            'This chore will be created but not assigned to anyone. '
+            'You can assign it later from the home screen.\n\n'
+            'Continue without assigning?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Create Anyway'),
+            ),
+          ],
+        ),
+      );
+      if (shouldProceed != true) return;
+    }
+
     setState(() {
       _isLoading = true;
     });
@@ -453,6 +479,12 @@ class _AddChoreScreenState extends State<AddChoreScreen> {
                 validator: (value) {
                   if (value == null || value.trim().isEmpty) {
                     return 'Please enter a title for the chore';
+                  }
+                  if (value.trim().length > 200) {
+                    return 'Title must be 200 characters or less';
+                  }
+                  if (value.trim().length < 2) {
+                    return 'Title must be at least 2 characters';
                   }
                   return null;
                 },

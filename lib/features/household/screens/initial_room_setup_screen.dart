@@ -27,7 +27,22 @@ class _InitialRoomSetupScreenState extends State<InitialRoomSetupScreen> {
   int _numBathrooms = 1;
   int _numLivingRooms = 1;
 
+  /// Returns true if all room counts are zero
+  bool get _allRoomsZero =>
+      _numKitchens == 0 && _numBathrooms == 0 && _numLivingRooms == 0;
+
   Future<void> _confirm() async {
+    // Validate: at least one room must exist
+    if (_allRoomsZero) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your household must have at least one room'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {

@@ -106,8 +106,12 @@ class _JoinHouseholdDialogState extends State<JoinHouseholdDialog> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter a household code';
                   }
-                  if (value.length != 8) {
-                    return 'Code must be 8 characters long';
+                  final trimmed = value.trim().toUpperCase();
+                  if (trimmed.length != 8) {
+                    return 'Code must be exactly 8 characters';
+                  }
+                  if (!RegExp(r'^[A-Z0-9]+$').hasMatch(trimmed)) {
+                    return 'Code can only contain letters and numbers';
                   }
                   return null;
                 },

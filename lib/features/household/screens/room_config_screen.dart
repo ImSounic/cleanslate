@@ -40,7 +40,22 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
       _numBathrooms != widget.household.numBathrooms ||
       _numLivingRooms != widget.household.numLivingRooms;
 
+  /// Returns true if all room counts are zero
+  bool get _allRoomsZero =>
+      _numKitchens == 0 && _numBathrooms == 0 && _numLivingRooms == 0;
+
   Future<void> _save() async {
+    // Validate: at least one room must exist
+    if (_allRoomsZero) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Your household must have at least one room'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     if (!_hasChanges) {
       Navigator.pop(context);
       return;
