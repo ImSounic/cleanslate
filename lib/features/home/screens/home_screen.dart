@@ -1616,39 +1616,62 @@ class HomeScreenState extends State<HomeScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // LEFT COLUMN - Completion circle for the entire height
-          GestureDetector(
-            onTap: () {
-              if (isCompleted) {
-                _uncompleteChore(assignment['id']);
-              } else {
-                _completeChore(
-                  assignment['id'],
-                  choreId: chore['id'],
-                );
-              }
-            },
-            child: Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: isCompleted
-                      ? AppColors.primary
-                      : isDarkMode
-                          ? AppColors.borderDark
-                          : AppColors.borderPrimary,
-                  width: 2,
+          // LEFT COLUMN - Completion circle at top, recurring indicator at bottom
+          Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Completion circle
+              GestureDetector(
+                onTap: () {
+                  if (isCompleted) {
+                    _uncompleteChore(assignment['id']);
+                  } else {
+                    _completeChore(
+                      assignment['id'],
+                      choreId: chore['id'],
+                    );
+                  }
+                },
+                child: Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: isCompleted
+                          ? AppColors.primary
+                          : isDarkMode
+                              ? AppColors.borderDark
+                              : AppColors.borderPrimary,
+                      width: 2,
+                    ),
+                    color: isCompleted
+                        ? AppColors.primary
+                        : Colors.transparent,
+                  ),
+                  child: isCompleted
+                      ? Icon(Icons.check, color: AppColors.textLight, size: 16)
+                      : null,
                 ),
-                color: isCompleted
-                    ? AppColors.primary
-                    : Colors.transparent,
               ),
-              child: isCompleted
-                  ? Icon(Icons.check, color: AppColors.textLight, size: 16)
-                  : null,
-            ),
+              // Recurring indicator at bottom
+              if (isRecurring)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                        .withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Icon(
+                    Icons.autorenew,
+                    size: 14,
+                    color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                  ),
+                )
+              else
+                const SizedBox(height: 20), // Placeholder when no indicator
+            ],
           ),
 
           const SizedBox(width: 16),
@@ -1802,39 +1825,8 @@ class HomeScreenState extends State<HomeScreen>
                     ],
                   ),
 
-                // Spacer to push recurring indicator to bottom
+                // Spacer to push elements to their positions
                 const Spacer(),
-                
-                // BOTTOM LEFT - Recurring indicator
-                if (isRecurring)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
-                          .withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.autorenew,
-                          size: 10,
-                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                        ),
-                        const SizedBox(width: 3),
-                        Text(
-                          _formatFrequency(frequency),
-                          style: TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
-                            fontFamily: 'VarelaRound',
-                            color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
               ],
             ),
           ),
