@@ -4,6 +4,7 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/core/utils/input_sanitizer.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/features/household/screens/initial_room_setup_screen.dart';
 
 class CreateHouseholdDialog extends StatefulWidget {
   const CreateHouseholdDialog({super.key});
@@ -32,11 +33,25 @@ class _CreateHouseholdDialogState extends State<CreateHouseholdDialog> {
     });
 
     try {
-      await _householdService.createAndSetHousehold(
+      final household = await _householdService.createAndSetHousehold(
         sanitizeHouseholdName(_nameController.text),
       );
       if (mounted) {
-        Navigator.of(context).pop(true); // Return true to indicate success
+        // Close the dialog first
+        Navigator.of(context).pop();
+        
+        // Navigate to room setup screen
+        final result = await Navigator.of(context).push<bool>(
+          MaterialPageRoute(
+            builder: (context) => InitialRoomSetupScreen(household: household),
+          ),
+        );
+        
+        // If user completed setup, we need to signal success
+        if (result == true && context.mounted) {
+          // Pop again or signal the parent - the household is now set up
+          // The parent will rebuild with the new household
+        }
       }
     } catch (e) {
       if (mounted) {

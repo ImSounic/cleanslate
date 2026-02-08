@@ -15,6 +15,7 @@ import 'package:cleanslate/data/services/supabase_service.dart';
 import 'package:cleanslate/features/members/screens/admin_mode_screen.dart';
 import 'package:cleanslate/core/services/error_service.dart';
 import 'package:cleanslate/features/household/widgets/share_invite_sheet.dart';
+import 'package:cleanslate/features/household/screens/initial_room_setup_screen.dart';
 
 class MembersScreen extends StatefulWidget {
   const MembersScreen({super.key});
@@ -147,7 +148,7 @@ class _MembersScreenState extends State<MembersScreen> {
     });
 
     try {
-      await _householdService.createAndSetHousehold(name);
+      final household = await _householdService.createAndSetHousehold(name);
 
       // Check if widget is still mounted before updating UI
       if (!context.mounted) return;
@@ -156,7 +157,16 @@ class _MembersScreenState extends State<MembersScreen> {
         _isLoading = false;
       });
 
-      // Refresh members with new household
+      // Navigate to room setup screen
+      await Navigator.push(
+        currentContext,
+        MaterialPageRoute(
+          builder: (context) => InitialRoomSetupScreen(household: household),
+        ),
+      );
+
+      // Refresh members with new household after returning
+      if (!context.mounted) return;
       await _loadMembers();
 
       // Check again if mounted before showing success message

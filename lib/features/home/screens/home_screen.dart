@@ -30,7 +30,6 @@ import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
 import 'package:cleanslate/features/stats/screens/chore_stats_screen.dart';
 import 'package:cleanslate/data/services/chore_initialization_service.dart';
-import 'package:cleanslate/features/household/screens/household_config_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -105,131 +104,6 @@ class HomeScreenState extends State<HomeScreen>
       }
     } catch (e) {
       debugLog('Failed to check initialization status: $e');
-    }
-  }
-
-  /// Build the initialization/rebalance banner.
-  Widget _buildInitializationBanner(bool isDarkMode) {
-    final isRebalance = _choresInitialized && _needsRebalance;
-    
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: _isInitializing
-            ? null
-            : () => isRebalance ? _handleRebalance() : _navigateToConfigScreen(),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: isRebalance
-                  ? [Colors.orange.shade400, Colors.orange.shade600]
-                  : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: (isRebalance ? Colors.orange : AppColors.primary).withValues(alpha: 0.3),
-                blurRadius: 8,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      isRebalance ? Icons.balance : Icons.auto_awesome,
-                      color: Colors.white,
-                      size: 24,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isRebalance ? 'New Member Joined!' : 'Get Started',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                            fontFamily: 'Switzer',
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          isRebalance
-                              ? 'Rebalance chores to include everyone'
-                              : 'Set up your home and assign chores',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.9),
-                            fontSize: 12,
-                            fontFamily: 'VarelaRound',
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (_isInitializing)
-                    const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  else
-                    Icon(
-                      Icons.arrow_forward_ios_rounded,
-                      color: Colors.white.withValues(alpha: 0.8),
-                      size: 18,
-                    ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Navigate to the household configuration screen.
-  Future<void> _navigateToConfigScreen() async {
-    final result = await Navigator.push<int>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => HouseholdConfigScreen(
-          members: _householdMembers,
-        ),
-      ),
-    );
-
-    if (result != null && result > 0) {
-      // Chores were created, reload everything
-      await _loadChores();
-      await _checkInitializationStatus();
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$result chores created and assigned!'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
     }
   }
 
@@ -904,17 +778,19 @@ class HomeScreenState extends State<HomeScreen>
     final isDarkMode = themeProvider.isDarkMode;
 
     return SafeArea(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          // Top bar with icons
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  // Theme toggle — uses shared widget
-                  const ThemeToggleButton(),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Top bar with icons
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      // Theme toggle — uses shared widget
+                      const ThemeToggleButton(),
                   const SizedBox(width: 12),
                   // Stats icon
                   GestureDetector(
@@ -1096,12 +972,6 @@ class HomeScreenState extends State<HomeScreen>
               ),
             ),
             const SizedBox(height: 16),
-            
-            // Assign Chores / Rebalance Banner
-            if (!_choresInitialized || _needsRebalance)
-              _buildInitializationBanner(isDarkMode),
-            
-            const SizedBox(height: 16),
             // Tab buttons - Made horizontally scrollable
             SizedBox(
               height: 40,
@@ -1134,7 +1004,98 @@ class HomeScreenState extends State<HomeScreen>
             ),
           ],
         ),
+        // Assign Chores / Rebalance button (bottom left)
+        if (!_choresInitialized || _needsRebalance)
+          Positioned(
+            left: 16,
+            bottom: 16,
+            child: _buildAssignRebalanceButton(isDarkMode),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build the Assign/Rebalance floating button
+  Widget _buildAssignRebalanceButton(bool isDarkMode) {
+    final isRebalance = _choresInitialized && _needsRebalance;
+    
+    return FloatingActionButton.extended(
+      heroTag: 'assign_rebalance_fab',
+      onPressed: _isInitializing ? null : () async {
+        if (isRebalance) {
+          await _handleRebalance();
+        } else {
+          await _handleAssignChores();
+        }
+      },
+      backgroundColor: isRebalance ? Colors.orange : AppColors.primary,
+      icon: _isInitializing
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: Colors.white,
+              ),
+            )
+          : Icon(
+              isRebalance ? Icons.balance : Icons.auto_awesome,
+              color: Colors.white,
+            ),
+      label: Text(
+        _isInitializing
+            ? 'Working...'
+            : isRebalance
+                ? 'Rebalance'
+                : 'Assign Chores',
+        style: const TextStyle(
+          color: Colors.white,
+          fontFamily: 'VarelaRound',
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+
+  /// Handle auto-assignment of chores
+  Future<void> _handleAssignChores() async {
+    setState(() => _isInitializing = true);
+
+    try {
+      final household = HouseholdService().currentHousehold;
+      if (household == null) throw Exception('No household');
+
+      final memberIds = _householdMembers.map((m) => m.userId).toList();
+      if (memberIds.isEmpty) {
+        throw Exception('No members in household');
+      }
+
+      final initService = ChoreInitializationService();
+      final count = await initService.initializeChores(
+        household: household,
+        memberIds: memberIds,
       );
+
+      // Reload everything
+      await _loadChores();
+      await _checkInitializationStatus();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('$count chores assigned! 🎉'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ErrorService.showError(context, e, operation: 'assignChores');
+      }
+    } finally {
+      if (mounted) setState(() => _isInitializing = false);
+    }
   }
 
   // Method to show appropriate content based on selected tab

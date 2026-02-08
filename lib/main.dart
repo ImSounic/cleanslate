@@ -22,6 +22,7 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/features/onboarding/screens/onboarding_screen.dart';
+import 'package:cleanslate/features/onboarding/screens/setup_onboarding_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
@@ -152,6 +153,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   bool _isLoading = true;
   bool _isLoggedIn = false;
   bool _onboardingComplete = true; // default true to avoid flash
+  bool _setupOnboardingComplete = true; // default true to avoid flash
   StreamSubscription<AuthState>? _authSubscription;
   bool _servicesInitialized = false;
   final DeepLinkService _deepLinkService = DeepLinkService();
@@ -453,6 +455,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // Check onboarding status
     final prefs = await SharedPreferences.getInstance();
     final onboardingDone = prefs.getBool('onboarding_complete') ?? false;
+    final setupOnboardingDone = prefs.getBool('setup_onboarding_complete') ?? false;
 
     final isLoggedIn = _supabaseService.isAuthenticated;
 
@@ -476,6 +479,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     setState(() {
       _isLoggedIn = isLoggedIn;
       _onboardingComplete = onboardingDone;
+      _setupOnboardingComplete = setupOnboardingDone;
       _isLoading = false;
     });
   }
@@ -514,6 +518,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     
     // Normal flow
     if (_isLoggedIn) {
+      // Show setup onboarding for first-time logged in users
+      if (!_setupOnboardingComplete) {
+        return const SetupOnboardingScreen();
+      }
       return const AppShell();
     } else if (!_onboardingComplete) {
       return const OnboardingScreen();
