@@ -140,17 +140,33 @@ class RecurrenceService {
           .select()
           .single();
 
-      // 5. Assign the new instance
+      // 5. Assign the new instance with rotation
+      final currentAssignee = assignment['assigned_to'] as String?;
       String? assigneeId;
+      
       if (autoAssign) {
+        // Try to find a different person (rotation)
         assigneeId = await _assignmentService.findBestAssignee(
           householdId: householdId,
           choreName: chore['name'] as String,
           dueDate: nextDueDate,
+          excludeUserId: currentAssignee, // Exclude current assignee for rotation
         );
+        
+        // If no one else available, fall back to including everyone
+        if (assigneeId == null && currentAssignee != null) {
+          debugLog('🔄 No other members available, checking all members...');
+          assigneeId = await _assignmentService.findBestAssignee(
+            householdId: householdId,
+            choreName: chore['name'] as String,
+            dueDate: nextDueDate,
+            // No exclusion - include everyone
+          );
+        }
       }
-      // Fall back to same person if algorithm returns null
-      assigneeId ??= assignment['assigned_to'] as String?;
+      
+      // Final fallback to same person if no one else fits
+      assigneeId ??= currentAssignee;
 
       if (assigneeId != null) {
         await _choreRepository.assignChore(

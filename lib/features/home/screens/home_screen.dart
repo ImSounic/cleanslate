@@ -1419,6 +1419,10 @@ class HomeScreenState extends State<HomeScreen>
         chore['description'] != null &&
         chore['description'].toString().isNotEmpty;
 
+    // Check if this is a recurring chore
+    final frequency = chore['frequency'] as String?;
+    final isRecurring = frequency != null && frequency != 'once';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1475,18 +1479,56 @@ class HomeScreenState extends State<HomeScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // TOP ROW - Title only (description icon moved down)
-                Text(
-                  chore['name'] ?? 'Unnamed Chore',
-                  style: AppTextStyles.cardTitle.copyWith(
-                    color:
-                        isDarkMode
-                            ? AppColors.textPrimaryDark
-                            : AppColors.textPrimary,
-                    decoration: isCompleted ? TextDecoration.lineThrough : null,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                // TOP ROW - Title with recurring indicator
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        chore['name'] ?? 'Unnamed Chore',
+                        style: AppTextStyles.cardTitle.copyWith(
+                          color:
+                              isDarkMode
+                                  ? AppColors.textPrimaryDark
+                                  : AppColors.textPrimary,
+                          decoration: isCompleted ? TextDecoration.lineThrough : null,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // Recurring indicator
+                    if (isRecurring) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                              .withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.autorenew,
+                              size: 12,
+                              color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              _formatFrequency(frequency),
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                fontFamily: 'VarelaRound',
+                                color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
 
                 const SizedBox(height: 6),
@@ -2072,4 +2114,24 @@ class HomeScreenState extends State<HomeScreen>
   }
 
   // capitalize helper moved to string_extensions.dart
+
+  /// Format frequency for display on chore card
+  String _formatFrequency(String? frequency) {
+    switch (frequency?.toLowerCase()) {
+      case 'daily':
+        return 'Daily';
+      case 'weekly':
+        return 'Weekly';
+      case 'biweekly':
+        return 'Biweekly';
+      case 'monthly':
+        return 'Monthly';
+      case 'weekdays':
+        return 'Weekdays';
+      case 'weekends':
+        return 'Weekends';
+      default:
+        return 'Recurring';
+    }
+  }
 }

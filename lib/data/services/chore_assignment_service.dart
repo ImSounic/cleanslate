@@ -79,15 +79,21 @@ class ChoreAssignmentService {
 
   /// Returns the user-id of the best assignee using rotation-first logic.
   /// Returns `null` when no one fits.
+  /// 
+  /// [excludeUserId] - Optional user to exclude from consideration (useful for rotation).
   Future<String?> findBestAssignee({
     required String householdId,
     required String choreName,
     required DateTime dueDate,
     String? choreType,
+    String? excludeUserId,
   }) async {
     try {
       debugLog('🤖 Auto-assign: finding best member for "$choreName"');
       debugLog('📋 Algorithm: ROTATION-FIRST (preferences as tiebreaker only)');
+      if (excludeUserId != null) {
+        debugLog('🔄 Rotation mode: excluding previous assignee');
+      }
 
       choreType ??= inferChoreType(choreName);
       debugLog('🏷️ Chore type: ${choreType ?? "unknown"}');
@@ -99,8 +105,13 @@ class ChoreAssignmentService {
           .eq('household_id', householdId)
           .eq('is_active', true);
 
-      final memberIds =
+      var memberIds =
           (members as List).map((m) => m['user_id'] as String).toList();
+      
+      // Exclude specified user for rotation
+      if (excludeUserId != null) {
+        memberIds = memberIds.where((id) => id != excludeUserId).toList();
+      }
 
       if (memberIds.isEmpty) {
         debugLog('⚠️ No active members in household');
