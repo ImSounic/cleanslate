@@ -139,7 +139,7 @@ class ChoreInitializationService {
 
     for (final choreData in choresToCreate) {
       try {
-        // Create the chore
+        // Create the chore with recurring settings
         final chore = await _choreRepository.createChore(
           householdId: household.id,
           name: choreData['name'],
@@ -148,6 +148,12 @@ class ChoreInitializationService {
           frequency: choreData['frequency'],
           isRecurring: true,
         );
+        
+        // Mark this chore as an "initial instance" by setting recurrence_parent_id to itself
+        // This prevents it from being filtered out as a template
+        await _client.from('chores').update({
+          'recurrence_parent_id': chore['id'],
+        }).eq('id', chore['id']);
 
         // Calculate due date based on frequency
         final dueDate = _calculateInitialDueDate(
@@ -289,5 +295,161 @@ class ChoreInitializationService {
   Future<bool> needsRebalance(HouseholdModel household, int currentMemberCount) async {
     if (!household.choresInitialized) return false;
     return currentMemberCount > household.memberCountAtInit;
+  }
+
+  /// Adjust chores when room configuration changes.
+  /// 
+  /// Compares old vs new room counts and adds/removes chores accordingly.
+  /// Returns a map with 'added' and 'removed' counts.
+  Future<Map<String, int>> adjustChoresForRoomConfigChange({
+    required HouseholdModel oldHousehold,
+    required HouseholdModel newHousehold,
+    required List<String> memberIds,
+  }) async {
+    if (memberIds.isEmpty) {
+      return {'added': 0, 'removed': 0};
+    }
+
+    debugLog('🔧 Adjusting chores for room config change');
+    debugLog('   Kitchens: ${oldHousehold.numKitchens} → ${newHousehold.numKitchens}');
+    debugLog('   Bathrooms: ${oldHousehold.numBathrooms} → ${newHousehold.numBathrooms}');
+    debugLog('   Living rooms: ${oldHousehold.numLivingRooms} → ${newHousehold.numLivingRooms}');
+
+    int added = 0;
+    int removed = 0;
+    final now = DateTime.now();
+    int memberIndex = 0;
+
+    // Get existing chores for this household
+    final existingChores = await _client
+        .from('chores')
+        .select('id, name, household_id')
+        .eq('household_id', newHousehold.id);
+
+    // Helper to count existing chores by base name
+    int countChoresByBaseName(String baseName) {
+      return (existingChores as List).where((c) {
+        final name = c['name'] as String;
+        return name == baseName || name.startsWith('$baseName ');
+      }).length;
+    }
+
+    // Helper to get chores by base name sorted by number (highest first)
+    List<Map<String, dynamic>> getChoresByBaseName(String baseName) {
+      final matches = (existingChores as List).where((c) {
+        final name = c['name'] as String;
+        return name == baseName || name.startsWith('$baseName ');
+      }).toList();
+      
+      // Sort by number in name (descending) so we remove highest numbered first
+      matches.sort((a, b) {
+        final aNum = _extractNumber(a['name'] as String);
+        final bNum = _extractNumber(b['name'] as String);
+        return bNum.compareTo(aNum);
+      });
+      
+      return matches.cast<Map<String, dynamic>>();
+    }
+
+    // Process each room type
+    for (final template in _choreTemplates) {
+      final roomType = template['room_type'] as String;
+      final baseName = template['name'] as String;
+      
+      int oldCount = 0;
+      int newCount = 0;
+      
+      if (roomType == 'kitchen') {
+        oldCount = oldHousehold.numKitchens;
+        newCount = newHousehold.numKitchens;
+      } else if (roomType == 'bathroom') {
+        oldCount = oldHousehold.numBathrooms;
+        newCount = newHousehold.numBathrooms;
+      } else if (roomType == 'living_room') {
+        oldCount = oldHousehold.numLivingRooms;
+        newCount = newHousehold.numLivingRooms;
+      } else {
+        continue; // Skip general chores, they don't scale with rooms
+      }
+
+      final currentChoreCount = countChoresByBaseName(baseName);
+      final diff = newCount - oldCount;
+
+      if (diff > 0) {
+        // Need to add chores
+        for (int i = 0; i < diff; i++) {
+          final choreNumber = currentChoreCount + i + 1;
+          final choreName = newCount > 1 ? '$baseName $choreNumber' : baseName;
+          
+          try {
+            final chore = await _choreRepository.createChore(
+              householdId: newHousehold.id,
+              name: choreName,
+              description: template['description'],
+              estimatedDuration: template['estimated_duration'],
+              frequency: template['frequency'],
+              isRecurring: true,
+            );
+            
+            // Mark as initial instance
+            await _client.from('chores').update({
+              'recurrence_parent_id': chore['id'],
+            }).eq('id', chore['id']);
+            
+            // Assign to a member
+            final dueDate = _calculateInitialDueDate(
+              template['frequency'] as String,
+              now,
+              memberIndex,
+            );
+            final assignedTo = memberIds[memberIndex % memberIds.length];
+            
+            await _choreRepository.assignChore(
+              choreId: chore['id'],
+              assignedTo: assignedTo,
+              dueDate: dueDate,
+              priority: 'medium',
+            );
+            
+            memberIndex++;
+            added++;
+            debugLog('➕ Added: $choreName → assigned to $assignedTo');
+          } catch (e) {
+            debugLog('❌ Failed to add $choreName: $e');
+          }
+        }
+      } else if (diff < 0) {
+        // Need to remove chores (remove highest numbered first)
+        final choresToRemove = getChoresByBaseName(baseName).take(-diff);
+        
+        for (final chore in choresToRemove) {
+          try {
+            // Delete assignments first, then the chore
+            await _client
+                .from('chore_assignments')
+                .delete()
+                .eq('chore_id', chore['id']);
+            await _client
+                .from('chores')
+                .delete()
+                .eq('id', chore['id']);
+            
+            removed++;
+            debugLog('➖ Removed: ${chore['name']}');
+          } catch (e) {
+            debugLog('❌ Failed to remove ${chore['name']}: $e');
+          }
+        }
+      }
+    }
+
+    debugLog('✅ Room config adjustment complete: $added added, $removed removed');
+    return {'added': added, 'removed': removed};
+  }
+
+  /// Extract number from chore name (e.g., "Kitchen Cleaning 2" → 2)
+  int _extractNumber(String name) {
+    final match = RegExp(r'\d+$').firstMatch(name);
+    return match != null ? int.parse(match.group(0)!) : 0;
   }
 }

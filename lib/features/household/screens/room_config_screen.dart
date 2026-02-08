@@ -5,6 +5,7 @@ import 'package:cleanslate/core/constants/app_colors.dart';
 import 'package:cleanslate/core/utils/theme_utils.dart';
 import 'package:cleanslate/data/models/household_model.dart';
 import 'package:cleanslate/data/repositories/household_repository.dart';
+import 'package:cleanslate/data/services/household_service.dart';
 import 'package:cleanslate/core/services/error_service.dart';
 
 /// Screen for configuring the number of rooms in a household.
@@ -54,6 +55,10 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
         numBathrooms: _numBathrooms,
         numLivingRooms: _numLivingRooms,
       );
+
+      // Reload household to get updated config
+      final freshHousehold = await _householdRepository.getHouseholdModel(widget.household.id);
+      HouseholdService().setCurrentHousehold(freshHousehold);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

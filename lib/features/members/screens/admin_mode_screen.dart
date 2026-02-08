@@ -10,7 +10,9 @@ import 'package:cleanslate/data/models/household_member_model.dart';
 import 'package:cleanslate/features/app_shell.dart';
 import 'package:cleanslate/core/utils/debug_logger.dart';
 import 'package:cleanslate/data/services/chore_assignment_service.dart';
+import 'package:cleanslate/data/services/chore_initialization_service.dart';
 import 'package:cleanslate/core/services/error_service.dart';
+import 'package:cleanslate/features/household/screens/room_config_screen.dart';
 
 class AdminModeScreen extends StatefulWidget {
   const AdminModeScreen({super.key});
@@ -155,6 +157,70 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
           'choresAssigned': 0,
         });
       }
+    }
+  }
+
+  // ── Room Configuration ───────────────────────────────────────────────
+
+  Future<void> _navigateToRoomConfig() async {
+    final household = _householdService.currentHousehold;
+    if (household == null) return;
+
+    // Store old config for comparison
+    final oldHousehold = household;
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => RoomConfigScreen(household: household),
+      ),
+    );
+
+    if (result == true && mounted) {
+      // Room config was changed, adjust chores
+      final newHousehold = _householdService.currentHousehold;
+      if (newHousehold == null) return;
+
+      // Get member IDs
+      final members = await _householdRepository.getHouseholdMembers(household.id);
+      final memberIds = members.map((m) => m.userId).toList();
+
+      if (memberIds.isNotEmpty) {
+        try {
+          final initService = ChoreInitializationService();
+          final changes = await initService.adjustChoresForRoomConfigChange(
+            oldHousehold: oldHousehold,
+            newHousehold: newHousehold,
+            memberIds: memberIds,
+          );
+
+          if (mounted) {
+            final added = changes['added'] ?? 0;
+            final removed = changes['removed'] ?? 0;
+            
+            if (added > 0 || removed > 0) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    added > 0 && removed > 0
+                        ? '$added chores added, $removed removed'
+                        : added > 0
+                            ? '$added new chores added'
+                            : '$removed chores removed',
+                  ),
+                ),
+              );
+            }
+          }
+        } catch (e) {
+          if (mounted) {
+            ErrorService.showError(context, e, operation: 'adjustChores');
+          }
+        }
+      }
+
+      // Refresh admin data
+      _loadAdminData();
     }
   }
 
@@ -1220,6 +1286,105 @@ class _AdminModeScreenState extends State<AdminModeScreen> {
                     ),
 
                 const SizedBox(height: 24),
+
+                // Room Configuration section
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          thickness: 1,
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Text(
+                          'Household Settings',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color: Colors.white.withValues(alpha: 0.3),
+                          thickness: 1,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.2),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.home_rounded,
+                                color: Colors.white, size: 24),
+                            const SizedBox(width: 12),
+                            const Text(
+                              'Room Configuration',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                fontFamily: 'Switzer',
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Update the number of kitchens, bathrooms, and living rooms. '
+                          'Chores will be automatically added or removed.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontFamily: 'VarelaRound',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _navigateToRoomConfig,
+                            icon: const Icon(Icons.settings),
+                            label: const Text('Configure Rooms'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: AppColors.primary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
 
                 // Rebalance Chores section
                 Padding(
