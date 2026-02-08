@@ -24,7 +24,6 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
 
   late int _numKitchens;
   late int _numBathrooms;
-  late int _numBedrooms;
   late int _numLivingRooms;
 
   @override
@@ -32,14 +31,12 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
     super.initState();
     _numKitchens = widget.household.numKitchens;
     _numBathrooms = widget.household.numBathrooms;
-    _numBedrooms = widget.household.numBedrooms;
     _numLivingRooms = widget.household.numLivingRooms;
   }
 
   bool get _hasChanges =>
       _numKitchens != widget.household.numKitchens ||
       _numBathrooms != widget.household.numBathrooms ||
-      _numBedrooms != widget.household.numBedrooms ||
       _numLivingRooms != widget.household.numLivingRooms;
 
   Future<void> _save() async {
@@ -55,7 +52,6 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
         widget.household.id,
         numKitchens: _numKitchens,
         numBathrooms: _numBathrooms,
-        numBedrooms: _numBedrooms,
         numLivingRooms: _numLivingRooms,
       );
 
@@ -163,17 +159,6 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
 
             _buildRoomPicker(
               isDarkMode: isDarkMode,
-              icon: Icons.bed_outlined,
-              label: 'Bedrooms',
-              value: _numBedrooms,
-              min: 0,
-              max: 10,
-              onChanged: (v) => setState(() => _numBedrooms = v),
-            ),
-            const SizedBox(height: 16),
-
-            _buildRoomPicker(
-              isDarkMode: isDarkMode,
               icon: Icons.weekend_outlined,
               label: 'Living / Common Areas',
               value: _numLivingRooms,
@@ -211,7 +196,7 @@ class _RoomConfigScreenState extends State<RoomConfigScreen> {
                     ),
                   ),
                   Text(
-                    '${_numKitchens + _numBathrooms + _numBedrooms + _numLivingRooms}',
+                    '${_numKitchens + _numBathrooms + _numLivingRooms}',
                     style: TextStyle(
                       fontSize: 24,
                       fontFamily: 'Switzer',

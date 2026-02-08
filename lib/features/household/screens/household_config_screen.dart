@@ -26,7 +26,6 @@ class _HouseholdConfigScreenState extends State<HouseholdConfigScreen> {
   
   late int _numKitchens;
   late int _numBathrooms;
-  late int _numBedrooms;
   late int _numLivingRooms;
   
   bool _isLoading = false;
@@ -37,7 +36,6 @@ class _HouseholdConfigScreenState extends State<HouseholdConfigScreen> {
     final household = HouseholdService().currentHousehold;
     _numKitchens = household?.numKitchens ?? 1;
     _numBathrooms = household?.numBathrooms ?? 1;
-    _numBedrooms = household?.numBedrooms ?? 1;
     _numLivingRooms = household?.numLivingRooms ?? 1;
   }
 
@@ -53,7 +51,6 @@ class _HouseholdConfigScreenState extends State<HouseholdConfigScreen> {
         household.id,
         numKitchens: _numKitchens,
         numBathrooms: _numBathrooms,
-        numBedrooms: _numBedrooms,
         numLivingRooms: _numLivingRooms,
       );
 
@@ -175,14 +172,6 @@ class _HouseholdConfigScreenState extends State<HouseholdConfigScreen> {
                         label: 'Bathrooms',
                         value: _numBathrooms,
                         onChanged: (v) => setState(() => _numBathrooms = v),
-                        isDarkMode: isDarkMode,
-                      ),
-                      const SizedBox(height: 16),
-                      _buildRoomCounter(
-                        icon: '🛏️',
-                        label: 'Bedrooms',
-                        value: _numBedrooms,
-                        onChanged: (v) => setState(() => _numBedrooms = v),
                         isDarkMode: isDarkMode,
                       ),
                       const SizedBox(height: 16),

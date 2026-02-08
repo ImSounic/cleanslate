@@ -548,7 +548,6 @@ class HouseholdRepository {
     String householdId, {
     int? numKitchens,
     int? numBathrooms,
-    int? numBedrooms,
     int? numLivingRooms,
   }) async {
     try {
@@ -561,7 +560,6 @@ class HouseholdRepository {
       };
       if (numKitchens != null) updates['num_kitchens'] = numKitchens;
       if (numBathrooms != null) updates['num_bathrooms'] = numBathrooms;
-      if (numBedrooms != null) updates['num_bedrooms'] = numBedrooms;
       if (numLivingRooms != null) updates['num_living_rooms'] = numLivingRooms;
 
       // Update without expecting a return (RLS may block select)
