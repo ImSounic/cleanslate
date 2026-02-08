@@ -30,7 +30,7 @@ import 'package:cleanslate/data/services/notification_service.dart';
 import 'package:cleanslate/features/notifications/screens/notifications_screen.dart';
 import 'package:cleanslate/features/stats/screens/chore_stats_screen.dart';
 import 'package:cleanslate/data/services/chore_initialization_service.dart';
-import 'package:cleanslate/data/models/household_model.dart';
+import 'package:cleanslate/features/household/screens/household_config_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -114,330 +114,121 @@ class HomeScreenState extends State<HomeScreen>
     
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: isRebalance
-                ? [Colors.orange.shade400, Colors.orange.shade600]
-                : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+      child: GestureDetector(
+        onTap: _isInitializing
+            ? null
+            : () => isRebalance ? _handleRebalance() : _navigateToConfigScreen(),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isRebalance
+                  ? [Colors.orange.shade400, Colors.orange.shade600]
+                  : [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: (isRebalance ? Colors.orange : AppColors.primary).withValues(alpha: 0.3),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: (isRebalance ? Colors.orange : AppColors.primary).withValues(alpha: 0.3),
-              blurRadius: 8,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                isRebalance ? Icons.balance : Icons.auto_awesome,
-                color: Colors.white,
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Text(
-                    isRebalance ? 'New Member Joined!' : 'Get Started',
-                    style: const TextStyle(
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      isRebalance ? Icons.balance : Icons.auto_awesome,
                       color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      fontFamily: 'Switzer',
+                      size: 24,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isRebalance
-                        ? 'Rebalance chores to include everyone'
-                        : 'Set up your home and assign chores automatically',
-                    style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      fontSize: 12,
-                      fontFamily: 'VarelaRound',
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 8),
-            ElevatedButton(
-              onPressed: _isInitializing
-                  ? null
-                  : () => isRebalance ? _handleRebalance() : _showConfigurationDialog(),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: isRebalance ? Colors.orange.shade600 : AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: _isInitializing
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: isRebalance ? Colors.orange.shade600 : AppColors.primary,
-                      ),
-                    )
-                  : Text(
-                      isRebalance ? 'Rebalance' : 'Assign',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'VarelaRound',
-                      ),
-                    ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Show household configuration dialog.
-  Future<void> _showConfigurationDialog() async {
-    final household = HouseholdService().currentHousehold;
-    if (household == null) return;
-
-    int numKitchens = household.numKitchens;
-    int numBathrooms = household.numBathrooms;
-    int numBedrooms = household.numBedrooms;
-    int numLivingRooms = household.numLivingRooms;
-
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDarkMode = themeProvider.isDarkMode;
-
-    final result = await showDialog<bool>(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          Widget buildCounter(String label, int value, ValueChanged<int> onChanged) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontFamily: 'VarelaRound',
-                      color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      IconButton(
-                        onPressed: value > 0
-                            ? () => setDialogState(() => onChanged(value - 1))
-                            : null,
-                        icon: Icon(
-                          Icons.remove_circle_outline,
-                          color: value > 0
-                              ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
-                              : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
-                        ),
-                      ),
-                      Container(
-                        width: 40,
-                        alignment: Alignment.center,
-                        child: Text(
-                          value.toString(),
-                          style: TextStyle(
-                            fontSize: 18,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          isRebalance ? 'New Member Joined!' : 'Get Started',
+                          style: const TextStyle(
+                            color: Colors.white,
                             fontWeight: FontWeight.bold,
-                            fontFamily: 'VarelaRound',
-                            color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
+                            fontSize: 16,
+                            fontFamily: 'Switzer',
                           ),
                         ),
-                      ),
-                      IconButton(
-                        onPressed: value < 10
-                            ? () => setDialogState(() => onChanged(value + 1))
-                            : null,
-                        icon: Icon(
-                          Icons.add_circle_outline,
-                          color: value < 10
-                              ? (isDarkMode ? AppColors.primaryDark : AppColors.primary)
-                              : (isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return AlertDialog(
-            backgroundColor: isDarkMode ? AppColors.surfaceDark : Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: Row(
-              children: [
-                Icon(
-                  Icons.home_rounded,
-                  color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(
-                    'Configure Your Home',
-                    style: TextStyle(
-                      fontFamily: 'Switzer',
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? AppColors.textPrimaryDark : AppColors.textPrimary,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Tell us about your home so we can create the right chores:',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontFamily: 'VarelaRound',
-                      color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  buildCounter('🍳 Kitchens', numKitchens, (v) => numKitchens = v),
-                  buildCounter('🚿 Bathrooms', numBathrooms, (v) => numBathrooms = v),
-                  buildCounter('🛏️ Bedrooms', numBedrooms, (v) => numBedrooms = v),
-                  buildCounter('🛋️ Living Rooms', numLivingRooms, (v) => numLivingRooms = v),
-                  const SizedBox(height: 16),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: (isDarkMode ? AppColors.primaryDark : AppColors.primary).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 20,
-                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Chores will be automatically assigned to ${_householdMembers.length} member${_householdMembers.length > 1 ? 's' : ''} in rotation.',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontFamily: 'VarelaRound',
-                              color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                            ),
+                        const SizedBox(height: 2),
+                        Text(
+                          isRebalance
+                              ? 'Rebalance chores to include everyone'
+                              : 'Set up your home and assign chores',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            fontSize: 12,
+                            fontFamily: 'VarelaRound',
                           ),
                         ),
                       ],
                     ),
                   ),
+                  if (_isInitializing)
+                    const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  else
+                    Icon(
+                      Icons.arrow_forward_ios_rounded,
+                      color: Colors.white.withValues(alpha: 0.8),
+                      size: 18,
+                    ),
                 ],
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(
-                    color: isDarkMode ? AppColors.textSecondaryDark : AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  // Save configuration
-                  await _householdRepository.updateRoomConfig(
-                    household.id,
-                    numKitchens: numKitchens,
-                    numBathrooms: numBathrooms,
-                    numBedrooms: numBedrooms,
-                    numLivingRooms: numLivingRooms,
-                  );
-                  Navigator.pop(context, true);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: const Text('Assign Chores'),
-              ),
             ],
-          );
-        },
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Navigate to the household configuration screen.
+  Future<void> _navigateToConfigScreen() async {
+    final result = await Navigator.push<int>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HouseholdConfigScreen(
+          members: _householdMembers,
+        ),
       ),
     );
 
-    if (result == true) {
-      await _initializeChores();
-    }
-  }
-
-  /// Initialize chores for the household.
-  Future<void> _initializeChores() async {
-    setState(() => _isInitializing = true);
-
-    try {
-      final household = HouseholdService().currentHousehold;
-      if (household == null) throw Exception('No household');
-
-      // Reload household to get updated config
-      final freshHousehold = await _householdRepository.getHouseholdModel(household.id);
-      HouseholdService().setCurrentHousehold(freshHousehold);
-
-      final memberIds = _householdMembers.map((m) => m.userId).toList();
-      
-      final initService = ChoreInitializationService();
-      final count = await initService.initializeChores(
-        household: freshHousehold,
-        memberIds: memberIds,
-      );
-
-      // Reload everything
+    if (result != null && result > 0) {
+      // Chores were created, reload everything
       await _loadChores();
       await _checkInitializationStatus();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('$count chores created and assigned!'),
+            content: Text('$result chores created and assigned!'),
             backgroundColor: Colors.green,
           ),
         );
-      }
-    } catch (e) {
-      if (mounted) {
-        ErrorService.showError(context, e, operation: 'initializeChores');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isInitializing = false);
       }
     }
   }
