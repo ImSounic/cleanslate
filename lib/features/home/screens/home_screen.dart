@@ -45,7 +45,6 @@ class HomeScreenState extends State<HomeScreen>
   String _userName = '';
   String? _profileImageUrl; // Added property for profile image URL
   List<Map<String, dynamic>> _myChores = []; // pending
-  List<Map<String, dynamic>> _inProgressChores = [];
   List<Map<String, dynamic>> _completedChores = [];
   List<Map<String, dynamic>> _householdChores = []; // All household chores for filter
   bool _isLoading = true;
@@ -58,10 +57,9 @@ class HomeScreenState extends State<HomeScreen>
   // User filter for "Completed" tab
   String? _selectedCompletedMemberFilter; // null = All, or user_id
 
-  // Updated tab titles to include Completed
+  // Tab titles
   final List<String> _tabTitles = [
     'My Tasks',
-    'In-progress',
     'Assigned to',
     'Completed',
   ];
@@ -128,7 +126,6 @@ class HomeScreenState extends State<HomeScreen>
       // Separate chores by status
       final completed = <Map<String, dynamic>>[];
       final pending = <Map<String, dynamic>>[];
-      final inProgress = <Map<String, dynamic>>[];
 
       for (final chore in chores) {
         final status = chore['status'] ?? 'pending';
@@ -152,14 +149,13 @@ class HomeScreenState extends State<HomeScreen>
         
         if (status == 'completed') {
           completed.add(chore);
-        } else if (status == 'in_progress') {
-          inProgress.add(chore);
         } else {
+          // Both pending and in_progress go to My Tasks
           pending.add(chore);
         }
       }
 
-      debugLog('📋 Results: pending=${pending.length}, inProgress=${inProgress.length}, completed=${completed.length}');
+      debugLog('📋 Results: pending=${pending.length}, completed=${completed.length}');
 
       // Also load all household chores for the filter view
       final householdId = HouseholdService().currentHousehold?.id;
@@ -194,7 +190,6 @@ class HomeScreenState extends State<HomeScreen>
 
       setState(() {
         _myChores = pending;
-        _inProgressChores = inProgress;
         _completedChores = completed;
         _householdChores = householdChores;
       });
@@ -939,21 +934,13 @@ class HomeScreenState extends State<HomeScreen>
   Widget _buildChoreContent(bool isDarkMode) {
     // Show appropriate content based on selected tab
     switch (_selectedTabIndex) {
-      case 0: // My Tasks (pending only)
+      case 0: // My Tasks
         return _myChores.isEmpty
             ? _buildEmptyState(isDarkMode)
             : _buildChoresList(_myChores, isDarkMode);
-      case 1: // In-progress
-        return _inProgressChores.isEmpty
-            ? _buildEmptyStateWithMessage(
-              'No chores in progress',
-              'Tap the menu on a chore and select "Start" to begin working on it',
-              isDarkMode,
-            )
-            : _buildChoresList(_inProgressChores, isDarkMode);
-      case 2: // Assigned to - with user filter
+      case 1: // Assigned to - with user filter
         return _buildAssignedToWithFilter(isDarkMode);
-      case 3: // Completed - with user filter
+      case 2: // Completed - with user filter
         return _buildCompletedWithFilter(isDarkMode);
       default:
         return _buildEmptyState(isDarkMode);
@@ -1394,7 +1381,6 @@ class HomeScreenState extends State<HomeScreen>
     // Determine status
     final status = assignment['status'] ?? 'pending';
     final isCompleted = status == 'completed';
-    final isInProgress = status == 'in_progress';
 
     // Get assignee info from household members
     final assignedToId = assignment['assigned_to'] as String?;
@@ -1465,7 +1451,7 @@ class HomeScreenState extends State<HomeScreen>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: isCompleted || isInProgress
+                  color: isCompleted
                       ? AppColors.primary
                       : isDarkMode
                           ? AppColors.borderDark
@@ -1474,16 +1460,11 @@ class HomeScreenState extends State<HomeScreen>
                 ),
                 color: isCompleted
                     ? AppColors.primary
-                    : isInProgress
-                        ? AppColors.primary.withValues(alpha: 0.2)
-                        : Colors.transparent,
+                    : Colors.transparent,
               ),
               child: isCompleted
                   ? Icon(Icons.check, color: AppColors.textLight, size: 16)
-                  : isInProgress
-                      ? Icon(Icons.play_arrow,
-                          color: AppColors.primary, size: 14)
-                      : null,
+                  : null,
             ),
           ),
 
@@ -1737,7 +1718,6 @@ class HomeScreenState extends State<HomeScreen>
   ) {
     final status = assignment['status'] ?? 'pending';
     final isCompleted = status == 'completed';
-    final isInProgress = status == 'in_progress';
     final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
     final isDarkMode = themeProvider.isDarkMode;
 
@@ -1779,25 +1759,6 @@ class HomeScreenState extends State<HomeScreen>
                 },
               ),
 
-              // Mark as In Progress (only for pending)
-              if (!isCompleted && !isInProgress)
-                ListTile(
-                  leading:
-                      Icon(Icons.play_circle_outline, color: AppColors.primary),
-                  title: Text(
-                    'Start (In Progress)',
-                    style: TextStyle(
-                      color: isDarkMode
-                          ? AppColors.textPrimaryDark
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    _updateChoreStatus(assignment['id'], 'in_progress');
-                  },
-                ),
-
               // Mark as Complete
               if (!isCompleted)
                 ListTile(
@@ -1820,8 +1781,8 @@ class HomeScreenState extends State<HomeScreen>
                   },
                 ),
 
-              // Mark as Pending (from completed or in_progress)
-              if (isCompleted || isInProgress)
+              // Mark as Pending (from completed)
+              if (isCompleted)
                 ListTile(
                   leading: Icon(
                     Icons.radio_button_unchecked,
@@ -1837,11 +1798,7 @@ class HomeScreenState extends State<HomeScreen>
                   ),
                   onTap: () {
                     Navigator.pop(sheetContext);
-                    if (isCompleted) {
-                      _uncompleteChore(assignment['id']);
-                    } else {
-                      _updateChoreStatus(assignment['id'], 'pending');
-                    }
+                    _uncompleteChore(assignment['id']);
                   },
                 ),
 
@@ -1879,21 +1836,6 @@ class HomeScreenState extends State<HomeScreen>
         );
       },
     );
-  }
-
-  /// Update a chore assignment's status (pending, in_progress, completed).
-  Future<void> _updateChoreStatus(String assignmentId, String status) async {
-    try {
-      await _choreRepository.updateChoreAssignment(
-        assignmentId: assignmentId,
-        status: status,
-      );
-      await _loadChores();
-    } catch (e) {
-      if (mounted) {
-        ErrorService.showError(context, e, operation: 'updateChoreStatus');
-      }
-    }
   }
 
   /// Show bottom sheet to reassign a chore to another household member.
