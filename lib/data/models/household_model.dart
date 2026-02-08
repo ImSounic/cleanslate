@@ -13,6 +13,10 @@ class HouseholdModel {
   final int numBedrooms;
   final int numLivingRooms;
 
+  // Chore initialization tracking
+  final bool choresInitialized;
+  final int memberCountAtInit;
+
   HouseholdModel({
     required this.id,
     required this.name,
@@ -24,6 +28,8 @@ class HouseholdModel {
     this.numBathrooms = 1,
     this.numBedrooms = 1,
     this.numLivingRooms = 1,
+    this.choresInitialized = false,
+    this.memberCountAtInit = 0,
   });
 
   factory HouseholdModel.fromJson(Map<String, dynamic> json) {
@@ -41,6 +47,8 @@ class HouseholdModel {
       numBathrooms: json['num_bathrooms'] as int? ?? 1,
       numBedrooms: json['num_bedrooms'] as int? ?? 1,
       numLivingRooms: json['num_living_rooms'] as int? ?? 1,
+      choresInitialized: json['chores_initialized'] as bool? ?? false,
+      memberCountAtInit: json['member_count_at_init'] as int? ?? 0,
     );
   }
 
@@ -56,6 +64,8 @@ class HouseholdModel {
       'num_bathrooms': numBathrooms,
       'num_bedrooms': numBedrooms,
       'num_living_rooms': numLivingRooms,
+      'chores_initialized': choresInitialized,
+      'member_count_at_init': memberCountAtInit,
     };
   }
 
@@ -66,6 +76,8 @@ class HouseholdModel {
     int? numBathrooms,
     int? numBedrooms,
     int? numLivingRooms,
+    bool? choresInitialized,
+    int? memberCountAtInit,
   }) {
     return HouseholdModel(
       id: id,
@@ -78,6 +90,8 @@ class HouseholdModel {
       numBathrooms: numBathrooms ?? this.numBathrooms,
       numBedrooms: numBedrooms ?? this.numBedrooms,
       numLivingRooms: numLivingRooms ?? this.numLivingRooms,
+      choresInitialized: choresInitialized ?? this.choresInitialized,
+      memberCountAtInit: memberCountAtInit ?? this.memberCountAtInit,
     );
   }
 
