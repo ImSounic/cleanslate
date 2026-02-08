@@ -211,6 +211,9 @@ class ChoreRepository {
   // Mark a chore as complete and notify household members
   Future<void> completeChore(String assignmentId) async {
     final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User must be authenticated to complete a chore');
+    }
     
     // First, get the assignment details including chore info
     final assignment = await _client
@@ -218,6 +221,29 @@ class ChoreRepository {
         .select('*, chores(id, name, household_id)')
         .eq('id', assignmentId)
         .single();
+
+    // Security check: verify user is assigned to this chore or is a household admin
+    final assignedTo = assignment['assigned_to'] as String?;
+    final householdId = (assignment['chores'] as Map<String, dynamic>?)?['household_id'] as String?;
+    
+    if (assignedTo != userId) {
+      // Check if user is admin (admins can complete any chore)
+      if (householdId != null) {
+        final memberRecord = await _client
+            .from('household_members')
+            .select('role')
+            .eq('household_id', householdId)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .maybeSingle();
+        
+        if (memberRecord?['role'] != 'admin') {
+          throw Exception('Only the assigned user or an admin can complete this chore');
+        }
+      } else {
+        throw Exception('Only the assigned user can complete this chore');
+      }
+    }
 
     // Mark as completed
     await _client
@@ -229,7 +255,7 @@ class ChoreRepository {
         .eq('id', assignmentId);
 
     // Send notification to all household members (except completer)
-    if (userId != null && assignment['chores'] != null) {
+    if (assignment['chores'] != null) {
       final chore = assignment['chores'] as Map<String, dynamic>;
       await _notificationService.notifyChoreCompleted(
         completedByUserId: userId,
@@ -242,6 +268,40 @@ class ChoreRepository {
 
   // Unmark a chore as complete (set back to pending)
   Future<void> uncompleteChore(String assignmentId) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User must be authenticated to uncomplete a chore');
+    }
+
+    // Get the assignment to check ownership
+    final assignment = await _client
+        .from('chore_assignments')
+        .select('assigned_to, chores(household_id)')
+        .eq('id', assignmentId)
+        .single();
+
+    final assignedTo = assignment['assigned_to'] as String?;
+    final householdId = (assignment['chores'] as Map<String, dynamic>?)?['household_id'] as String?;
+
+    // Security check: verify user is assigned or is admin
+    if (assignedTo != userId) {
+      if (householdId != null) {
+        final memberRecord = await _client
+            .from('household_members')
+            .select('role')
+            .eq('household_id', householdId)
+            .eq('user_id', userId)
+            .eq('is_active', true)
+            .maybeSingle();
+        
+        if (memberRecord?['role'] != 'admin') {
+          throw Exception('Only the assigned user or an admin can uncomplete this chore');
+        }
+      } else {
+        throw Exception('Only the assigned user can uncomplete this chore');
+      }
+    }
+
     await _client
         .from('chore_assignments')
         .update({'status': 'pending', 'completed_at': null})
