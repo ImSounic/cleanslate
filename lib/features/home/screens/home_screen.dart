@@ -1802,8 +1802,39 @@ class HomeScreenState extends State<HomeScreen>
                     ],
                   ),
 
-                // Spacer to push elements to their positions
+                // Spacer to push recurring indicator to bottom
                 const Spacer(),
+                
+                // BOTTOM LEFT - Recurring indicator
+                if (isRecurring)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
+                          .withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.autorenew,
+                          size: 10,
+                          color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                        ),
+                        const SizedBox(width: 3),
+                        Text(
+                          _formatFrequency(frequency),
+                          style: TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            fontFamily: 'VarelaRound',
+                            color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1859,72 +1890,33 @@ class HomeScreenState extends State<HomeScreen>
                 ],
               ),
 
-              // BOTTOM RIGHT - Due date and recurring indicator
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+              // BOTTOM RIGHT - Due date only
+              Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // Due date row
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SvgPicture.asset(
-                        'assets/images/icons/clock.svg',
-                        height: 12,
-                        width: 12,
-                        colorFilter: ColorFilter.mode(
+                  SvgPicture.asset(
+                    'assets/images/icons/clock.svg',
+                    height: 12,
+                    width: 12,
+                    colorFilter: ColorFilter.mode(
+                      isDarkMode
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondary,
+                      BlendMode.srcIn,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    dueDate,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFamily: 'VarelaRound',
+                      color:
                           isDarkMode
                               ? AppColors.textSecondaryDark
                               : AppColors.textSecondary,
-                          BlendMode.srcIn,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        dueDate,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontFamily: 'VarelaRound',
-                          color:
-                              isDarkMode
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondary,
-                        ),
-                      ),
-                    ],
-                  ),
-                  // Recurring indicator (if applicable)
-                  if (isRecurring) ...[
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: (isDarkMode ? AppColors.primaryDark : AppColors.primary)
-                            .withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.autorenew,
-                            size: 10,
-                            color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                          ),
-                          const SizedBox(width: 3),
-                          Text(
-                            _formatFrequency(frequency),
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              fontFamily: 'VarelaRound',
-                              color: isDarkMode ? AppColors.primaryDark : AppColors.primary,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
-                  ],
+                  ),
                 ],
               ),
             ],
